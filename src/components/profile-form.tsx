@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -34,14 +34,16 @@ export function ProfileForm() {
     email: 'user@mediminder.app',
   });
 
+  const defaultValues = useMemo(() => profile, [profile]);
+
   const form = useForm<z.infer<typeof profileSchema>>({
     resolver: zodResolver(profileSchema),
-    defaultValues: profile,
+    defaultValues,
   });
   
   useEffect(() => {
-    form.reset(profile);
-  }, [profile, form]);
+    form.reset(defaultValues);
+  }, [defaultValues, form]);
 
 
   function onSubmit(values: z.infer<typeof profileSchema>) {
