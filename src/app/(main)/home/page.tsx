@@ -2,11 +2,11 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, ShieldAlert } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Medication, Appointment, AdherenceLog } from '@/lib/types';
+import { Medication, Appointment, AdherenceLog, FamilyMember } from '@/lib/types';
 import { MedicationCard } from '@/components/medication-card';
 import { AppointmentCard } from '@/components/appointment-card';
 import { format, parse } from 'date-fns';
@@ -17,10 +17,13 @@ import { useRouter } from 'next/navigation';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { MedicationReminderDialog } from '@/components/medication-reminder-dialog';
 import { trackAdherence } from '@/ai/flows/track-adherence-flow';
+import { useToast } from '@/hooks/use-toast';
+import { generateFamilyAlert } from '@/ai/flows/family-alert-flow';
 
 export default function HomePage() {
   const { user, isGuest } = useAuth();
   const router = useRouter();
+  const { toast } = useToast();
 
   const [localMedications, setLocalMedications] = useLocalStorage<Medication[]>('guest-medications', []);
   const [localAppointments, setLocalAppointments] = useLocalStorage<Appointment[]>('guest-appointments', []);
@@ -29,6 +32,7 @@ export default function HomePage() {
   const [firestoreMedications, setFirestoreMedications] = useState<Medication[]>([]);
   const [firestoreAppointments, setFirestoreAppointments] = useState<Appointment[]>([]);
   const [firestoreAdherence, setFirestoreAdherence] = useState<AdherenceLog[]>([]);
+  const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
 
   const [greeting, setGreeting] = useState('');
   const [reminder, setReminder] = useState<{ medication: Medication; time: string } | null>(null);
@@ -51,16 +55,22 @@ export default function HomePage() {
         setFirestoreAdherence(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AdherenceLog)));
       });
 
+       const familyUnsub = onSnapshot(collection(db, 'users', user.uid, 'familyMembers'), (snapshot) => {
+        setFamilyMembers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as FamilyMember)));
+      });
+
 
       return () => {
         medUnsub();
         apptUnsub();
         adherenceUnsub();
+        familyUnsub();
       };
     } else {
       setFirestoreMedications([]);
       setFirestoreAppointments([]);
       setFirestoreAdherence([]);
+      setFamilyMembers([]);
     }
   }, [user, isGuest, setLocalMedications, setLocalAppointments, setLocalAdherence]);
 
@@ -78,6 +88,33 @@ export default function HomePage() {
         return false;
     });
   }, [activeMedications]);
+
+    const handleFamilyAlert = useCallback(async (medication: Medication) => {
+        if (isGuest || !user) {
+            toast({ title: 'Sign In Required', description: 'Please sign in to alert family members.', variant: 'destructive'});
+            return;
+        }
+        const acceptedFamilyMember = familyMembers.find(m => m.status === 'accepted');
+        if (!acceptedFamilyMember) {
+            toast({ title: 'No Linked Family Member', description: 'Please add and link a family member in the Family tab first.', variant: 'destructive'});
+            return;
+        }
+        
+        try {
+            toast({ title: 'Sending Alert...', description: `Notifying ${acceptedFamilyMember.name}.` });
+            const result = await generateFamilyAlert({
+                patientName: user.displayName || 'A family member',
+                medicationName: medication.name,
+                familyName: acceptedFamilyMember.name,
+            });
+            // Here you would typically send the alert via SMS/email
+            console.log("Family Alert Message:", result.alertMessage);
+            toast({ title: 'Alert Sent!', description: `${acceptedFamilyMember.name} has been notified.` });
+        } catch (error) {
+            toast({ title: 'Error', description: 'Could not send alert. Please try again.', variant: 'destructive'});
+        }
+    }, [isGuest, user, familyMembers, toast]);
+
 
   const checkReminders = useCallback(() => {
     if (reminder) return; // Don't check for new reminders if one is already showing
@@ -101,7 +138,7 @@ export default function HomePage() {
         }
       }
     }
-  }, [adherenceLogs, todaysMedications]);
+  }, [adherenceLogs, todaysMedications, reminder]);
 
   useEffect(() => {
     const interval = setInterval(checkReminders, 30000); // Check every 30 seconds
@@ -130,6 +167,10 @@ export default function HomePage() {
           status: status,
           userId: user.uid,
       });
+    }
+
+    if (status === 'skipped') {
+        handleFamilyAlert(medication);
     }
     setReminder(null);
   };
@@ -184,7 +225,7 @@ export default function HomePage() {
             <div className="space-y-4">
               {sortedSchedule.map((item, index) => (
                 item.type === 'medication' ? (
-                   <MedicationCard key={`${item.data.id}-${item.time}`} medication={item.data} specificTime={item.time} />
+                   <MedicationCard key={`${item.data.id}-${item.time}`} medication={item.data} specificTime={item.time} onFamilyAlert={() => handleFamilyAlert(item.data)} />
                 ) : (
                   <AppointmentCard key={item.data.id} appointment={item.data} />
                 )
