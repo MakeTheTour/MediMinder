@@ -225,7 +225,7 @@ export default function HomePage() {
             <div className="space-y-4">
               {sortedSchedule.map((item, index) => (
                 item.type === 'medication' ? (
-                   <MedicationCard key={`${item.data.id}-${item.time}`} medication={item.data} specificTime={item.time} onFamilyAlert={() => handleFamilyAlert(item.data)} />
+                   <MedicationCard key={`${item.data.id}-${item.time}`} medication={item.data} specificTime={item.time} />
                 ) : (
                   <AppointmentCard key={item.data.id} appointment={item.data} />
                 )
