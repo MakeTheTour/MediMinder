@@ -17,8 +17,8 @@ const navItems = [
 export function BottomNavbar() {
   const pathname = usePathname();
 
-  // Don't render navbar on auth pages
-  if (pathname === '/login' || pathname === '/signup' || pathname === '/') {
+  // Don't render navbar on auth or admin pages
+  if (pathname === '/login' || pathname === '/signup' || pathname === '/' || pathname.startsWith('/admin')) {
     return null;
   }
 
