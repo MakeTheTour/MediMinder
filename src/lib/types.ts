@@ -22,6 +22,7 @@ export interface Appointment {
 export interface UserProfile {
   name: string;
   email: string;
+  photoURL?: string;
   dateOfBirth?: string;
   gender?: string;
   country?: string;
@@ -36,4 +37,5 @@ export interface FamilyMember {
   relation: string;
   email: string;
   status: 'pending' | 'accepted';
+  photoURL?: string;
 }

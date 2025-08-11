@@ -15,6 +15,8 @@ interface User {
   name: string;
   email: string;
   createdAt: string;
+  photoURL?: string;
+  isPremium?: boolean;
 }
 
 export default function AdminUsersPage() {
@@ -59,12 +61,13 @@ export default function AdminUsersPage() {
                 <TableHead>Email</TableHead>
                 <TableHead>Joined At</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Plan</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="h-24 text-center">
+                  <TableCell colSpan={5} className="h-24 text-center">
                     Loading users...
                   </TableCell>
                 </TableRow>
@@ -74,7 +77,7 @@ export default function AdminUsersPage() {
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <Avatar>
-                          <AvatarImage data-ai-hint="person portrait" src={`https://placehold.co/40x40.png`} alt={user.name} />
+                          <AvatarImage src={user.photoURL || `https://placehold.co/40x40.png`} alt={user.name} />
                           <AvatarFallback>{user.name?.charAt(0) || 'U'}</AvatarFallback>
                         </Avatar>
                         <span className="font-medium">{user.name}</span>
@@ -87,11 +90,16 @@ export default function AdminUsersPage() {
                     <TableCell>
                        <Badge variant="secondary">Active</Badge>
                     </TableCell>
+                     <TableCell>
+                       <Badge variant={user.isPremium ? 'default' : 'outline'}>
+                         {user.isPremium ? 'Premium' : 'Free'}
+                        </Badge>
+                    </TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={4} className="h-24 text-center">
+                  <TableCell colSpan={5} className="h-24 text-center">
                     No users found.
                   </TableCell>
                 </TableRow>

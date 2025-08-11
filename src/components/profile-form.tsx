@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -22,10 +23,12 @@ import { useAuth } from '@/context/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 
 const profileSchema = z.object({
   name: z.string().min(1, 'Name is required.'),
   email: z.string().email('Invalid email address.'),
+  photoURL: z.string().optional(),
   dateOfBirth: z.string().optional(),
   gender: z.string().optional(),
   country: z.string().optional(),
@@ -38,12 +41,15 @@ export function ProfileForm() {
   const router = useRouter();
   const { toast } = useToast();
   const { user } = useAuth();
+  const [photoPreview, setPhotoPreview] = useState<string | null>(user?.photoURL || null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<z.infer<typeof profileSchema>>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
       name: user?.displayName || '',
       email: user?.email || '',
+      photoURL: user?.photoURL || '',
       dateOfBirth: '',
       gender: '',
       country: '',
@@ -63,6 +69,7 @@ export function ProfileForm() {
                 form.reset({
                     name: user.displayName || userData.name || '',
                     email: user.email || userData.email || '',
+                    photoURL: user.photoURL || userData.photoURL || '',
                     dateOfBirth: userData.dateOfBirth || '',
                     gender: userData.gender || '',
                     country: userData.country || '',
@@ -70,11 +77,25 @@ export function ProfileForm() {
                     state: userData.state || '',
                     postcode: userData.postcode || '',
                 });
+                setPhotoPreview(user.photoURL || userData.photoURL || null);
             }
         }
         fetchUserData();
     }
   }, [user, form]);
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const dataUrl = reader.result as string;
+        setPhotoPreview(dataUrl);
+        form.setValue('photoURL', dataUrl);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
 
   async function onSubmit(values: z.infer<typeof profileSchema>) {
@@ -84,8 +105,11 @@ export function ProfileForm() {
     }
 
     try {
-        if (values.name !== user.displayName) {
-            await updateProfile(user, { displayName: values.name });
+        if (values.name !== user.displayName || values.photoURL !== user.photoURL) {
+            await updateProfile(user, { 
+              displayName: values.name,
+              photoURL: values.photoURL,
+            });
         }
         
         const userRef = doc(db, 'users', user.uid);
@@ -95,6 +119,7 @@ export function ProfileForm() {
             title: 'Profile Updated',
             description: 'Your information has been saved successfully.',
         });
+        router.refresh(); // Refresh to update user data across the app
         router.push('/settings');
     } catch (error) {
          toast({
@@ -113,6 +138,23 @@ export function ProfileForm() {
         <CardContent>
             <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                <div className="flex flex-col items-center space-y-4">
+                  <Avatar className="h-24 w-24 cursor-pointer" onClick={() => fileInputRef.current?.click()}>
+                    <AvatarImage src={photoPreview || undefined} alt="Profile picture" />
+                    <AvatarFallback>{form.getValues('name')?.charAt(0) || user?.email?.charAt(0)}</AvatarFallback>
+                  </Avatar>
+                   <Input 
+                    type="file" 
+                    ref={fileInputRef} 
+                    className="hidden" 
+                    accept="image/*"
+                    onChange={handlePhotoChange}
+                  />
+                  <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
+                    Change Picture
+                  </Button>
+                </div>
+
                 <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                     <FormField
                     control={form.control}

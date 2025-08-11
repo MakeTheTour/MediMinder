@@ -79,7 +79,7 @@ export default function FamilyPage() {
               <div key={member.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50">
                 <div className="flex items-center gap-4">
                    <Avatar>
-                    <AvatarImage data-ai-hint="person portrait" src={`https://placehold.co/40x40.png`} alt={member.name} />
+                    <AvatarImage src={member.photoURL || `https://placehold.co/40x40.png`} alt={member.name} />
                     <AvatarFallback>{member.name.charAt(0)}</AvatarFallback>
                   </Avatar>
                   <div>
