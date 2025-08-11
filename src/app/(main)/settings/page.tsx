@@ -15,7 +15,7 @@ const settingsItems = [
     description: 'Customize reminder voice.',
   },
   {
-    href: '#',
+    href: '/settings/notifications',
     icon: Bell,
     title: 'Notifications',
     description: 'Manage alert preferences.',
