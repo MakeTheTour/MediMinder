@@ -5,7 +5,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle2, Star, Users, Loader2 } from "lucide-react";
+import { CheckCircle2, Star, Users, Loader2, CreditCard } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { doc, setDoc } from "firebase/firestore";
@@ -30,19 +30,36 @@ const premiumFeatures = [
   }
 ];
 
+const StripeIcon = () => (
+    <svg className="mr-2 h-5 w-5" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+        <path d="M33,13.2a5.4,5.4,0,0,0-5.4,5.4V29.4a5.4,5.4,0,0,0,5.4,5.4h5.4V29.4a5.4,5.4,0,0,0-5.4-5.4H27.6V18.6a5.4,5.4,0,0,1,5.4-5.4h5.4V7.8H33A5.4,5.4,0,0,0,27.6,13.2Z" fill="#635bff"></path>
+        <path d="M20.4,18.6a5.4,5.4,0,0,0-5.4,5.4V34.8a5.4,5.4,0,0,0,5.4,5.4H33V34.8a5.4,5.4,0,0,0-5.4-5.4H20.4V24a5.4,5.4,0,0,1,5.4-5.4H33V13.2H20.4A5.4,5.4,0,0,0,15,18.6Z" fill="#635bff"></path>
+    </svg>
+);
+
+const PayoneerIcon = () => (
+    <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path fill="#FF4800" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z" />
+        <path fill="#FFFFFF" d="M11 11h2v6h-2zm0 8h2v2h-2z"/>
+    </svg>
+);
+
+
 export default function PremiumPage() {
   const { user, isGuest } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
   const [isUpgrading, setIsUpgrading] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<string | null>(null);
 
-  const handleUpgrade = async () => {
+  const handleUpgrade = async (method: 'Stripe' | 'Payoneer') => {
     if (isGuest || !user) {
       router.push('/login');
       return;
     }
 
     setIsUpgrading(true);
+    setPaymentMethod(method);
 
     try {
       // Simulate payment processing
@@ -60,7 +77,7 @@ export default function PremiumPage() {
 
       toast({
         title: "Upgrade Successful!",
-        description: "Welcome to MediMinder Premium.",
+        description: `Welcome to MediMinder Premium. Your payment via ${method} was successful.`,
       });
 
       router.push('/settings/premium/success');
@@ -70,10 +87,11 @@ export default function PremiumPage() {
       toast({
         variant: 'destructive',
         title: "Upgrade Failed",
-        description: "We couldn't process your upgrade. Please try again.",
+        description: `We couldn't process your ${method} payment. Please try again.`,
       });
     } finally {
       setIsUpgrading(false);
+      setPaymentMethod(null);
     }
   };
 
@@ -104,14 +122,32 @@ export default function PremiumPage() {
                 </div>
             ))}
         </CardContent>
-        <CardFooter>
-            <Button className="w-full" size="lg" onClick={handleUpgrade} disabled={isUpgrading}>
-                 {isUpgrading ? (
+        <CardFooter className="flex-col gap-4">
+            <Button className="w-full" size="lg" onClick={() => handleUpgrade('Stripe')} disabled={isUpgrading}>
+                 {isUpgrading && paymentMethod === 'Stripe' ? (
                     <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Upgrading...
+                        Processing with Stripe...
                     </>
-                 ) : 'Upgrade to Premium'}
+                 ) : (
+                    <>
+                        <StripeIcon/>
+                        Pay with Stripe
+                    </>
+                 )}
+            </Button>
+             <Button className="w-full" size="lg" variant="secondary" onClick={() => handleUpgrade('Payoneer')} disabled={isUpgrading}>
+                 {isUpgrading && paymentMethod === 'Payoneer' ? (
+                    <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Processing with Payoneer...
+                    </>
+                 ) : (
+                    <>
+                        <PayoneerIcon/>
+                        Pay with Payoneer
+                    </>
+                 )}
             </Button>
         </CardFooter>
       </Card>
