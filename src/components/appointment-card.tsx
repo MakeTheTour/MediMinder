@@ -20,7 +20,7 @@ interface AppointmentCardProps {
 
 export function AppointmentCard({ appointment, onDelete }: AppointmentCardProps) {
   return (
-    <Card className="w-full overflow-hidden transition-all hover:shadow-md">
+    <Card className="w-full overflow-hidden transition-all hover:shadow-md bg-muted/20 border">
       <CardContent className="p-4">
         <div className="flex items-start justify-between">
           <div className="flex items-start gap-4">
