@@ -1,11 +1,13 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useRouter } from 'next/navigation';
-
+import { updateProfile } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
+import { db, auth } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -16,8 +18,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { useLocalStorage } from '@/hooks/use-local-storage';
-import { UserProfile } from '@/lib/types';
+import { useAuth } from '@/context/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 
@@ -29,30 +30,52 @@ const profileSchema = z.object({
 export function ProfileForm() {
   const router = useRouter();
   const { toast } = useToast();
-  const [profile, setProfile] = useLocalStorage<UserProfile>('user-profile', {
-    name: 'User',
-    email: 'user@mediminder.app',
-  });
-
-  const defaultValues = useMemo(() => profile, [profile]);
+  const { user } = useAuth();
 
   const form = useForm<z.infer<typeof profileSchema>>({
     resolver: zodResolver(profileSchema),
-    defaultValues,
+    defaultValues: {
+      name: user?.displayName || '',
+      email: user?.email || '',
+    },
   });
   
   useEffect(() => {
-    form.reset(defaultValues);
-  }, [defaultValues, form]);
+    if (user) {
+      form.reset({
+        name: user.displayName || '',
+        email: user.email || '',
+      });
+    }
+  }, [user, form]);
 
 
-  function onSubmit(values: z.infer<typeof profileSchema>) {
-    setProfile(values);
-    toast({
-      title: 'Profile Updated',
-      description: 'Your information has been saved successfully.',
-    });
-    router.push('/settings');
+  async function onSubmit(values: z.infer<typeof profileSchema>) {
+    if (!user) {
+        toast({ title: 'Error', description: 'No user is signed in.', variant: 'destructive'});
+        return;
+    }
+
+    try {
+        if (values.name !== user.displayName) {
+            await updateProfile(user, { displayName: values.name });
+        }
+        
+        const userRef = doc(db, 'users', user.uid);
+        await setDoc(userRef, { name: values.name, email: values.email }, { merge: true });
+
+        toast({
+            title: 'Profile Updated',
+            description: 'Your information has been saved successfully.',
+        });
+        router.push('/settings');
+    } catch (error) {
+         toast({
+            title: 'Error',
+            description: 'Could not update profile. Please try again.',
+            variant: 'destructive',
+        });
+    }
   }
 
   return (
@@ -83,13 +106,15 @@ export function ProfileForm() {
                     <FormItem>
                     <FormLabel>Email Address</FormLabel>
                     <FormControl>
-                        <Input type="email" placeholder="e.g., john.doe@example.com" {...field} />
+                        <Input type="email" placeholder="e.g., john.doe@example.com" {...field} disabled />
                     </FormControl>
                     <FormMessage />
                     </FormItem>
                 )}
                 />
-                <Button type="submit" className="w-full">Save Changes</Button>
+                <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+                    {form.formState.isSubmitting ? 'Saving...' : 'Save Changes'}
+                </Button>
             </form>
             </Form>
         </CardContent>

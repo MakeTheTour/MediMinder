@@ -6,7 +6,7 @@ import { Home, Pill, LineChart, Users2, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navItems = [
-  { href: '/', label: 'Home', icon: Home },
+  { href: '/home', label: 'Home', icon: Home },
   { href: '/medicine', label: 'Medicine', icon: Pill },
   { href: '/reports', label: 'Reports', icon: LineChart },
   { href: '/family', label: 'Family', icon: Users2 },
@@ -16,11 +16,16 @@ const navItems = [
 export function BottomNavbar() {
   const pathname = usePathname();
 
+  // Don't render navbar on auth pages
+  if (pathname === '/login' || pathname === '/signup' || pathname === '/') {
+    return null;
+  }
+
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background/95 backdrop-blur-sm shadow-[0_-1px_3px_rgba(0,0,0,0.05)]">
       <div className="mx-auto flex h-16 max-w-md items-center justify-around">
         {navItems.map((item) => {
-          const isActive = pathname === item.href;
+          const isActive = pathname.startsWith(item.href);
           return (
             <Link
               key={item.href}

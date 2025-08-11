@@ -5,7 +5,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useRouter } from 'next/navigation';
 import { Plus, Trash2 } from 'lucide-react';
-
+import { addDoc, collection } from 'firebase/firestore';
+import { db, auth } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -24,9 +25,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { useLocalStorage } from '@/hooks/use-local-storage';
 import { Medication, Frequency } from '@/lib/types';
-import { useToast } from "@/hooks/use-toast"
+import { useToast } from "@/hooks/use-toast";
 
 const medicationSchema = z.object({
   name: z.string().min(1, 'Medication name is required.'),
@@ -58,7 +58,6 @@ const weekDays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Frida
 export function AddMedicationForm() {
   const router = useRouter();
   const { toast } = useToast();
-  const [medications, setMedications] = useLocalStorage<Medication[]>('medications', []);
 
   const form = useForm<z.infer<typeof medicationSchema>>({
     resolver: zodResolver(medicationSchema),
@@ -78,18 +77,29 @@ export function AddMedicationForm() {
 
   const frequency = form.watch('frequency');
 
-  function onSubmit(values: z.infer<typeof medicationSchema>) {
-    const newMedication: Medication = {
-      id: new Date().toISOString(),
+  async function onSubmit(values: z.infer<typeof medicationSchema>) {
+    const user = auth.currentUser;
+    if (!user) {
+        toast({ title: "Error", description: "You must be logged in to add medication.", variant: "destructive"});
+        return;
+    }
+    
+    const medicationData: Omit<Medication, 'id'> = {
       ...values,
       frequency: values.frequency as Frequency,
-    };
-    setMedications([...medications, newMedication]);
-    toast({
-        title: "Medication Added",
-        description: `${values.name} has been added to your schedule.`,
-      })
-    router.push('/medicine');
+    }
+
+    try {
+        await addDoc(collection(db, 'users', user.uid, 'medications'), medicationData);
+        toast({
+            title: "Medication Added",
+            description: `${values.name} has been added to your schedule.`,
+        });
+        router.push('/medicine');
+    } catch (error) {
+        console.error("Error adding document: ", error);
+        toast({ title: "Error", description: "Could not save medication. Please try again.", variant: "destructive"});
+    }
   }
 
   return (
@@ -238,7 +248,9 @@ export function AddMedicationForm() {
         </div>
 
 
-        <Button type="submit" className="w-full">Save Medication</Button>
+        <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+            {form.formState.isSubmitting ? 'Saving...' : 'Save Medication'}
+        </Button>
       </form>
     </Form>
   );

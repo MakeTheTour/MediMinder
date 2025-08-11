@@ -1,5 +1,12 @@
+
+'use client'
+
 import Link from 'next/link';
-import { User, Bell, Mic, ChevronRight } from 'lucide-react';
+import { User, Bell, Mic, ChevronRight, LogOut } from 'lucide-react';
+import { useAuth } from '@/context/auth-context';
+import { auth } from '@/lib/firebase';
+import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/button';
 
 const settingsItems = [
   {
@@ -23,6 +30,15 @@ const settingsItems = [
 ];
 
 export default function SettingsPage() {
+  const { user } = useAuth();
+  const router = useRouter();
+
+  const handleSignOut = async () => {
+    await auth.signOut();
+    router.push('/login');
+  };
+
+
   return (
     <div className="container mx-auto max-w-2xl p-4">
       <header className="mb-6">
@@ -46,6 +62,12 @@ export default function SettingsPage() {
             <ChevronRight className="h-5 w-5 text-muted-foreground" />
           </Link>
         ))}
+      </div>
+      <div className="mt-8">
+        <Button variant="destructive" className="w-full" onClick={handleSignOut}>
+            <LogOut className="mr-2 h-4 w-4" />
+            Sign Out
+        </Button>
       </div>
     </div>
   );

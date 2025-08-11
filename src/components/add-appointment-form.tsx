@@ -4,7 +4,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useRouter } from 'next/navigation';
-
+import { addDoc, collection } from 'firebase/firestore';
+import { db, auth } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -15,9 +16,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { useLocalStorage } from '@/hooks/use-local-storage';
-import { Appointment } from '@/lib/types';
-import { useToast } from "@/hooks/use-toast"
+import { useToast } from "@/hooks/use-toast";
 
 const appointmentSchema = z.object({
   doctorName: z.string().min(1, 'Doctor name is required.'),
@@ -31,7 +30,6 @@ const appointmentSchema = z.object({
 export function AddAppointmentForm() {
   const router = useRouter();
   const { toast } = useToast();
-  const [appointments, setAppointments] = useLocalStorage<Appointment[]>('appointments', []);
 
   const form = useForm<z.infer<typeof appointmentSchema>>({
     resolver: zodResolver(appointmentSchema),
@@ -44,17 +42,24 @@ export function AddAppointmentForm() {
     },
   });
 
-  function onSubmit(values: z.infer<typeof appointmentSchema>) {
-    const newAppointment: Appointment = {
-      id: new Date().toISOString(),
-      ...values,
-    };
-    setAppointments([...appointments, newAppointment]);
-    toast({
-        title: "Appointment Scheduled",
-        description: `Your appointment with Dr. ${values.doctorName} has been added.`,
-      })
-    router.push('/medicine');
+  async function onSubmit(values: z.infer<typeof appointmentSchema>) {
+    const user = auth.currentUser;
+    if (!user) {
+        toast({ title: "Error", description: "You must be logged in to add an appointment.", variant: "destructive"});
+        return;
+    }
+    
+    try {
+        await addDoc(collection(db, 'users', user.uid, 'appointments'), values);
+        toast({
+            title: "Appointment Scheduled",
+            description: `Your appointment with Dr. ${values.doctorName} has been added.`,
+        });
+        router.push('/medicine');
+    } catch (error) {
+        console.error("Error adding document: ", error);
+        toast({ title: "Error", description: "Could not save appointment. Please try again.", variant: "destructive"});
+    }
   }
 
   return (
@@ -127,7 +132,9 @@ export function AddAppointmentForm() {
             </FormItem>
           )}
         />
-        <Button type="submit" className="w-full">Save Appointment</Button>
+        <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+            {form.formState.isSubmitting ? 'Saving...' : 'Save Appointment'}
+        </Button>
       </form>
     </Form>
   );

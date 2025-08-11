@@ -2,23 +2,58 @@
 
 import Link from 'next/link';
 import { Plus } from 'lucide-react';
-import { useLocalStorage } from '@/hooks/use-local-storage';
 import { Medication } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { MedicationCard } from '@/components/medication-card';
 import { AppointmentCard } from '@/components/appointment-card';
 import { Appointment } from '@/lib/types';
+import { useAuth } from '@/context/auth-context';
+import { useState, useEffect } from 'react';
+import { collection, onSnapshot, deleteDoc, doc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { useToast } from '@/hooks/use-toast';
 
 export default function MedicinePage() {
-  const [medications, setMedications] = useLocalStorage<Medication[]>('medications', []);
-  const [appointments, setAppointments] = useLocalStorage<Appointment[]>('appointments', []);
+  const { user } = useAuth();
+  const [medications, setMedications] = useState<Medication[]>([]);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const { toast } = useToast();
 
-  const handleDeleteMedication = (id: string) => {
-    setMedications(meds => meds.filter(m => m.id !== id));
+  useEffect(() => {
+    if (!user) return;
+
+    const medUnsub = onSnapshot(collection(db, 'users', user.uid, 'medications'), (snapshot) => {
+      setMedications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Medication)));
+    });
+
+    const apptUnsub = onSnapshot(collection(db, 'users', user.uid, 'appointments'), (snapshot) => {
+      setAppointments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Appointment)));
+    });
+
+    return () => {
+      medUnsub();
+      apptUnsub();
+    }
+  }, [user]);
+
+  const handleDeleteMedication = async (id: string) => {
+    if (!user) return;
+    try {
+      await deleteDoc(doc(db, 'users', user.uid, 'medications', id));
+      toast({ title: "Medication Deleted", description: "The medication has been removed from your schedule."});
+    } catch (error) {
+      toast({ title: "Error", description: "Could not delete medication. Please try again.", variant: "destructive"});
+    }
   };
   
-  const handleDeleteAppointment = (id: string) => {
-    setAppointments(apps => apps.filter(a => a.id !== id));
+  const handleDeleteAppointment = async (id: string) => {
+    if (!user) return;
+    try {
+      await deleteDoc(doc(db, 'users', user.uid, 'appointments', id));
+       toast({ title: "Appointment Deleted", description: "The appointment has been removed from your schedule."});
+    } catch (error) {
+       toast({ title: "Error", description: "Could not delete appointment. Please try again.", variant: "destructive"});
+    }
   };
 
   return (

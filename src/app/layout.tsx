@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { Toaster } from "@/components/ui/toaster"
 import './globals.css';
-import { BottomNavbar } from '@/components/bottom-navbar';
+import { AuthProvider } from '@/context/auth-context';
 
 export const metadata: Metadata = {
   title: 'MediMinder',
@@ -21,13 +21,14 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=PT+Sans:wght@400;700&display=swap" rel="stylesheet" />
       </head>
       <body className="font-body antialiased h-full bg-background">
-        <div className="flex flex-col min-h-screen">
-          <main className="flex-grow pb-20">
-            {children}
-          </main>
-          <BottomNavbar />
-        </div>
-        <Toaster />
+        <AuthProvider>
+          <div className="flex flex-col min-h-screen">
+            <main className="flex-grow">
+              {children}
+            </main>
+          </div>
+          <Toaster />
+        </AuthProvider>
       </body>
     </html>
   );

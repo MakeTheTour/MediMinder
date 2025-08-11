@@ -6,19 +6,33 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { useLocalStorage } from '@/hooks/use-local-storage';
 import { FamilyMember } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/context/auth-context';
+import { useState, useEffect } from 'react';
+import { collection, onSnapshot, doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 
 export default function FamilyPage() {
-    const [familyMembers, setFamilyMembers] = useLocalStorage<FamilyMember[]>('family-members', []);
+    const { user } = useAuth();
+    const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
     const { toast } = useToast();
 
-    const handleAcceptInvitation = (id: string) => {
+    useEffect(() => {
+      if (!user) return;
+      const unsub = onSnapshot(collection(db, 'users', user.uid, 'familyMembers'), (snapshot) => {
+          setFamilyMembers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as FamilyMember)));
+      });
+      return () => unsub();
+    }, [user]);
+
+    const handleAcceptInvitation = async (id: string) => {
+        if (!user) return;
         const member = familyMembers.find(m => m.id === id);
         if (member) {
-            setFamilyMembers(members => members.map(m => m.id === id ? { ...m, status: 'accepted' } : m));
+            const memberRef = doc(db, 'users', user.uid, 'familyMembers', id);
+            await updateDoc(memberRef, { status: 'accepted' });
             toast({
                 title: 'Invitation Accepted',
                 description: `${member.name} is now linked to your family circle.`,
@@ -26,8 +40,10 @@ export default function FamilyPage() {
         }
     };
 
-    const handleDeleteMember = (id: string) => {
-        setFamilyMembers(members => members.filter(m => m.id !== id));
+    const handleDeleteMember = async (id: string) => {
+        if (!user) return;
+        const memberRef = doc(db, 'users', user.uid, 'familyMembers', id);
+        await deleteDoc(memberRef);
     };
 
   return (
