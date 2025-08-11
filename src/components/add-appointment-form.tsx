@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useRouter } from 'next/navigation';
 import { addDoc, collection } from 'firebase/firestore';
-import { db, auth } from '@/lib/firebase';
+import { db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -19,6 +19,8 @@ import {
 import { Input } from '@/components/ui/input';
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/context/auth-context';
+import { useLocalStorage } from '@/hooks/use-local-storage';
+import { Appointment } from '@/lib/types';
 
 const appointmentSchema = z.object({
   doctorName: z.string().min(1, 'Doctor name is required.'),
@@ -33,6 +35,7 @@ export function AddAppointmentForm() {
   const router = useRouter();
   const { toast } = useToast();
   const { user, isGuest } = useAuth();
+  const [localAppointments, setLocalAppointments] = useLocalStorage<Appointment[]>('guest-appointments', []);
 
   const form = useForm<z.infer<typeof appointmentSchema>>({
     resolver: zodResolver(appointmentSchema),
@@ -46,12 +49,26 @@ export function AddAppointmentForm() {
   });
 
   async function onSubmit(values: z.infer<typeof appointmentSchema>) {
-    if (isGuest || !user) {
+    if (isGuest) {
+        const newAppointment: Appointment = {
+            ...values,
+            id: new Date().toISOString(), // simple unique id
+        };
+        setLocalAppointments([...localAppointments, newAppointment]);
         toast({
-            title: "Feature for Signed-In Users",
-            description: "Please sign in to save your appointments permanently.",
+            title: "Appointment Saved Locally",
+            description: `Your appointment with Dr. ${values.doctorName} has been added. Sign in to save permanently.`,
         });
         router.push('/medicine');
+        return;
+    }
+    
+    if (!user) {
+        toast({
+            title: "Not Signed In",
+            description: "Please sign in to save your appointments.",
+            variant: "destructive"
+        });
         return;
     }
     
@@ -145,3 +162,5 @@ export function AddAppointmentForm() {
     </Form>
   );
 }
+
+    

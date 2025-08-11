@@ -15,35 +15,48 @@ import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent } from '@/components/ui/card';
+import { useLocalStorage } from '@/hooks/use-local-storage';
 
 export default function MedicinePage() {
-  const { user } = useAuth();
-  const [medications, setMedications] = useState<Medication[]>([]);
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const { user, isGuest } = useAuth();
   const { toast } = useToast();
 
+  const [localMedications, setLocalMedications] = useLocalStorage<Medication[]>('guest-medications', []);
+  const [localAppointments, setLocalAppointments] = useLocalStorage<Appointment[]>('guest-appointments', []);
+  
+  const [firestoreMedications, setFirestoreMedications] = useState<Medication[]>([]);
+  const [firestoreAppointments, setFirestoreAppointments] = useState<Appointment[]>([]);
+
   useEffect(() => {
-    if (!user) {
-        setMedications([]);
-        setAppointments([]);
+    if (!user || isGuest) {
+        setFirestoreMedications([]);
+        setFirestoreAppointments([]);
         return;
     };
 
     const medUnsub = onSnapshot(collection(db, 'users', user.uid, 'medications'), (snapshot) => {
-      setMedications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Medication)));
+      setFirestoreMedications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Medication)));
     });
 
     const apptUnsub = onSnapshot(collection(db, 'users', user.uid, 'appointments'), (snapshot) => {
-      setAppointments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Appointment)));
+      setFirestoreAppointments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Appointment)));
     });
 
     return () => {
       medUnsub();
       apptUnsub();
     }
-  }, [user]);
+  }, [user, isGuest]);
+
+  const medications = isGuest ? localMedications : firestoreMedications;
+  const appointments = isGuest ? localAppointments : firestoreAppointments;
 
   const handleDeleteMedication = async (id: string) => {
+    if(isGuest) {
+      setLocalMedications(localMedications.filter(med => med.id !== id));
+      toast({ title: "Medication Removed", description: "The medication has been removed from your local schedule."});
+      return;
+    }
     if (!user) return;
     try {
       await deleteDoc(doc(db, 'users', user.uid, 'medications', id));
@@ -54,6 +67,11 @@ export default function MedicinePage() {
   };
   
   const handleDeleteAppointment = async (id: string) => {
+    if (isGuest) {
+      setLocalAppointments(localAppointments.filter(app => app.id !== id));
+      toast({ title: "Appointment Removed", description: "The appointment has been removed from your local schedule."});
+      return;
+    }
     if (!user) return;
     try {
       await deleteDoc(doc(db, 'users', user.uid, 'appointments', id));
@@ -75,6 +93,11 @@ export default function MedicinePage() {
           <Plus className="mr-2 h-4 w-4" /> {buttonText}
         </Link>
       </Button>
+      {isGuest && (
+        <p className="text-sm text-muted-foreground mt-4">
+          <Link href="/login" className="text-primary underline">Sign in</Link> to save your data.
+        </p>
+      )}
     </div>
   );
 
@@ -98,8 +121,8 @@ export default function MedicinePage() {
             </TabsTrigger>
           </TabsList>
            <Button asChild size="sm" variant="outline">
-                <Link href="/medicine/add">
-                <Plus className="mr-2 h-4 w-4" /> Add New
+                <Link href={isGuest ? "/medicine/add" : (medications.length > 0 ? "/medicine/add" : "/appointments/add")}>
+                  <Plus className="mr-2 h-4 w-4" /> Add New
                 </Link>
             </Button>
         </div>
@@ -149,3 +172,5 @@ export default function MedicinePage() {
     </div>
   );
 }
+
+    

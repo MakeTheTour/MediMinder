@@ -23,7 +23,7 @@ export default function FamilyPage() {
     const router = useRouter();
 
     useEffect(() => {
-      if (!user) {
+      if (!user || isGuest) {
         setFamilyMembers([]);
         return;
       };
@@ -31,7 +31,7 @@ export default function FamilyPage() {
           setFamilyMembers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as FamilyMember)));
       });
       return () => unsub();
-    }, [user]);
+    }, [user, isGuest]);
 
     const handleAcceptInvitation = async (id: string) => {
         if (!user) return;
@@ -75,7 +75,7 @@ export default function FamilyPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {(user && !isGuest) && familyMembers.map(member => (
+            {(!isGuest && familyMembers.length > 0) && familyMembers.map(member => (
               <div key={member.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50">
                 <div className="flex items-center gap-4">
                    <Avatar>
@@ -102,13 +102,13 @@ export default function FamilyPage() {
                 </div>
               </div>
             ))}
-             {(isGuest || (user && familyMembers.length === 0)) && (
+             {(isGuest || familyMembers.length === 0) && (
                 <div className="text-center py-10">
                     <Users2 className="mx-auto h-12 w-12 text-muted-foreground" />
-                    <h3 className="mt-4 text-lg font-semibold">{user ? "Your family circle is empty" : "Sign in to manage your family circle"}</h3>
-                    <p className="mt-1 text-sm text-muted-foreground">{user ? "Add family members to share your progress." : "Create an account or sign in to add family and share progress."}</p>
+                    <h3 className="mt-4 text-lg font-semibold">{isGuest ? "Sign in to manage your family" : "Your family circle is empty"}</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">{isGuest ? "Create an account or sign in to add family and share progress." : "Add family members to share your progress."}</p>
                      <Button onClick={handleAddMemberClick} size="sm" className="mt-4">
-                        <Plus className="mr-2 h-4 w-4" /> {user ? 'Add Member' : 'Sign In'}
+                        <Plus className="mr-2 h-4 w-4" /> {isGuest ? 'Sign In' : 'Add Member'}
                     </Button>
                 </div>
              )}
@@ -118,3 +118,5 @@ export default function FamilyPage() {
     </div>
   );
 }
+
+    

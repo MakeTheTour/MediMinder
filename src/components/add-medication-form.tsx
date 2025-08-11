@@ -7,7 +7,7 @@ import * as z from 'zod';
 import { useRouter } from 'next/navigation';
 import { Plus, Trash2 } from 'lucide-react';
 import { addDoc, collection } from 'firebase/firestore';
-import { db, auth } from '@/lib/firebase';
+import { db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -31,6 +31,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Medication, Frequency } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/context/auth-context';
+import { useLocalStorage } from '@/hooks/use-local-storage';
 
 const medicationSchema = z.object({
   name: z.string().min(1, 'Medication name is required.'),
@@ -83,6 +84,7 @@ export function AddMedicationForm() {
   const router = useRouter();
   const { toast } = useToast();
   const { user, isGuest } = useAuth();
+  const [localMedications, setLocalMedications] = useLocalStorage<Medication[]>('guest-medications', []);
 
   const form = useForm<z.infer<typeof medicationSchema>>({
     resolver: zodResolver(medicationSchema),
@@ -112,20 +114,34 @@ export function AddMedicationForm() {
   const foodRelation = form.watch('food_relation');
 
   async function onSubmit(values: z.infer<typeof medicationSchema>) {
-    if (isGuest || !user) {
+    const medicationData: Omit<Medication, 'id'> = {
+      ...values,
+      frequency: values.frequency as Frequency,
+    };
+      
+    if (isGuest) {
+        const newMedication: Medication = {
+            ...medicationData,
+            id: new Date().toISOString(), // simple unique id
+        };
+        setLocalMedications([...localMedications, newMedication]);
         toast({
-            title: "Feature for Signed-In Users",
-            description: "Please sign in to save your medications permanently.",
+            title: "Medication Saved Locally",
+            description: `${values.name} has been added to your local schedule. Sign in to save permanently.`,
         });
         router.push('/medicine');
         return;
     }
-    
-    const medicationData: Omit<Medication, 'id'> = {
-      ...values,
-      frequency: values.frequency as Frequency,
-    }
 
+    if (!user) {
+        toast({
+            title: "Not Signed In",
+            description: "Please sign in to save your medications.",
+            variant: "destructive",
+        });
+        return;
+    }
+    
     try {
         await addDoc(collection(db, 'users', user.uid, 'medications'), medicationData);
         toast({
@@ -453,3 +469,5 @@ export function AddMedicationForm() {
     </Form>
   );
 }
+
+    

@@ -4,7 +4,6 @@
 import Link from 'next/link';
 import { User, Bell, Mic, ChevronRight, LogOut, Star } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
-import { auth } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 
@@ -36,11 +35,11 @@ const settingsItems = [
 ];
 
 export default function SettingsPage() {
-  const { user, isGuest } = useAuth();
+  const { user, isGuest, logout } = useAuth();
   const router = useRouter();
 
   const handleSignOut = async () => {
-    await auth.signOut();
+    await logout();
     router.push('/login');
   };
 
@@ -84,3 +83,5 @@ export default function SettingsPage() {
     </div>
   );
 }
+
+    

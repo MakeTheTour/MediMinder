@@ -21,8 +21,8 @@ export default function HomePage() {
   const { user, isGuest } = useAuth();
   const router = useRouter();
 
-  const [medications, setMedications] = useLocalStorage<Medication[]>('guest-medications', []);
-  const [appointments, setAppointments] = useLocalStorage<Appointment[]>('guest-appointments', []);
+  const [localMedications, setLocalMedications] = useLocalStorage<Medication[]>('guest-medications', []);
+  const [localAppointments, setLocalAppointments] = useLocalStorage<Appointment[]>('guest-appointments', []);
 
   const [firestoreMedications, setFirestoreMedications] = useState<Medication[]>([]);
   const [firestoreAppointments, setFirestoreAppointments] = useState<Appointment[]>([]);
@@ -31,6 +31,10 @@ export default function HomePage() {
 
   useEffect(() => {
     if (user && !isGuest) {
+      // Clear local storage if user is logged in
+      setLocalMedications([]);
+      setLocalAppointments([]);
+
       const medUnsub = onSnapshot(collection(db, 'users', user.uid, 'medications'), (snapshot) => {
         setFirestoreMedications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Medication)));
       });
@@ -48,10 +52,10 @@ export default function HomePage() {
       setFirestoreMedications([]);
       setFirestoreAppointments([]);
     }
-  }, [user, isGuest]);
+  }, [user, isGuest, setLocalMedications, setLocalAppointments]);
 
-  const activeMedications = isGuest ? medications : firestoreMedications;
-  const activeAppointments = isGuest ? appointments : firestoreAppointments;
+  const activeMedications = isGuest ? localMedications : firestoreMedications;
+  const activeAppointments = isGuest ? localAppointments : firestoreAppointments;
 
 
   const todaysAppointments = useMemo(() => {
@@ -116,7 +120,7 @@ export default function HomePage() {
             </div>
           ) : (
             <div className="text-center py-10">
-              <p className="text-muted-foreground mb-4">{isGuest ? "Try adding a medication or appointment to see it here." : "You have a clear schedule today!"}</p>
+              <p className="text-muted-foreground mb-4">{isGuest ? "Try adding a medication or appointment to see it here." : "You have no items on your schedule today!"}</p>
               <div className="flex justify-center gap-4">
                 <Button asChild>
                   <Link href="/medicine/add">
@@ -131,7 +135,7 @@ export default function HomePage() {
               </div>
                {isGuest && (
                  <p className="text-sm text-muted-foreground mt-4">
-                  <Link href="/login" className="text-primary underline">Sign in</Link> to save your schedule.
+                  <Link href="/login" className="text-primary underline">Sign in</Link> to save your schedule across devices.
                  </p>
                 )}
             </div>
@@ -141,3 +145,5 @@ export default function HomePage() {
     </div>
   );
 }
+
+    
