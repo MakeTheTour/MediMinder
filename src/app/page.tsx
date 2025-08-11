@@ -7,18 +7,18 @@ import { useAuth } from '@/context/auth-context';
 import { Loader2 } from 'lucide-react';
 
 export default function LandingPage() {
-  const { user, loading } = useAuth();
+  const { user, loading, isGuest } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     if (!loading) {
-      if (user) {
+      if (user || isGuest) {
         router.replace('/home');
       } else {
         router.replace('/login');
       }
     }
-  }, [user, loading, router]);
+  }, [user, loading, isGuest, router]);
 
   return (
     <div className="flex h-screen items-center justify-center">

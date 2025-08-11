@@ -18,13 +18,19 @@ const AuthContext = createContext<AuthContextType>({ user: null, loading: true, 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isGuest, setIsGuestState] = useState(false);
+  const [isGuest, setIsGuestState] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.sessionStorage.getItem('isGuest') === 'true';
+  });
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
       if (user) {
         setIsGuestState(false);
+        if (typeof window !== 'undefined') {
+          window.sessionStorage.removeItem('isGuest');
+        }
       }
       setLoading(false);
     });
@@ -36,6 +42,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsGuestState(isGuest);
       if(isGuest) {
           setUser(null);
+          if (typeof window !== 'undefined') {
+            window.sessionStorage.setItem('isGuest', 'true');
+          }
       }
   }
 

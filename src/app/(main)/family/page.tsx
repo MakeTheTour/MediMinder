@@ -53,7 +53,7 @@ export default function FamilyPage() {
     };
     
     const handleAddMemberClick = () => {
-        if (!user) {
+        if (isGuest || !user) {
             router.push('/login');
         } else {
             router.push('/family/add');
@@ -102,7 +102,7 @@ export default function FamilyPage() {
                 </div>
               </div>
             ))}
-             {(isGuest || !user) && familyMembers.length === 0 && (
+             {(!user || familyMembers.length === 0) && (
                 <div className="text-center py-10">
                     <Users2 className="mx-auto h-12 w-12 text-muted-foreground" />
                     <h3 className="mt-4 text-lg font-semibold">{user ? "Your family circle is empty" : "Sign in to manage your family circle"}</h3>

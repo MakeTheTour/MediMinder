@@ -13,9 +13,12 @@ import { format } from 'date-fns';
 import { useAuth } from '@/context/auth-context';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { useRouter } from 'next/navigation';
+
 
 export default function HomePage() {
   const { user, isGuest } = useAuth();
+  const router = useRouter();
   const [medications, setMedications] = useState<Medication[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [greeting, setGreeting] = useState('');
@@ -42,12 +45,14 @@ export default function HomePage() {
   }, [user]);
 
   const todaysAppointments = useMemo(() => {
+    if (isGuest) return [];
     const today = new Date();
     const todayStr = format(today, 'yyyy-MM-dd');
     return appointments.filter(app => app.date === todayStr);
-  }, [appointments]);
+  }, [appointments, isGuest]);
 
   const todaysMedications = useMemo(() => {
+    if (isGuest) return [];
     const today = new Date();
     const dayOfWeek = today.getDay();
     return medications.filter(med => {
@@ -56,7 +61,7 @@ export default function HomePage() {
         if (med.frequency === 'Monthly') return med.dayOfMonth === today.getDate();
         return false;
     });
-  }, [medications]);
+  }, [medications, isGuest]);
 
 
   useEffect(() => {
@@ -67,11 +72,20 @@ export default function HomePage() {
   }, []);
 
   const sortedSchedule = useMemo(() => {
+    if (isGuest) return [];
     return [
       ...todaysMedications.flatMap(med => med.times.map(time => ({ type: 'medication' as const, time, data: med }))),
       ...todaysAppointments.map(app => ({ type: 'appointment' as const, time: app.time, data: app }))
     ].sort((a, b) => a.time.localeCompare(b.time));
-  }, [todaysMedications, todaysAppointments]);
+  }, [todaysMedications, todaysAppointments, isGuest]);
+
+  const handleAddClick = (path: string) => {
+    if (isGuest) {
+      router.push('/login');
+    } else {
+      router.push(path);
+    }
+  };
 
 
   return (
@@ -98,17 +112,13 @@ export default function HomePage() {
             </div>
           ) : (
             <div className="text-center py-10">
-              <p className="text-muted-foreground mb-4">{user ? "You have a clear schedule today!" : "Sign in to see your schedule."}</p>
+              <p className="text-muted-foreground mb-4">{user ? "You have a clear schedule today!" : isGuest ? "Sign in to see and manage your schedule." : "Sign in to see your schedule."}</p>
               <div className="flex justify-center gap-4">
-                <Button asChild>
-                  <Link href={user ? "/medicine/add" : "/login"}>
-                    <Plus className="mr-2 h-4 w-4" /> Add Medication
-                  </Link>
+                <Button onClick={() => handleAddClick('/medicine/add')}>
+                  <Plus className="mr-2 h-4 w-4" /> Add Medication
                 </Button>
-                 <Button asChild variant="secondary">
-                  <Link href={user ? "/appointments/add" : "/login"}>
-                    <Plus className="mr-2 h-4 w-4" /> Add Appointment
-                  </Link>
+                 <Button onClick={() => handleAddClick('/appointments/add')} variant="secondary">
+                  <Plus className="mr-2 h-4 w-4" /> Add Appointment
                 </Button>
               </div>
             </div>
