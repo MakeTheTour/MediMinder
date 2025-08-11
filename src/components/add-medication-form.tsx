@@ -42,7 +42,6 @@ const medicationSchema = z.object({
   food_time_minutes: z.coerce.number().optional(),
 
   total_qty: z.coerce.number().min(1, 'Total quantity must be at least 1.'),
-  consumption_count: z.coerce.number().min(1, 'Consumption count must be at least 1 per day.'),
   stock_alert_qty: z.coerce.number().min(0, 'Stock alert quantity cannot be negative.'),
 
   start_date: z.string().min(1, 'Start date is required'),
@@ -95,7 +94,6 @@ export function AddMedicationForm() {
       food_relation: 'with',
       food_time_minutes: 30,
       total_qty: 30,
-      consumption_count: 1,
       stock_alert_qty: 5,
       start_date: new Date().toISOString().split('T')[0],
       end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
@@ -296,24 +294,6 @@ export function AddMedicationForm() {
             />
         </div>
 
-        <FormField
-            control={form.control}
-            name="consumption_count"
-            render={({ field }) => (
-                <FormItem>
-                    <FormLabel>Expected Daily Doses</FormLabel>
-                    <FormControl>
-                        <Input type="number" placeholder="e.g., 3" {...field} />
-                    </FormControl>
-                    <FormDescription>
-                        How many doses are expected to be taken per day on average.
-                    </FormDescription>
-                    <FormMessage />
-                </FormItem>
-            )}
-        />
-
-
         <div className="grid grid-cols-2 gap-4">
             <FormField
                 control={form.control}
@@ -470,4 +450,3 @@ export function AddMedicationForm() {
   );
 }
 
-    

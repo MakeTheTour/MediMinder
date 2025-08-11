@@ -9,7 +9,6 @@ export interface Medication {
   food_relation: 'before' | 'after' | 'with';
   food_time_minutes?: number;
   total_qty: number;
-  consumption_count: number;
   stock_alert_qty: number;
   start_date: string;
   end_date: string;
