@@ -210,13 +210,13 @@ export function AddMedicationForm() {
                             <FormControl>
                             <RadioGroupItem value="before" />
                             </FormControl>
-                            <FormLabel className="font-normal">Before Food</FormLabel>
+                            <FormLabel className="font-normal">Before to Food</FormLabel>
                         </FormItem>
                         <FormItem className="flex items-center space-x-3 space-y-0">
                             <FormControl>
                             <RadioGroupItem value="after" />
                             </FormControl>
-                            <FormLabel className="font-normal">After Food</FormLabel>
+                            <FormLabel className="font-normal">After to Food</FormLabel>
                         </FormItem>
                         <FormItem className="flex items-center space-x-3 space-y-0">
                             <FormControl>
