@@ -14,7 +14,7 @@ import {
   SidebarInset,
 } from '@/components/ui/sidebar';
 import { usePathname, useRouter } from 'next/navigation';
-import { Users, LayoutDashboard, DollarSign, Megaphone } from 'lucide-react';
+import { Users, LayoutDashboard, DollarSign, Megaphone, CreditCard } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/context/auth-context';
 import { Loader2 } from 'lucide-react';
@@ -24,6 +24,7 @@ const adminNavItems = [
   { href: '/admin/users', label: 'Live Users', icon: Users },
   { href: '/admin/ads', label: 'Custom Ads', icon: Megaphone },
   { href: '/admin/premium', label: 'Premium Plan', icon: DollarSign },
+  { href: '/admin/payments', label: 'Payments', icon: CreditCard },
 ];
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
