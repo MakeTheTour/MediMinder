@@ -17,7 +17,7 @@ import { useRouter } from 'next/navigation';
 
 
 export default function FamilyPage() {
-    const { user } = useAuth();
+    const { user, isGuest } = useAuth();
     const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
     const { toast } = useToast();
     const router = useRouter();
@@ -102,11 +102,11 @@ export default function FamilyPage() {
                 </div>
               </div>
             ))}
-             {(!user || familyMembers.length === 0) && (
+             {(isGuest || !user) && familyMembers.length === 0 && (
                 <div className="text-center py-10">
                     <Users2 className="mx-auto h-12 w-12 text-muted-foreground" />
                     <h3 className="mt-4 text-lg font-semibold">{user ? "Your family circle is empty" : "Sign in to manage your family circle"}</h3>
-                    <p className="mt-1 text-sm text-muted-foreground">{user ? "Add family members to share your progress." : "Create an account to add family and share progress."}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">{user ? "Add family members to share your progress." : "Create an account or sign in to add family and share progress."}</p>
                      <Button onClick={handleAddMemberClick} size="sm" className="mt-4">
                         <Plus className="mr-2 h-4 w-4" /> {user ? 'Add Member' : 'Sign In'}
                     </Button>

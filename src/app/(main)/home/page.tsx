@@ -15,7 +15,7 @@ import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 export default function HomePage() {
-  const { user } = useAuth();
+  const { user, isGuest } = useAuth();
   const [medications, setMedications] = useState<Medication[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [greeting, setGreeting] = useState('');
@@ -86,7 +86,7 @@ export default function HomePage() {
           <CardTitle>Today's Schedule</CardTitle>
         </CardHeader>
         <CardContent>
-          {sortedSchedule.length > 0 ? (
+          {(user || isGuest) && sortedSchedule.length > 0 ? (
             <div className="space-y-4">
               {sortedSchedule.map((item, index) => (
                 item.type === 'medication' ? (

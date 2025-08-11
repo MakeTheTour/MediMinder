@@ -18,13 +18,13 @@ const AuthContext = createContext<AuthContextType>({ user: null, loading: true, 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isGuest, setIsGuest] = useState(false);
+  const [isGuest, setIsGuestState] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
       if (user) {
-        setIsGuest(false);
+        setIsGuestState(false);
       }
       setLoading(false);
     });
@@ -33,23 +33,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
   
   const setGuest = (isGuest: boolean) => {
-      setIsGuest(isGuest);
+      setIsGuestState(isGuest);
       if(isGuest) {
           setUser(null);
       }
   }
 
-  if (loading) {
-    return (
-        <div className="flex h-screen items-center justify-center">
-            <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        </div>
-    )
+  const value = {
+      user,
+      loading,
+      isGuest,
+      setGuest
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, isGuest, setGuest }}>
-      {children}
+    <AuthContext.Provider value={value}>
+      {loading ? (
+         <div className="flex h-screen items-center justify-center">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        </div>
+      ) : children}
     </AuthContext.Provider>
   );
 }
