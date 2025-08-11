@@ -73,7 +73,7 @@ const medicationSchema = z.object({
     }
     return true;
 }, {
-    message: 'Please specify the time in minutes.',
+    message: 'Please specify a time greater than 0 minutes.',
     path: ['food_time_minutes'],
 });
 
