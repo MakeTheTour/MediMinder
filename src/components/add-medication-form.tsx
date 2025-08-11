@@ -41,9 +41,6 @@ const medicationSchema = z.object({
   food_relation: z.enum(['before', 'after', 'with']),
   food_time_minutes: z.coerce.number().optional(),
 
-  total_qty: z.coerce.number().min(1, 'Total quantity must be at least 1.'),
-  stock_alert_qty: z.coerce.number().min(0, 'Stock alert quantity cannot be negative.'),
-
   start_date: z.string().min(1, 'Start date is required'),
   end_date: z.string().min(1, 'End date is required'),
 
@@ -93,8 +90,6 @@ export function AddMedicationForm() {
       intake_qty: 1,
       food_relation: 'with',
       food_time_minutes: 30,
-      total_qty: 30,
-      stock_alert_qty: 5,
       start_date: new Date().toISOString().split('T')[0],
       end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       frequency: 'Daily',
@@ -260,39 +255,6 @@ export function AddMedicationForm() {
             )}
             />
         )}
-
-
-        <div className="grid grid-cols-2 gap-4">
-             <FormField
-                control={form.control}
-                name="total_qty"
-                render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Total Bought Quantity</FormLabel>
-                        <FormControl>
-                            <Input type="number" placeholder="e.g., 100" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                )}
-            />
-             <FormField
-                control={form.control}
-                name="stock_alert_qty"
-                render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Stock Alert At</FormLabel>
-                        <FormControl>
-                            <Input type="number" placeholder="e.g., 10" {...field} />
-                        </FormControl>
-                         <FormDescription>
-                            Get notified when stock is low.
-                        </FormDescription>
-                        <FormMessage />
-                    </FormItem>
-                )}
-            />
-        </div>
 
         <div className="grid grid-cols-2 gap-4">
             <FormField
