@@ -1,9 +1,18 @@
+
 export type Frequency = 'Daily' | 'Hourly' | 'Weekly' | 'Monthly';
 
 export interface Medication {
   id: string;
   name: string;
-  dosage: string;
+  dosage: string; // e.g. "1 pill", "10ml"
+  intake_qty: number; // e.g. 1, 2
+  food_relation: 'before' | 'after' | 'with';
+  food_time_minutes?: number;
+  total_qty: number;
+  consumption_count: number;
+  stock_alert_qty: number;
+  start_date: string;
+  end_date: string;
   frequency: Frequency;
   times: string[];
   daysOfWeek?: number[];

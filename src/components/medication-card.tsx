@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Pill, Clock, Trash2, MoreVertical } from 'lucide-react';
@@ -30,7 +31,7 @@ export function MedicationCard({ medication, onDelete, specificTime }: Medicatio
             </div>
             <div>
               <h3 className="font-bold text-lg text-foreground">{medication.name}</h3>
-              <p className="text-sm text-muted-foreground">{medication.dosage}</p>
+              <p className="text-sm text-muted-foreground">{medication.intake_qty} {medication.dosage}</p>
             </div>
           </div>
           {onDelete && (

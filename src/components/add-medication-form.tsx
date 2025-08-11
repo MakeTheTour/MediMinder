@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -26,13 +27,26 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Medication, Frequency } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/context/auth-context';
 
 const medicationSchema = z.object({
   name: z.string().min(1, 'Medication name is required.'),
-  dosage: z.string().min(1, 'Dosage is required (e.g., "1 pill", "10ml").'),
+  dosage: z.string().min(1, 'Dosage description is required (e.g., "pills", "ml").'),
+  intake_qty: z.coerce.number().min(1, 'Intake quantity must be at least 1.'),
+  
+  food_relation: z.enum(['before', 'after', 'with']),
+  food_time_minutes: z.coerce.number().optional(),
+
+  total_qty: z.coerce.number().min(1, 'Total quantity must be at least 1.'),
+  consumption_count: z.coerce.number().min(1, 'Consumption count must be at least 1 per day.'),
+  stock_alert_qty: z.coerce.number().min(0, 'Stock alert quantity cannot be negative.'),
+
+  start_date: z.string().min(1, 'Start date is required'),
+  end_date: z.string().min(1, 'End date is required'),
+
   frequency: z.enum(['Daily', 'Hourly', 'Weekly', 'Monthly']),
   times: z.array(z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, 'Invalid time format (HH:MM)')).min(1, 'At least one time is required.'),
   daysOfWeek: z.array(z.number()).optional(),
@@ -53,6 +67,14 @@ const medicationSchema = z.object({
 }, {
     message: 'A day of the month must be selected for monthly frequency.',
     path: ['dayOfMonth'],
+}).refine(data => {
+    if (data.food_relation === 'before' || data.food_relation === 'after') {
+        return data.food_time_minutes !== undefined && data.food_time_minutes > 0;
+    }
+    return true;
+}, {
+    message: 'Please specify the time in minutes.',
+    path: ['food_time_minutes'],
 });
 
 const weekDays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -66,7 +88,14 @@ export function AddMedicationForm() {
     resolver: zodResolver(medicationSchema),
     defaultValues: {
       name: '',
-      dosage: '',
+      dosage: 'pill',
+      intake_qty: 1,
+      food_relation: 'with',
+      total_qty: 30,
+      consumption_count: 1,
+      stock_alert_qty: 5,
+      start_date: new Date().toISOString().split('T')[0],
+      end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       frequency: 'Daily',
       times: ['09:00'],
       daysOfWeek: [],
@@ -79,6 +108,7 @@ export function AddMedicationForm() {
   });
 
   const frequency = form.watch('frequency');
+  const foodRelation = form.watch('food_relation');
 
   async function onSubmit(values: z.infer<typeof medicationSchema>) {
     if (isGuest || !user) {
@@ -124,19 +154,170 @@ export function AddMedicationForm() {
             </FormItem>
           )}
         />
+
+        <div className="grid grid-cols-2 gap-4">
+            <FormField
+            control={form.control}
+            name="intake_qty"
+            render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Intake Quantity</FormLabel>
+                    <FormControl>
+                        <Input type="number" placeholder="e.g., 1" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+            )}
+            />
+            <FormField
+            control={form.control}
+            name="dosage"
+            render={({ field }) => (
+                <FormItem>
+                <FormLabel>Dosage Unit</FormLabel>
+                <FormControl>
+                    <Input placeholder="e.g., pill, mg, ml" {...field} />
+                </FormControl>
+                <FormMessage />
+                </FormItem>
+            )}
+            />
+        </div>
+
         <FormField
-          control={form.control}
-          name="dosage"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Dosage</FormLabel>
-              <FormControl>
-                <Input placeholder="e.g., 1 pill, 500mg" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+            control={form.control}
+            name="food_relation"
+            render={({ field }) => (
+                <FormItem className="space-y-3">
+                    <FormLabel>Relation to Food</FormLabel>
+                    <FormControl>
+                        <RadioGroup
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                        className="flex flex-col space-y-1"
+                        >
+                        <FormItem className="flex items-center space-x-3 space-y-0">
+                            <FormControl>
+                            <RadioGroupItem value="before" />
+                            </FormControl>
+                            <FormLabel className="font-normal">Before Food</FormLabel>
+                        </FormItem>
+                        <FormItem className="flex items-center space-x-3 space-y-0">
+                            <FormControl>
+                            <RadioGroupItem value="after" />
+                            </FormControl>
+                            <FormLabel className="font-normal">After Food</FormLabel>
+                        </FormItem>
+                        <FormItem className="flex items-center space-x-3 space-y-0">
+                            <FormControl>
+                            <RadioGroupItem value="with" />
+                            </FormControl>
+                            <FormLabel className="font-normal">With Food</FormLabel>
+                        </FormItem>
+                        </RadioGroup>
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+            )}
         />
+        
+        {(foodRelation === 'before' || foodRelation === 'after') && (
+            <FormField
+            control={form.control}
+            name="food_time_minutes"
+            render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Time {foodRelation} food (in minutes)</FormLabel>
+                    <FormControl>
+                        <Input type="number" placeholder="e.g., 30" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+            )}
+            />
+        )}
+
+
+        <div className="grid grid-cols-2 gap-4">
+             <FormField
+                control={form.control}
+                name="total_qty"
+                render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Total Bought Quantity</FormLabel>
+                        <FormControl>
+                            <Input type="number" placeholder="e.g., 100" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                )}
+            />
+             <FormField
+                control={form.control}
+                name="stock_alert_qty"
+                render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Stock Alert At</FormLabel>
+                        <FormControl>
+                            <Input type="number" placeholder="e.g., 10" {...field} />
+                        </FormControl>
+                         <FormDescription>
+                            Get notified when stock is low.
+                        </FormDescription>
+                        <FormMessage />
+                    </FormItem>
+                )}
+            />
+        </div>
+
+        <FormField
+            control={form.control}
+            name="consumption_count"
+            render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Expected Daily Doses</FormLabel>
+                    <FormControl>
+                        <Input type="number" placeholder="e.g., 3" {...field} />
+                    </FormControl>
+                    <FormDescription>
+                        How many doses are expected to be taken per day on average.
+                    </FormDescription>
+                    <FormMessage />
+                </FormItem>
+            )}
+        />
+
+
+        <div className="grid grid-cols-2 gap-4">
+            <FormField
+                control={form.control}
+                name="start_date"
+                render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Start Date</FormLabel>
+                        <FormControl>
+                            <Input type="date" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                )}
+            />
+            <FormField
+                control={form.control}
+                name="end_date"
+                render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>End Date</FormLabel>
+                        <FormControl>
+                            <Input type="date" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                )}
+            />
+        </div>
+
+
         <FormField
           control={form.control}
           name="frequency"
@@ -151,6 +332,7 @@ export function AddMedicationForm() {
                 </FormControl>
                 <SelectContent>
                   <SelectItem value="Daily">Daily</SelectItem>
+                  <SelectItem value="Hourly">Hourly</SelectItem>
                   <SelectItem value="Weekly">Weekly</SelectItem>
                   <SelectItem value="Monthly">Monthly</SelectItem>
                 </SelectContent>
