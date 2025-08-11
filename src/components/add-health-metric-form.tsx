@@ -61,7 +61,7 @@ export function AddHealthMetricForm() {
         return;
     }
     
-    const healthMetricData: Omit<HealthMetric, 'id' | 'userId'> & {userId?: string} = {
+    const healthMetricData: Omit<HealthMetric, 'id' | 'userId'> = {
         date: new Date(values.date).toISOString(),
         weight: values.weight,
         bloodPressure: (values.systolic && values.diastolic) ? { systolic: values.systolic, diastolic: values.diastolic } : undefined,
