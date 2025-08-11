@@ -11,59 +11,69 @@ import { MedicationCard } from '@/components/medication-card';
 import { AppointmentCard } from '@/components/appointment-card';
 import { format } from 'date-fns';
 import { useAuth } from '@/context/auth-context';
-import { collection, onSnapshot } from 'firebase/firestore';
+import { collection, onSnapshot, doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
+import { useLocalStorage } from '@/hooks/use-local-storage';
 
 
 export default function HomePage() {
   const { user, isGuest } = useAuth();
   const router = useRouter();
-  const [medications, setMedications] = useState<Medication[]>([]);
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
+
+  const [medications, setMedications] = useLocalStorage<Medication[]>('guest-medications', []);
+  const [appointments, setAppointments] = useLocalStorage<Appointment[]>('guest-appointments', []);
+
+  const [firestoreMedications, setFirestoreMedications] = useState<Medication[]>([]);
+  const [firestoreAppointments, setFirestoreAppointments] = useState<Appointment[]>([]);
+
   const [greeting, setGreeting] = useState('');
 
   useEffect(() => {
-    if (!user) {
-      setMedications([]);
-      setAppointments([]);
-      return;
-    };
+    if (user && !isGuest) {
+      const medUnsub = onSnapshot(collection(db, 'users', user.uid, 'medications'), (snapshot) => {
+        setFirestoreMedications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Medication)));
+      });
 
-    const medUnsub = onSnapshot(collection(db, 'users', user.uid, 'medications'), (snapshot) => {
-        setMedications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Medication)));
-    });
+      const apptUnsub = onSnapshot(collection(db, 'users', user.uid, 'appointments'), (snapshot) => {
+        setFirestoreAppointments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Appointment)));
+      });
 
-    const apptUnsub = onSnapshot(collection(db, 'users', user.uid, 'appointments'), (snapshot) => {
-        setAppointments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Appointment)));
-    });
-
-    return () => {
+      return () => {
         medUnsub();
         apptUnsub();
+      };
+    } else {
+      // Clear firestore data when user logs out or is a guest
+      setFirestoreMedications([]);
+      setFirestoreAppointments([]);
     }
-  }, [user]);
+  }, [user, isGuest]);
+
+  const activeMedications = isGuest ? medications : firestoreMedications;
+  const activeAppointments = isGuest ? appointments : firestoreAppointments;
+
 
   const todaysAppointments = useMemo(() => {
-    if (isGuest && !user) return appointments; // Show local state for guests
-    if (!user) return [];
     const today = new Date();
     const todayStr = format(today, 'yyyy-MM-dd');
-    return appointments.filter(app => app.date === todayStr);
-  }, [appointments, isGuest, user]);
+    return activeAppointments.filter(app => app.date === todayStr);
+  }, [activeAppointments]);
 
   const todaysMedications = useMemo(() => {
-    if (isGuest && !user) return medications; // Show local state for guests
-    if (!user) return [];
     const today = new Date();
-    const dayOfWeek = today.getDay();
-    return medications.filter(med => {
+    const dayOfWeek = today.getDay(); // Sunday - 0, Monday - 1
+    return activeMedications.filter(med => {
         if (med.frequency === 'Daily') return true;
-        if (med.frequency === 'Weekly') return med.daysOfWeek?.includes(dayOfWeek);
-        if (med.frequency === 'Monthly') return med.dayOfMonth === today.getDate();
+        if (med.frequency === 'Weekly') {
+            return med.daysOfWeek?.includes(dayOfWeek);
+        }
+        if (med.frequency === 'Monthly') {
+            return med.dayOfMonth === today.getDate();
+        }
         return false;
     });
-  }, [medications, isGuest, user]);
+  }, [activeMedications]);
 
 
   useEffect(() => {
