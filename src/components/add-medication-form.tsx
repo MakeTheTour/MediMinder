@@ -34,7 +34,7 @@ import { useAuth } from '@/context/auth-context';
 
 const medicationSchema = z.object({
   name: z.string().min(1, 'Medication name is required.'),
-  dosage: z.string().min(1, 'Dosage description is required (e.g., "pills", "ml").'),
+  dosage: z.enum(['Tablet', 'Capsule', 'Spoon/cap']),
   intake_qty: z.coerce.number().min(1, 'Intake quantity must be at least 1.'),
   
   food_relation: z.enum(['before', 'after', 'with']),
@@ -88,7 +88,7 @@ export function AddMedicationForm() {
     resolver: zodResolver(medicationSchema),
     defaultValues: {
       name: '',
-      dosage: 'pill',
+      dosage: 'Tablet',
       intake_qty: 1,
       food_relation: 'with',
       total_qty: 30,
@@ -175,9 +175,18 @@ export function AddMedicationForm() {
             render={({ field }) => (
                 <FormItem>
                 <FormLabel>Dosage Unit</FormLabel>
-                <FormControl>
-                    <Input placeholder="e.g., pill, mg, ml" {...field} />
-                </FormControl>
+                 <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a dosage unit" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="Tablet">Tablet</SelectItem>
+                      <SelectItem value="Capsule">Capsule</SelectItem>
+                      <SelectItem value="Spoon/cap">Spoon/cap</SelectItem>
+                    </SelectContent>
+                  </Select>
                 <FormMessage />
                 </FormItem>
             )}
@@ -443,3 +452,5 @@ export function AddMedicationForm() {
     </Form>
   );
 }
+
+    
