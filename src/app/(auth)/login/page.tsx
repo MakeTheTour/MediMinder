@@ -2,12 +2,24 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { signInWithPopup, GoogleAuthProvider, FacebookAuthProvider, UserCredential, getAdditionalUserInfo, User } from 'firebase/auth';
+import Link from 'next/link';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { signInWithPopup, GoogleAuthProvider, FacebookAuthProvider, signInWithEmailAndPassword, User } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { Separator } from '@/components/ui/separator';
+
+const loginSchema = z.object({
+  email: z.string().email('Invalid email address.'),
+  password: z.string().min(1, 'Password is required.'),
+});
 
 const GoogleIcon = () => (
     <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
@@ -27,13 +39,20 @@ const FacebookIcon = () => (
 export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
+
+  const form = useForm<z.infer<typeof loginSchema>>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: '',
+      password: '',
+    },
+  });
   
   const handleUserInFirestore = async (user: User) => {
     const userRef = doc(db, "users", user.uid);
     const userSnap = await getDoc(userRef);
 
     if (!userSnap.exists()) {
-      // User is new, create a new document
       await setDoc(userRef, {
         uid: user.uid,
         name: user.displayName,
@@ -43,12 +62,24 @@ export default function LoginPage() {
     }
   }
 
+  const handleEmailSignIn = async (values: z.infer<typeof loginSchema>) => {
+    try {
+      await signInWithEmailAndPassword(auth, values.email, values.password);
+      router.push('/home');
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Sign In Failed',
+        description: error.message,
+      });
+    }
+  };
 
   const handleSocialSignIn = async (provider: GoogleAuthProvider | FacebookAuthProvider) => {
     try {
       const result = await signInWithPopup(auth, provider);
       await handleUserInFirestore(result.user);
-      router.push('/');
+      router.push('/home');
     } catch (error: any) {
         let errorMessage = error.message;
         if (error.code === 'auth/account-exists-with-different-credential') {
@@ -81,14 +112,67 @@ export default function LoginPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <Button onClick={handleGoogleSignIn} className="w-full" variant="outline">
-                <GoogleIcon />
-                Sign in with Google
-            </Button>
-            <Button onClick={handleFacebookSignIn} className="w-full" variant="outline">
-                <FacebookIcon />
-                Sign in with Facebook
-            </Button>
+             <Form {...form}>
+                <form onSubmit={form.handleSubmit(handleEmailSignIn)} className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email</FormLabel>
+                        <FormControl>
+                          <Input type="email" placeholder="you@example.com" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="password"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Password</FormLabel>
+                        <FormControl>
+                          <Input type="password" placeholder="••••••••" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+                    {form.formState.isSubmitting ? 'Signing In...' : 'Sign In'}
+                  </Button>
+                </form>
+              </Form>
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">
+                  Or continue with
+                </span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+                <Button onClick={handleGoogleSignIn} variant="outline">
+                    <GoogleIcon />
+                    Google
+                </Button>
+                <Button onClick={handleFacebookSignIn} variant="outline">
+                    <FacebookIcon />
+                    Facebook
+                </Button>
+            </div>
+             <p className="text-center text-sm text-muted-foreground">
+              Don't have an account?{' '}
+              <Link href="/signup" className="font-semibold text-primary hover:underline">
+                Sign Up
+              </Link>
+            </p>
           </div>
         </CardContent>
       </Card>
