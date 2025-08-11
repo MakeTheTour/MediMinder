@@ -1,9 +1,16 @@
 
 'use client';
 
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle2, Star, Users } from "lucide-react";
+import { CheckCircle2, Star, Users, Loader2 } from "lucide-react";
+import { useAuth } from "@/context/auth-context";
+import { useToast } from "@/hooks/use-toast";
+import { doc, setDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { sendPremiumConfirmationEmail } from "@/ai/flows/send-premium-confirmation-email";
 
 const premiumFeatures = [
   {
@@ -24,6 +31,52 @@ const premiumFeatures = [
 ];
 
 export default function PremiumPage() {
+  const { user, isGuest } = useAuth();
+  const router = useRouter();
+  const { toast } = useToast();
+  const [isUpgrading, setIsUpgrading] = useState(false);
+
+  const handleUpgrade = async () => {
+    if (isGuest || !user) {
+      router.push('/login');
+      return;
+    }
+
+    setIsUpgrading(true);
+
+    try {
+      // Simulate payment processing
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Update user in firestore
+      const userRef = doc(db, 'users', user.uid);
+      await setDoc(userRef, { isPremium: true }, { merge: true });
+
+      // Send confirmation email
+      await sendPremiumConfirmationEmail({
+          name: user.displayName || 'Valued User',
+          email: user.email || '',
+      })
+
+      toast({
+        title: "Upgrade Successful!",
+        description: "Welcome to MediMinder Premium.",
+      });
+
+      router.push('/settings/premium/success');
+
+    } catch (error) {
+      console.error("Upgrade failed:", error);
+      toast({
+        variant: 'destructive',
+        title: "Upgrade Failed",
+        description: "We couldn't process your upgrade. Please try again.",
+      });
+    } finally {
+      setIsUpgrading(false);
+    }
+  };
+
   return (
     <div className="container mx-auto max-w-2xl p-4">
       <header className="mb-6">
@@ -52,8 +105,13 @@ export default function PremiumPage() {
             ))}
         </CardContent>
         <CardFooter>
-            <Button className="w-full" size="lg">
-                Upgrade to Premium
+            <Button className="w-full" size="lg" onClick={handleUpgrade} disabled={isUpgrading}>
+                 {isUpgrading ? (
+                    <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Upgrading...
+                    </>
+                 ) : 'Upgrade to Premium'}
             </Button>
         </CardFooter>
       </Card>
