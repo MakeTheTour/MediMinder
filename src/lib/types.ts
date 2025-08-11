@@ -23,3 +23,9 @@ export interface UserProfile {
   name: string;
   email: string;
 }
+
+export interface FamilyMember {
+  id: string;
+  name: string;
+  relation: string;
+}
