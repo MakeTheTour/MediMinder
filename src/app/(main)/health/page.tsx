@@ -15,6 +15,7 @@ import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import { generateHealthInsights, HealthInsightsOutput } from '@/ai/flows/health-insights-flow';
 import { useToast } from '@/hooks/use-toast';
+import { SymptomChecker } from '@/components/symptom-checker';
 
 function HealthHistoryItem({ metric }: { metric: HealthMetric }) {
     return (
@@ -89,6 +90,8 @@ export default function HealthPage() {
             <Plus className="mr-2 h-4 w-4" /> {isGuest ? 'Sign In to Log' : 'Add Reading'}
         </Button>
       </header>
+      
+      <SymptomChecker />
       
       <Card>
         <CardHeader>
