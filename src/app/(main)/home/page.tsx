@@ -79,36 +79,36 @@ export default function HomePage() {
     });
   }, [activeMedications]);
 
-  useEffect(() => {
-    const checkReminders = () => {
-      if (reminder) return; // Don't check for new reminders if one is already showing
+  const checkReminders = useCallback(() => {
+    if (reminder) return; // Don't check for new reminders if one is already showing
 
-      const now = new Date();
-      
-      for (const med of todaysMedications) {
-        for (const time of med.times) {
-          const reminderTime = parse(time, 'HH:mm', new Date());
-          
-          // Check if a log already exists for this specific medication at this specific time on this day
-          const alreadyHandled = adherenceLogs.some(
-            log => log.medicationId === med.id && 
-                   format(new Date(log.takenAt), 'yyyy-MM-dd') === format(now, 'yyyy-MM-dd') &&
-                   format(parse(time, 'HH:mm', new Date()), 'HH:mm') === format(reminderTime, 'HH:mm')
-          );
-          
-          if (now >= reminderTime && !alreadyHandled) {
-            setReminder({ medication: med, time });
-            return; // Show one reminder at a time
-          }
+    const now = new Date();
+    
+    for (const med of todaysMedications) {
+      for (const time of med.times) {
+        const reminderTime = parse(time, 'HH:mm', new Date());
+        
+        // Check if a log already exists for this specific medication at this specific time on this day
+        const alreadyHandled = adherenceLogs.some(
+          log => log.medicationId === med.id && 
+                 format(new Date(log.takenAt), 'yyyy-MM-dd') === format(now, 'yyyy-MM-dd') &&
+                 format(parse(time, 'HH:mm', new Date()), 'HH:mm') === format(reminderTime, 'HH:mm')
+        );
+        
+        if (now >= reminderTime && !alreadyHandled) {
+          setReminder({ medication: med, time });
+          return; // Show one reminder at a time
         }
       }
-    };
-    
+    }
+  }, [adherenceLogs, todaysMedications, reminder]);
+
+  useEffect(() => {
     const interval = setInterval(checkReminders, 30000); // Check every 30 seconds
     checkReminders(); // Check immediately on load
 
     return () => clearInterval(interval);
-  }, [todaysMedications, adherenceLogs]);
+  }, [checkReminders]);
 
 
   const handleReminderAction = async (medication: Medication, status: 'taken' | 'skipped') => {
