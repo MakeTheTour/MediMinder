@@ -2,16 +2,16 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Plus, ShieldAlert } from 'lucide-react';
+import { Plus, ShieldAlert, Stethoscope } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Medication, Appointment, AdherenceLog, FamilyMember } from '@/lib/types';
 import { MedicationCard } from '@/components/medication-card';
 import { AppointmentCard } from '@/components/appointment-card';
-import { format, parse } from 'date-fns';
+import { format, parse, isToday, isFuture } from 'date-fns';
 import { useAuth } from '@/context/auth-context';
-import { collection, onSnapshot } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, orderBy, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { useLocalStorage } from '@/hooks/use-local-storage';
@@ -47,7 +47,8 @@ export default function HomePage() {
         setFirestoreMedications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Medication)));
       });
 
-      const apptUnsub = onSnapshot(collection(db, 'users', user.uid, 'appointments'), (snapshot) => {
+      const apptQuery = query(collection(db, 'users', user.uid, 'appointments'), orderBy('date', 'asc'));
+      const apptUnsub = onSnapshot(apptQuery, (snapshot) => {
         setFirestoreAppointments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Appointment)));
       });
 
@@ -177,9 +178,15 @@ export default function HomePage() {
 
 
   const todaysAppointments = useMemo(() => {
-    const today = new Date();
-    const todayStr = format(today, 'yyyy-MM-dd');
-    return activeAppointments.filter(app => app.date === todayStr);
+    return activeAppointments.filter(app => isToday(new Date(app.date)));
+  }, [activeAppointments]);
+
+  const nextAppointment = useMemo(() => {
+    const futureAppointments = activeAppointments.filter(app => {
+        const appDate = new Date(app.date);
+        return isFuture(appDate) || isToday(appDate);
+    });
+    return futureAppointments[0] || null;
   }, [activeAppointments]);
 
 
@@ -210,15 +217,30 @@ export default function HomePage() {
             onSkip={() => handleReminderAction(reminder.medication, 'skipped')}
         />
     )}
-    <div className="container mx-auto max-w-2xl p-4">
+    <div className="container mx-auto max-w-2xl p-4 space-y-6">
       <header className="mb-6">
         <h1 className="text-3xl font-bold text-foreground">{greeting}, {user?.displayName || 'Guest'}!</h1>
         <p className="text-muted-foreground">{format(new Date(), 'EEEE, MMMM d')}</p>
       </header>
+      
+      {nextAppointment && (
+        <Card className="bg-primary/10 border-primary/20">
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-primary">
+                    <Stethoscope/>
+                    Upcoming Appointment
+                </CardTitle>
+            </CardHeader>
+            <CardContent>
+                <AppointmentCard appointment={nextAppointment} />
+            </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>
           <CardTitle>Today's Schedule</CardTitle>
+          <CardDescription>All your medications and appointments for today.</CardDescription>
         </CardHeader>
         <CardContent>
           {sortedSchedule.length > 0 ? (

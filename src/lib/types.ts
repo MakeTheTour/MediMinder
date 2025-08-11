@@ -17,12 +17,26 @@ export interface Medication {
 }
 
 export interface Appointment {
-  id: string;
+  id:string;
   doctorName: string;
   specialty: string;
   date: string;
   time: string;
   location: string;
+  notes?: string;
+}
+
+export interface HealthMetric {
+    id: string;
+    date: string; // ISO String
+    weight?: number;
+    bloodPressure?: {
+        systolic: number;
+        diastolic: number;
+    };
+    bloodSugar?: number;
+    heartRate?: number;
+    userId: string;
 }
 
 export interface UserProfile {

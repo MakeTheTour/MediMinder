@@ -17,6 +17,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/context/auth-context';
 import { useLocalStorage } from '@/hooks/use-local-storage';
@@ -28,6 +29,7 @@ const appointmentSchema = z.object({
   date: z.string().min(1, 'Date is required.'),
   time: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, 'Invalid time format (HH:MM)'),
   location: z.string().min(1, 'Location is required.'),
+  notes: z.string().optional(),
 });
 
 
@@ -45,6 +47,7 @@ export function AddAppointmentForm() {
       date: '',
       time: '10:00',
       location: '',
+      notes: '',
     },
   });
 
@@ -155,6 +158,19 @@ export function AddAppointmentForm() {
             </FormItem>
           )}
         />
+        <FormField
+          control={form.control}
+          name="notes"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Problem Notes for Visit</FormLabel>
+              <FormControl>
+                <Textarea placeholder="e.g., Experiencing mild headaches, check blood pressure..." {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
         <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
             {form.formState.isSubmitting ? 'Saving...' : 'Save Appointment'}
         </Button>
@@ -162,5 +178,3 @@ export function AddAppointmentForm() {
     </Form>
   );
 }
-
-    
