@@ -1,3 +1,4 @@
+
 'use client';
 
 import { ReactNode, useEffect } from 'react';
@@ -6,16 +7,16 @@ import { BottomNavbar } from '@/components/bottom-navbar';
 import { useAuth } from '@/context/auth-context';
 
 export default function MainLayout({ children }: { children: ReactNode }) {
-  const { user, loading } = useAuth();
+  const { user, loading, isGuest } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (!loading && !user && !isGuest) {
       router.push('/login');
     }
-  }, [user, loading, router]);
+  }, [user, loading, router, isGuest]);
 
-  if (loading || !user) {
+  if (loading) {
     return null; // Or a loading spinner
   }
 

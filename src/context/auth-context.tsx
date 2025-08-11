@@ -1,3 +1,4 @@
+
 'use client';
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
@@ -8,22 +9,35 @@ import { Loader2 } from 'lucide-react';
 interface AuthContextType {
   user: User | null;
   loading: boolean;
+  isGuest: boolean;
+  setGuest: (isGuest: boolean) => void;
 }
 
-const AuthContext = createContext<AuthContextType>({ user: null, loading: true });
+const AuthContext = createContext<AuthContextType>({ user: null, loading: true, isGuest: false, setGuest: () => {} });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isGuest, setIsGuest] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
+      if (user) {
+        setIsGuest(false);
+      }
       setLoading(false);
     });
 
     return () => unsubscribe();
   }, []);
+  
+  const setGuest = (isGuest: boolean) => {
+      setIsGuest(isGuest);
+      if(isGuest) {
+          setUser(null);
+      }
+  }
 
   if (loading) {
     return (
@@ -34,7 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading }}>
+    <AuthContext.Provider value={{ user, loading, isGuest, setGuest }}>
       {children}
     </AuthContext.Provider>
   );

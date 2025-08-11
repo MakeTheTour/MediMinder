@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -20,7 +21,11 @@ export default function HomePage() {
   const [greeting, setGreeting] = useState('');
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setMedications([]);
+      setAppointments([]);
+      return;
+    };
 
     const medUnsub = onSnapshot(collection(db, 'users', user.uid, 'medications'), (snapshot) => {
         setMedications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Medication)));
@@ -72,7 +77,7 @@ export default function HomePage() {
   return (
     <div className="container mx-auto max-w-2xl p-4">
       <header className="mb-6">
-        <h1 className="text-3xl font-bold text-foreground">{greeting}, {user?.displayName || 'User'}!</h1>
+        <h1 className="text-3xl font-bold text-foreground">{greeting}, {user?.displayName || 'Guest'}!</h1>
         <p className="text-muted-foreground">{format(new Date(), 'EEEE, MMMM d')}</p>
       </header>
 
@@ -93,15 +98,15 @@ export default function HomePage() {
             </div>
           ) : (
             <div className="text-center py-10">
-              <p className="text-muted-foreground mb-4">You have a clear schedule today!</p>
+              <p className="text-muted-foreground mb-4">{user ? "You have a clear schedule today!" : "Sign in to see your schedule."}</p>
               <div className="flex justify-center gap-4">
                 <Button asChild>
-                  <Link href="/medicine/add">
+                  <Link href={user ? "/medicine/add" : "/login"}>
                     <Plus className="mr-2 h-4 w-4" /> Add Medication
                   </Link>
                 </Button>
                  <Button asChild variant="secondary">
-                  <Link href="/appointments/add">
+                  <Link href={user ? "/appointments/add" : "/login"}>
                     <Plus className="mr-2 h-4 w-4" /> Add Appointment
                   </Link>
                 </Button>
