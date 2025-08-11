@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Plus } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -15,36 +15,39 @@ export default function HomePage() {
   const [medications] = useLocalStorage<Medication[]>('medications', []);
   const [appointments] = useLocalStorage<Appointment[]>('appointments', []);
   const [greeting, setGreeting] = useState('');
-  const [todaysMedications, setTodaysMedications] = useState<Medication[]>([]);
-  const [todaysAppointments, setTodaysAppointments] = useState<Appointment[]>([]);
+
+  const todaysAppointments = useMemo(() => {
+    const today = new Date();
+    const todayStr = format(today, 'yyyy-MM-dd');
+    return appointments.filter(app => app.date === todayStr);
+  }, [appointments]);
+
+  const todaysMedications = useMemo(() => {
+    const today = new Date();
+    const dayOfWeek = today.getDay();
+    return medications.filter(med => {
+        if (med.frequency === 'Daily') return true;
+        if (med.frequency === 'Weekly') return med.daysOfWeek?.includes(dayOfWeek);
+        if (med.frequency === 'Monthly') return med.dayOfMonth === today.getDate();
+        return false;
+    });
+  }, [medications]);
+
 
   useEffect(() => {
     const hour = new Date().getHours();
     if (hour < 12) setGreeting('Good Morning');
     else if (hour < 18) setGreeting('Good Afternoon');
     else setGreeting('Good Evening');
+  }, []);
 
-    const today = new Date();
-    const todayStr = format(today, 'yyyy-MM-dd');
-    const dayOfWeek = today.getDay();
+  const sortedSchedule = useMemo(() => {
+    return [
+      ...todaysMedications.flatMap(med => med.times.map(time => ({ type: 'medication' as const, time, data: med }))),
+      ...todaysAppointments.map(app => ({ type: 'appointment' as const, time: app.time, data: app }))
+    ].sort((a, b) => a.time.localeCompare(b.time));
+  }, [todaysMedications, todaysAppointments]);
 
-    const filteredMeds = medications.filter(med => {
-        if (med.frequency === 'Daily') return true;
-        if (med.frequency === 'Weekly') return med.daysOfWeek?.includes(dayOfWeek);
-        if (med.frequency === 'Monthly') return med.dayOfMonth === today.getDate();
-        return false;
-    });
-    setTodaysMedications(filteredMeds);
-
-    const filteredAppointments = appointments.filter(app => app.date === todayStr);
-    setTodaysAppointments(filteredAppointments);
-
-  }, [medications, appointments]);
-
-  const sortedSchedule = [
-    ...todaysMedications.flatMap(med => med.times.map(time => ({ type: 'medication' as const, time, data: med }))),
-    ...todaysAppointments.map(app => ({ type: 'appointment' as const, time: app.time, data: app }))
-  ].sort((a, b) => a.time.localeCompare(b.time));
 
   return (
     <div className="container mx-auto max-w-2xl p-4">
