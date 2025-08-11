@@ -22,6 +22,12 @@ export interface Appointment {
 export interface UserProfile {
   name: string;
   email: string;
+  dateOfBirth?: string;
+  gender?: string;
+  country?: string;
+  city?: string;
+  state?: string;
+  postcode?: string;
 }
 
 export interface FamilyMember {
