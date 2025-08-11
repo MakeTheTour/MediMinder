@@ -108,7 +108,7 @@ export default function HomePage() {
     checkReminders(); // Check immediately on load
 
     return () => clearInterval(interval);
-  }, [todaysMedications, adherenceLogs, reminder]);
+  }, [todaysMedications, adherenceLogs]);
 
 
   const handleReminderAction = async (medication: Medication, status: 'taken' | 'skipped') => {
