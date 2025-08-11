@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useForm, useFieldArray } from 'react-hook-form';
@@ -27,6 +28,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { Medication, Frequency } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from '@/context/auth-context';
 
 const medicationSchema = z.object({
   name: z.string().min(1, 'Medication name is required.'),
@@ -58,6 +60,7 @@ const weekDays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Frida
 export function AddMedicationForm() {
   const router = useRouter();
   const { toast } = useToast();
+  const { user, isGuest } = useAuth();
 
   const form = useForm<z.infer<typeof medicationSchema>>({
     resolver: zodResolver(medicationSchema),
@@ -78,9 +81,12 @@ export function AddMedicationForm() {
   const frequency = form.watch('frequency');
 
   async function onSubmit(values: z.infer<typeof medicationSchema>) {
-    const user = auth.currentUser;
-    if (!user) {
-        toast({ title: "Error", description: "You must be logged in to add medication.", variant: "destructive"});
+    if (isGuest || !user) {
+        toast({
+            title: "Feature for Signed-In Users",
+            description: "Please sign in to save your medications permanently.",
+        });
+        router.push('/medicine');
         return;
     }
     

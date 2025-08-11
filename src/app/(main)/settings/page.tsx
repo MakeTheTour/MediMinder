@@ -2,7 +2,7 @@
 'use client'
 
 import Link from 'next/link';
-import { User, Bell, Mic, ChevronRight, LogOut } from 'lucide-react';
+import { User, Bell, Mic, ChevronRight, LogOut, Star } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { auth } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
@@ -27,10 +27,16 @@ const settingsItems = [
     title: 'Notifications',
     description: 'Manage alert preferences.',
   },
+  {
+    href: '/settings/premium',
+    icon: Star,
+    title: 'Premium Plan',
+    description: 'Unlock exclusive features.',
+  },
 ];
 
 export default function SettingsPage() {
-  const { user } = useAuth();
+  const { user, isGuest } = useAuth();
   const router = useRouter();
 
   const handleSignOut = async () => {
@@ -49,7 +55,7 @@ export default function SettingsPage() {
         {settingsItems.map((item) => (
           <Link
             key={item.title}
-            href={item.href}
+            href={(item.href === '/settings/profile' && isGuest) ? '/login' : item.href}
             className="flex items-center justify-between rounded-lg border bg-card p-4 text-card-foreground shadow-sm transition-colors hover:bg-muted/50"
           >
             <div className="flex items-center gap-4">
@@ -63,11 +69,17 @@ export default function SettingsPage() {
           </Link>
         ))}
       </div>
-      <div className="mt-8">
-        <Button variant="destructive" className="w-full" onClick={handleSignOut}>
-            <LogOut className="mr-2 h-4 w-4" />
-            Sign Out
-        </Button>
+       <div className="mt-8">
+        {isGuest ? (
+           <Button className="w-full" onClick={() => router.push('/login')}>
+            Sign In / Create Account
+          </Button>
+        ) : (
+          <Button variant="destructive" className="w-full" onClick={handleSignOut}>
+              <LogOut className="mr-2 h-4 w-4" />
+              Sign Out
+          </Button>
+        )}
       </div>
     </div>
   );

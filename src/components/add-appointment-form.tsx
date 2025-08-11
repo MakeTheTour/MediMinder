@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useForm } from 'react-hook-form';
@@ -17,6 +18,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from '@/context/auth-context';
 
 const appointmentSchema = z.object({
   doctorName: z.string().min(1, 'Doctor name is required.'),
@@ -30,6 +32,7 @@ const appointmentSchema = z.object({
 export function AddAppointmentForm() {
   const router = useRouter();
   const { toast } = useToast();
+  const { user, isGuest } = useAuth();
 
   const form = useForm<z.infer<typeof appointmentSchema>>({
     resolver: zodResolver(appointmentSchema),
@@ -43,9 +46,12 @@ export function AddAppointmentForm() {
   });
 
   async function onSubmit(values: z.infer<typeof appointmentSchema>) {
-    const user = auth.currentUser;
-    if (!user) {
-        toast({ title: "Error", description: "You must be logged in to add an appointment.", variant: "destructive"});
+    if (isGuest || !user) {
+        toast({
+            title: "Feature for Signed-In Users",
+            description: "Please sign in to save your appointments permanently.",
+        });
+        router.push('/medicine');
         return;
     }
     

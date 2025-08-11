@@ -45,14 +45,16 @@ export default function HomePage() {
   }, [user]);
 
   const todaysAppointments = useMemo(() => {
-    if (isGuest || !user) return [];
+    if (isGuest && !user) return appointments; // Show local state for guests
+    if (!user) return [];
     const today = new Date();
     const todayStr = format(today, 'yyyy-MM-dd');
     return appointments.filter(app => app.date === todayStr);
   }, [appointments, isGuest, user]);
 
   const todaysMedications = useMemo(() => {
-    if (isGuest || !user) return [];
+    if (isGuest && !user) return medications; // Show local state for guests
+    if (!user) return [];
     const today = new Date();
     const dayOfWeek = today.getDay();
     return medications.filter(med => {
@@ -72,20 +74,12 @@ export default function HomePage() {
   }, []);
 
   const sortedSchedule = useMemo(() => {
-    if (isGuest || !user) return [];
-    return [
+    const items = [
       ...todaysMedications.flatMap(med => med.times.map(time => ({ type: 'medication' as const, time, data: med }))),
       ...todaysAppointments.map(app => ({ type: 'appointment' as const, time: app.time, data: app }))
-    ].sort((a, b) => a.time.localeCompare(b.time));
-  }, [todaysMedications, todaysAppointments, isGuest, user]);
-
-  const handleAddClick = (path: string) => {
-    if (isGuest || !user) {
-      router.push('/login');
-    } else {
-      router.push(path);
-    }
-  };
+    ];
+    return items.sort((a, b) => a.time.localeCompare(b.time));
+  }, [todaysMedications, todaysAppointments]);
 
 
   return (
@@ -100,16 +94,7 @@ export default function HomePage() {
           <CardTitle>Today's Schedule</CardTitle>
         </CardHeader>
         <CardContent>
-          {isGuest ? (
-             <div className="text-center py-10">
-              <p className="text-muted-foreground mb-4">Sign in to see and manage your schedule.</p>
-              <div className="flex justify-center gap-4">
-                 <Button onClick={() => router.push('/login')}>
-                  Sign In
-                </Button>
-              </div>
-            </div>
-          ) : sortedSchedule.length > 0 ? (
+          {sortedSchedule.length > 0 ? (
             <div className="space-y-4">
               {sortedSchedule.map((item, index) => (
                 item.type === 'medication' ? (
@@ -121,15 +106,24 @@ export default function HomePage() {
             </div>
           ) : (
             <div className="text-center py-10">
-              <p className="text-muted-foreground mb-4">You have a clear schedule today!</p>
+              <p className="text-muted-foreground mb-4">{isGuest ? "Try adding a medication or appointment to see it here." : "You have a clear schedule today!"}</p>
               <div className="flex justify-center gap-4">
-                <Button onClick={() => handleAddClick('/medicine/add')}>
-                  <Plus className="mr-2 h-4 w-4" /> Add Medication
+                <Button asChild>
+                  <Link href="/medicine/add">
+                    <Plus className="mr-2 h-4 w-4" /> Add Medication
+                  </Link>
                 </Button>
-                 <Button onClick={() => handleAddClick('/appointments/add')} variant="secondary">
-                  <Plus className="mr-2 h-4 w-4" /> Add Appointment
+                 <Button asChild variant="secondary">
+                   <Link href="/appointments/add">
+                    <Plus className="mr-2 h-4 w-4" /> Add Appointment
+                  </Link>
                 </Button>
               </div>
+               {isGuest && (
+                 <p className="text-sm text-muted-foreground mt-4">
+                  <Link href="/login" className="text-primary underline">Sign in</Link> to save your schedule.
+                 </p>
+                )}
             </div>
           )}
         </CardContent>
