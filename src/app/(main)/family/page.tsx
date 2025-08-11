@@ -75,7 +75,7 @@ export default function FamilyPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {user && familyMembers.map(member => (
+            {(user && !isGuest) && familyMembers.map(member => (
               <div key={member.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50">
                 <div className="flex items-center gap-4">
                    <Avatar>
@@ -102,7 +102,7 @@ export default function FamilyPage() {
                 </div>
               </div>
             ))}
-             {(!user || familyMembers.length === 0) && (
+             {(isGuest || (user && familyMembers.length === 0)) && (
                 <div className="text-center py-10">
                     <Users2 className="mx-auto h-12 w-12 text-muted-foreground" />
                     <h3 className="mt-4 text-lg font-semibold">{user ? "Your family circle is empty" : "Sign in to manage your family circle"}</h3>

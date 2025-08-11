@@ -45,14 +45,14 @@ export default function HomePage() {
   }, [user]);
 
   const todaysAppointments = useMemo(() => {
-    if (isGuest) return [];
+    if (isGuest || !user) return [];
     const today = new Date();
     const todayStr = format(today, 'yyyy-MM-dd');
     return appointments.filter(app => app.date === todayStr);
-  }, [appointments, isGuest]);
+  }, [appointments, isGuest, user]);
 
   const todaysMedications = useMemo(() => {
-    if (isGuest) return [];
+    if (isGuest || !user) return [];
     const today = new Date();
     const dayOfWeek = today.getDay();
     return medications.filter(med => {
@@ -61,7 +61,7 @@ export default function HomePage() {
         if (med.frequency === 'Monthly') return med.dayOfMonth === today.getDate();
         return false;
     });
-  }, [medications, isGuest]);
+  }, [medications, isGuest, user]);
 
 
   useEffect(() => {
@@ -72,15 +72,15 @@ export default function HomePage() {
   }, []);
 
   const sortedSchedule = useMemo(() => {
-    if (isGuest) return [];
+    if (isGuest || !user) return [];
     return [
       ...todaysMedications.flatMap(med => med.times.map(time => ({ type: 'medication' as const, time, data: med }))),
       ...todaysAppointments.map(app => ({ type: 'appointment' as const, time: app.time, data: app }))
     ].sort((a, b) => a.time.localeCompare(b.time));
-  }, [todaysMedications, todaysAppointments, isGuest]);
+  }, [todaysMedications, todaysAppointments, isGuest, user]);
 
   const handleAddClick = (path: string) => {
-    if (isGuest) {
+    if (isGuest || !user) {
       router.push('/login');
     } else {
       router.push(path);
@@ -100,7 +100,16 @@ export default function HomePage() {
           <CardTitle>Today's Schedule</CardTitle>
         </CardHeader>
         <CardContent>
-          {(user || isGuest) && sortedSchedule.length > 0 ? (
+          {isGuest ? (
+             <div className="text-center py-10">
+              <p className="text-muted-foreground mb-4">Sign in to see and manage your schedule.</p>
+              <div className="flex justify-center gap-4">
+                 <Button onClick={() => router.push('/login')}>
+                  Sign In
+                </Button>
+              </div>
+            </div>
+          ) : sortedSchedule.length > 0 ? (
             <div className="space-y-4">
               {sortedSchedule.map((item, index) => (
                 item.type === 'medication' ? (
@@ -112,7 +121,7 @@ export default function HomePage() {
             </div>
           ) : (
             <div className="text-center py-10">
-              <p className="text-muted-foreground mb-4">{user ? "You have a clear schedule today!" : isGuest ? "Sign in to see and manage your schedule." : "Sign in to see your schedule."}</p>
+              <p className="text-muted-foreground mb-4">You have a clear schedule today!</p>
               <div className="flex justify-center gap-4">
                 <Button onClick={() => handleAddClick('/medicine/add')}>
                   <Plus className="mr-2 h-4 w-4" /> Add Medication
