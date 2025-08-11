@@ -101,7 +101,7 @@ export default function HomePage() {
         }
       }
     }
-  }, [adherenceLogs, todaysMedications, reminder]);
+  }, [adherenceLogs, todaysMedications]);
 
   useEffect(() => {
     const interval = setInterval(checkReminders, 30000); // Check every 30 seconds
