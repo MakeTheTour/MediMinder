@@ -28,4 +28,6 @@ export interface FamilyMember {
   id: string;
   name: string;
   relation: string;
+  email: string;
+  status: 'pending' | 'accepted';
 }

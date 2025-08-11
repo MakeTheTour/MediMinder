@@ -5,12 +5,26 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { FamilyMember } from '@/lib/types';
+import { useToast } from '@/hooks/use-toast';
 
 
 export default function FamilyPage() {
     const [familyMembers, setFamilyMembers] = useLocalStorage<FamilyMember[]>('family-members', []);
+    const { toast } = useToast();
+
+    const handleAcceptInvitation = (id: string) => {
+        const member = familyMembers.find(m => m.id === id);
+        if (member) {
+            setFamilyMembers(members => members.map(m => m.id === id ? { ...m, status: 'accepted' } : m));
+            toast({
+                title: 'Invitation Accepted',
+                description: `${member.name} is now linked to your family circle.`,
+            });
+        }
+    };
 
     const handleDeleteMember = (id: string) => {
         setFamilyMembers(members => members.filter(m => m.id !== id));
@@ -45,7 +59,19 @@ export default function FamilyPage() {
                     <p className="text-sm text-muted-foreground">{member.relation}</p>
                   </div>
                 </div>
-                 <Button variant="ghost" size="sm" onClick={() => handleDeleteMember(member.id)}>Remove</Button>
+                <div className="flex items-center gap-2">
+                    {member.status === 'pending' ? (
+                        <>
+                            <Badge variant="secondary">Pending</Badge>
+                            <Button variant="outline" size="sm" onClick={() => handleAcceptInvitation(member.id)}>Accept</Button>
+                        </>
+                    ) : (
+                         <Badge variant="default">Linked</Badge>
+                    )}
+                    <Button variant="ghost" size="sm" onClick={() => handleDeleteMember(member.id)}>
+                        {member.status === 'pending' ? 'Cancel' : 'Remove'}
+                    </Button>
+                </div>
               </div>
             ))}
              {familyMembers.length === 0 && (

@@ -22,6 +22,7 @@ import { useToast } from "@/hooks/use-toast"
 const familyMemberSchema = z.object({
   name: z.string().min(1, 'Name is required.'),
   relation: z.string().min(1, 'Relation is required.'),
+  email: z.string().email('A valid email is required to send an invitation.'),
 });
 
 
@@ -35,6 +36,7 @@ export function AddFamilyMemberForm() {
     defaultValues: {
       name: '',
       relation: '',
+      email: '',
     },
   });
 
@@ -42,11 +44,12 @@ export function AddFamilyMemberForm() {
     const newFamilyMember: FamilyMember = {
       id: new Date().toISOString(),
       ...values,
+      status: 'pending',
     };
     setFamilyMembers([...familyMembers, newFamilyMember]);
     toast({
-        title: "Family Member Added",
-        description: `${values.name} has been added to your family circle.`,
+        title: "Invitation Sent",
+        description: `An invitation has been sent to ${values.name}.`,
       })
     router.push('/family');
   }
@@ -80,7 +83,20 @@ export function AddFamilyMemberForm() {
             </FormItem>
           )}
         />
-        <Button type="submit" className="w-full">Save Member</Button>
+        <FormField
+          control={form.control}
+          name="email"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Email Address</FormLabel>
+              <FormControl>
+                <Input type="email" placeholder="e.g., jane.doe@example.com" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <Button type="submit" className="w-full">Send Invitation</Button>
       </form>
     </Form>
   );
