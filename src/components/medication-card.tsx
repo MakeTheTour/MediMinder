@@ -1,16 +1,23 @@
 
 'use client';
 
-import { Pill, Clock, Trash2, MoreVertical } from 'lucide-react';
+import { Pill, Clock, Trash2, MoreVertical, ShieldAlert } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Medication } from '@/lib/types';
+import { Medication, FamilyMember } from '@/lib/types';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu"
 import { Button } from './ui/button';
+import { useToast } from '@/hooks/use-toast';
+import { generateFamilyAlert } from '@/ai/flows/family-alert-flow';
+import { useAuth } from '@/context/auth-context';
+import { useState, useEffect } from 'react';
+import { collection, onSnapshot } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 interface MedicationCardProps {
   medication: Medication;
@@ -20,6 +27,45 @@ interface MedicationCardProps {
 
 export function MedicationCard({ medication, onDelete, specificTime }: MedicationCardProps) {
   const displayTimes = specificTime ? [specificTime] : medication.times;
+  const { user, isGuest } = useAuth();
+  const { toast } = useToast();
+  const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
+
+  useEffect(() => {
+    if (!user || isGuest) return;
+    const unsub = onSnapshot(collection(db, 'users', user.uid, 'familyMembers'), (snapshot) => {
+        setFamilyMembers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as FamilyMember)));
+    });
+    return () => unsub();
+  }, [user, isGuest]);
+
+
+  const handleFamilyAlert = async () => {
+    if (isGuest || !user) {
+        toast({ title: 'Sign In Required', description: 'Please sign in to alert family members.', variant: 'destructive'});
+        return;
+    }
+    const acceptedFamilyMember = familyMembers.find(m => m.status === 'accepted');
+    if (!acceptedFamilyMember) {
+        toast({ title: 'No Linked Family Member', description: 'Please add and link a family member in the Family tab first.', variant: 'destructive'});
+        return;
+    }
+    
+    try {
+        toast({ title: 'Sending Alert...', description: `Notifying ${acceptedFamilyMember.name}.` });
+        const result = await generateFamilyAlert({
+            patientName: user.displayName || 'A family member',
+            medicationName: medication.name,
+            familyName: acceptedFamilyMember.name,
+        });
+        // Here you would typically send the alert via SMS/email
+        console.log("Family Alert Message:", result.alertMessage);
+        toast({ title: 'Alert Sent!', description: `${acceptedFamilyMember.name} has been notified.` });
+    } catch (error) {
+        toast({ title: 'Error', description: 'Could not send alert. Please try again.', variant: 'destructive'});
+    }
+
+  }
 
   return (
     <Card className="w-full overflow-hidden transition-all hover:shadow-md bg-muted/20 border">
@@ -43,6 +89,11 @@ export function MedicationCard({ medication, onDelete, specificTime }: Medicatio
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleFamilyAlert}>
+                    <ShieldAlert className="mr-2 h-4 w-4" />
+                    Alert Family
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => onDelete(medication.id)} className="text-destructive">
                   <Trash2 className="mr-2 h-4 w-4" />
                   Delete

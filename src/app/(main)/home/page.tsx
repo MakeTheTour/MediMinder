@@ -1,21 +1,22 @@
 
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Plus } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Medication, Appointment } from '@/lib/types';
+import { Medication, Appointment, AdherenceLog } from '@/lib/types';
 import { MedicationCard } from '@/components/medication-card';
 import { AppointmentCard } from '@/components/appointment-card';
-import { format } from 'date-fns';
+import { format, parse } from 'date-fns';
 import { useAuth } from '@/context/auth-context';
-import { collection, onSnapshot, doc, getDoc, setDoc } from 'firebase/firestore';
+import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { useLocalStorage } from '@/hooks/use-local-storage';
-
+import { MedicationReminderDialog } from '@/components/medication-reminder-dialog';
+import { trackAdherence } from '@/ai/flows/track-adherence-flow';
 
 export default function HomePage() {
   const { user, isGuest } = useAuth();
@@ -23,17 +24,20 @@ export default function HomePage() {
 
   const [localMedications, setLocalMedications] = useLocalStorage<Medication[]>('guest-medications', []);
   const [localAppointments, setLocalAppointments] = useLocalStorage<Appointment[]>('guest-appointments', []);
+  const [localAdherence, setLocalAdherence] = useLocalStorage<AdherenceLog[]>('guest-adherence', []);
 
   const [firestoreMedications, setFirestoreMedications] = useState<Medication[]>([]);
   const [firestoreAppointments, setFirestoreAppointments] = useState<Appointment[]>([]);
+  const [firestoreAdherence, setFirestoreAdherence] = useState<AdherenceLog[]>([]);
 
   const [greeting, setGreeting] = useState('');
+  const [reminder, setReminder] = useState<{ medication: Medication; time: string } | null>(null);
 
   useEffect(() => {
     if (user && !isGuest) {
-      // Clear local storage if user is logged in
       setLocalMedications([]);
       setLocalAppointments([]);
+      setLocalAdherence([]);
 
       const medUnsub = onSnapshot(collection(db, 'users', user.uid, 'medications'), (snapshot) => {
         setFirestoreMedications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Medication)));
@@ -43,19 +47,88 @@ export default function HomePage() {
         setFirestoreAppointments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Appointment)));
       });
 
+      const adherenceUnsub = onSnapshot(collection(db, 'users', user.uid, 'adherenceLogs'), (snapshot) => {
+        setFirestoreAdherence(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AdherenceLog)));
+      });
+
+
       return () => {
         medUnsub();
         apptUnsub();
+        adherenceUnsub();
       };
     } else {
-      // Clear firestore data when user logs out or is a guest
       setFirestoreMedications([]);
       setFirestoreAppointments([]);
+      setFirestoreAdherence([]);
     }
-  }, [user, isGuest, setLocalMedications, setLocalAppointments]);
+  }, [user, isGuest, setLocalMedications, setLocalAppointments, setLocalAdherence]);
 
   const activeMedications = isGuest ? localMedications : firestoreMedications;
   const activeAppointments = isGuest ? localAppointments : firestoreAppointments;
+  const adherenceLogs = isGuest ? localAdherence : firestoreAdherence;
+
+  const todaysMedications = useMemo(() => {
+    const today = new Date();
+    const dayOfWeek = today.getDay(); // Sunday - 0, Monday - 1
+    return activeMedications.filter(med => {
+        if (med.frequency === 'Daily') return true;
+        if (med.frequency === 'Weekly') return med.daysOfWeek?.includes(dayOfWeek);
+        if (med.frequency === 'Monthly') return med.dayOfMonth === today.getDate();
+        return false;
+    });
+  }, [activeMedications]);
+
+  useEffect(() => {
+    const checkReminders = () => {
+      const now = new Date();
+      const todayStr = format(now, 'yyyy-MM-dd');
+
+      for (const med of todaysMedications) {
+        for (const time of med.times) {
+          const reminderTime = parse(time, 'HH:mm', new Date());
+          const alreadyHandled = adherenceLogs.some(
+            log => log.medicationId === med.id && format(new Date(log.takenAt), 'yyyy-MM-dd HH:mm') === format(reminderTime, 'yyyy-MM-dd HH:mm')
+          );
+          
+          if (now >= reminderTime && !alreadyHandled && !reminder) {
+            setReminder({ medication: med, time });
+            return;
+          }
+        }
+      }
+    };
+    
+    // Check every 30 seconds
+    const interval = setInterval(checkReminders, 30000);
+    checkReminders(); // Check immediately on load
+
+    return () => clearInterval(interval);
+  }, [todaysMedications, adherenceLogs, reminder]);
+
+
+  const handleReminderAction = async (medication: Medication, status: 'taken' | 'skipped') => {
+    const logEntry: Omit<AdherenceLog, 'id'> = {
+      medicationId: medication.id,
+      medicationName: medication.name,
+      takenAt: new Date().toISOString(),
+      status: status,
+      userId: user?.uid || 'guest'
+    };
+
+    if (isGuest || !user) {
+      setLocalAdherence([...localAdherence, { ...logEntry, id: new Date().toISOString() }]);
+    } else {
+      await trackAdherence({
+          medicationId: medication.id,
+          medicationName: medication.name,
+          takenAt: new Date().toISOString(),
+          status: status,
+          userId: user.uid,
+      });
+    }
+    setReminder(null);
+  };
 
 
   const todaysAppointments = useMemo(() => {
@@ -63,21 +136,6 @@ export default function HomePage() {
     const todayStr = format(today, 'yyyy-MM-dd');
     return activeAppointments.filter(app => app.date === todayStr);
   }, [activeAppointments]);
-
-  const todaysMedications = useMemo(() => {
-    const today = new Date();
-    const dayOfWeek = today.getDay(); // Sunday - 0, Monday - 1
-    return activeMedications.filter(med => {
-        if (med.frequency === 'Daily') return true;
-        if (med.frequency === 'Weekly') {
-            return med.daysOfWeek?.includes(dayOfWeek);
-        }
-        if (med.frequency === 'Monthly') {
-            return med.dayOfMonth === today.getDate();
-        }
-        return false;
-    });
-  }, [activeMedications]);
 
 
   useEffect(() => {
@@ -97,6 +155,16 @@ export default function HomePage() {
 
 
   return (
+    <>
+    {reminder && (
+        <MedicationReminderDialog
+            isOpen={!!reminder}
+            medication={reminder.medication}
+            time={reminder.time}
+            onTake={() => handleReminderAction(reminder.medication, 'taken')}
+            onSkip={() => handleReminderAction(reminder.medication, 'skipped')}
+        />
+    )}
     <div className="container mx-auto max-w-2xl p-4">
       <header className="mb-6">
         <h1 className="text-3xl font-bold text-foreground">{greeting}, {user?.displayName || 'Guest'}!</h1>
@@ -143,7 +211,6 @@ export default function HomePage() {
         </CardContent>
       </Card>
     </div>
+    </>
   );
 }
-
-    

@@ -45,3 +45,12 @@ export interface FamilyMember {
   status: 'pending' | 'accepted';
   photoURL?: string;
 }
+
+export interface AdherenceLog {
+    id?: string;
+    medicationId: string;
+    medicationName: string;
+    takenAt: string; // ISO string
+    status: 'taken' | 'skipped' | 'missed';
+    userId: string;
+}
