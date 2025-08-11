@@ -91,6 +91,7 @@ export function AddMedicationForm() {
       dosage: 'Tablet',
       intake_qty: 1,
       food_relation: 'with',
+      food_time_minutes: 30,
       total_qty: 30,
       consumption_count: 1,
       stock_alert_qty: 5,
@@ -452,5 +453,3 @@ export function AddMedicationForm() {
     </Form>
   );
 }
-
-    
