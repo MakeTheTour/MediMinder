@@ -12,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { getSpecialistRecommendation, SpecialistRecommendationOutput } from '@/ai/flows/symptom-checker-flow';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from './auth-context';
+import { useAuth } from '@/context/auth-context';
 
 const symptomSchema = z.object({
   symptoms: z.string().min(10, 'Please describe your symptoms in at least 10 characters.'),
