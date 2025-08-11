@@ -14,7 +14,6 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { Separator } from '@/components/ui/separator';
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address.'),
