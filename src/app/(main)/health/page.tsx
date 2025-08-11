@@ -13,7 +13,7 @@ import { db } from '@/lib/firebase';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
-import { generateHealthInsights } from '@/ai/flows/health-insights-flow';
+import { generateHealthInsights, HealthInsightsOutput } from '@/ai/flows/health-insights-flow';
 import { useToast } from '@/hooks/use-toast';
 
 function HealthHistoryItem({ metric }: { metric: HealthMetric }) {
@@ -35,7 +35,7 @@ export default function HealthPage() {
     
     const [localHealthMetrics, setLocalHealthMetrics] = useLocalStorage<HealthMetric[]>('guest-health-metrics', []);
     const [firestoreHealthMetrics, setFirestoreHealthMetrics] = useState<HealthMetric[]>([]);
-    const [insights, setInsights] = useState<{insight: string; suggestion: string} | null>(null);
+    const [insights, setInsights] = useState<HealthInsightsOutput | null>(null);
     const [loadingInsights, setLoadingInsights] = useState(false);
 
     const healthMetrics = (isGuest ? localHealthMetrics : firestoreHealthMetrics).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());

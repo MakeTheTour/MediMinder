@@ -1,4 +1,6 @@
 
+import { z } from 'zod';
+
 export type Frequency = 'Daily' | 'Hourly' | 'Weekly' | 'Monthly';
 
 export interface Medication {
@@ -26,18 +28,20 @@ export interface Appointment {
   notes?: string;
 }
 
-export interface HealthMetric {
-    id: string;
-    date: string; // ISO String
-    weight?: number;
-    bloodPressure?: {
-        systolic: number;
-        diastolic: number;
-    };
-    bloodSugar?: number;
-    heartRate?: number;
-    userId: string;
-}
+export const HealthMetricSchema = z.object({
+    id: z.string(),
+    date: z.string(), // ISO String
+    weight: z.number().optional(),
+    bloodPressure: z.object({
+        systolic: z.number(),
+        diastolic: z.number(),
+    }).optional(),
+    bloodSugar: z.number().optional(),
+    heartRate: z.number().optional(),
+    userId: z.string(),
+});
+export type HealthMetric = z.infer<typeof HealthMetricSchema>;
+
 
 export interface UserProfile {
   name: string;

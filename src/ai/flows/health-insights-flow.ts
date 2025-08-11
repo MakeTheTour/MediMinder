@@ -10,10 +10,10 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import { HealthMetric } from '@/lib/types';
+import { HealthMetric, HealthMetricSchema } from '@/lib/types';
 
 const HealthInsightsInputSchema = z.object({
-  healthMetrics: z.array(z.custom<HealthMetric>()).describe("An array of the user's recent health metric readings."),
+  healthMetrics: z.array(HealthMetricSchema).describe("An array of the user's recent health metric readings."),
   userName: z.string().describe("The name of the user."),
 });
 export type HealthInsightsInput = z.infer<typeof HealthInsightsInputSchema>;
