@@ -11,6 +11,10 @@ export default function MainLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
 
+  const noNavPaths = ['/login', '/signup', '/'];
+  const showNav = !noNavPaths.includes(pathname) && !pathname.startsWith('/admin');
+
+
   useEffect(() => {
     if (pathname?.startsWith('/admin')) {
       return;
@@ -32,7 +36,7 @@ export default function MainLayout({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col">
       <main className="flex-1 pb-20">{children}</main>
-      <BottomNavbar />
+      {showNav && <BottomNavbar />}
     </div>
   );
 }

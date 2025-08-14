@@ -18,11 +18,6 @@ const navItems = [
 export function BottomNavbar() {
   const pathname = usePathname();
 
-  // Don't render navbar on auth or admin pages
-  if (pathname === '/login' || pathname === '/signup' || pathname === '/' || pathname.startsWith('/admin')) {
-    return null;
-  }
-
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background/95 backdrop-blur-sm shadow-[0_-1px_3px_rgba(0,0,0,0.05)]">
       <div className="mx-auto flex h-16 max-w-md items-center justify-around">
