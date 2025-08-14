@@ -49,9 +49,9 @@ export function ProfileForm() {
   const form = useForm<z.infer<typeof profileSchema>>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      name: user?.displayName || '',
-      email: user?.email || '',
-      photoURL: user?.photoURL || '',
+      name: '',
+      email: '',
+      photoURL: '',
       dateOfBirth: '',
       height: undefined,
       gender: '',
@@ -82,6 +82,13 @@ export function ProfileForm() {
                     postcode: userData.postcode || '',
                 });
                 setPhotoPreview(user.photoURL || userData.photoURL || null);
+            } else {
+                 form.reset({
+                    name: user.displayName || '',
+                    email: user.email || '',
+                    photoURL: user.photoURL || '',
+                 });
+                 setPhotoPreview(user.photoURL || null);
             }
         }
         fetchUserData();
@@ -196,7 +203,7 @@ export function ProfileForm() {
                             <FormItem>
                             <FormLabel>Date of Birth</FormLabel>
                             <FormControl>
-                                <Input type="date" {...field} />
+                                <Input type="date" {...field} value={field.value || ''}/>
                             </FormControl>
                             <FormMessage />
                             </FormItem>
@@ -209,7 +216,7 @@ export function ProfileForm() {
                             <FormItem>
                             <FormLabel>Height (cm)</FormLabel>
                             <FormControl>
-                                <Input type="number" placeholder="e.g., 175" {...field} />
+                                <Input type="number" placeholder="e.g., 175" {...field} value={field.value || ''} />
                             </FormControl>
                             <FormMessage />
                             </FormItem>
@@ -221,7 +228,7 @@ export function ProfileForm() {
                         render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Gender</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value}>
+                                <Select onValueChange={field.onChange} value={field.value || ''}>
                                     <FormControl>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Select your gender" />
@@ -245,7 +252,7 @@ export function ProfileForm() {
                             <FormItem>
                             <FormLabel>Country</FormLabel>
                             <FormControl>
-                                <Input placeholder="e.g., United States" {...field} />
+                                <Input placeholder="e.g., United States" {...field} value={field.value || ''} />
                             </FormControl>
                             <FormMessage />
                             </FormItem>
@@ -258,7 +265,7 @@ export function ProfileForm() {
                             <FormItem>
                             <FormLabel>State / Province</FormLabel>
                             <FormControl>
-                                <Input placeholder="e.g., California" {...field} />
+                                <Input placeholder="e.g., California" {...field} value={field.value || ''} />
                             </FormControl>
                             <FormMessage />
                             </FormItem>
@@ -271,7 +278,7 @@ export function ProfileForm() {
                             <FormItem>
                             <FormLabel>City</FormLabel>
                             <FormControl>
-                                <Input placeholder="e.g., San Francisco" {...field} />
+                                <Input placeholder="e.g., San Francisco" {...field} value={field.value || ''} />
                             </FormControl>
                             <FormMessage />
                             </FormItem>
@@ -284,7 +291,7 @@ export function ProfileForm() {
                             <FormItem>
                             <FormLabel>Post Code</FormLabel>
                             <FormControl>
-                                <Input placeholder="e.g., 94103" {...field} />
+                                <Input placeholder="e.g., 94103" {...field} value={field.value || ''} />
                             </FormControl>
                             <FormMessage />
                             </FormItem>
