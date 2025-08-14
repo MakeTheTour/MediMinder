@@ -1,5 +1,6 @@
-// src/lib/firebase.ts - SERVER-SIDE ADMIN USE ONLY
+// src/lib/firebase-client.ts - CLIENT-SIDE USE ONLY
 import { initializeApp, getApps, getApp, App } from 'firebase/app';
+import { getAuth, Auth } from 'firebase/auth';
 import { getFirestore, Firestore } from 'firebase/firestore';
 
 const firebaseConfig = {
@@ -11,8 +12,9 @@ const firebaseConfig = {
   appId: "1:811154320643:web:42107016d08f6bcc568d36",
 };
 
-// This is for server-side use (e.g., Genkit flows)
-const app: App = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig, "server");
+// Initialize Firebase for client-side usage
+const app: App = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+const auth: Auth = getAuth(app);
 const db: Firestore = getFirestore(app);
 
-export { db };
+export { app, auth, db };

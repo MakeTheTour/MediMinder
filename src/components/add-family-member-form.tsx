@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useForm } from 'react-hook-form';
@@ -5,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useRouter } from 'next/navigation';
 import { addDoc, collection } from 'firebase/firestore';
-import { db, auth } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase-client';
 import { Button } from '@/components/ui/button';
 import {
   Form,

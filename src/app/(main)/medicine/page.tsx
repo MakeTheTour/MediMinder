@@ -11,7 +11,7 @@ import { Appointment } from '@/lib/types';
 import { useAuth } from '@/context/auth-context';
 import { useState, useEffect } from 'react';
 import { collection, onSnapshot, deleteDoc, doc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db } from '@/lib/firebase-client';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent } from '@/components/ui/card';
@@ -172,5 +172,3 @@ export default function MedicinePage() {
     </div>
   );
 }
-
-    

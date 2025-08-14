@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { HealthMetric } from '@/lib/types';
 import { useAuth } from '@/context/auth-context';
 import { collection, onSnapshot, query, orderBy, limit } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db } from '@/lib/firebase-client';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';

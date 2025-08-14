@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { collection, getDocs } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db } from '@/lib/firebase-client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';

@@ -18,6 +18,8 @@ import { Users, LayoutDashboard, DollarSign, Megaphone, CreditCard } from 'lucid
 import Link from 'next/link';
 import { useAuth } from '@/context/auth-context';
 import { Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+
 
 const adminNavItems = [
   { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },

@@ -8,7 +8,7 @@ import * as z from 'zod';
 import { useRouter } from 'next/navigation';
 import { updateProfile } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { db, auth } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase-client';
 import { Button } from '@/components/ui/button';
 import {
   Form,

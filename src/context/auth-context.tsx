@@ -3,7 +3,7 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { onAuthStateChanged, User, signOut } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { auth } from '@/lib/firebase-client';
 import { Loader2 } from 'lucide-react';
 
 interface AuthContextType {

@@ -12,7 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/auth-context';
 import { useState, useEffect } from 'react';
 import { collection, onSnapshot, doc, updateDoc, deleteDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db } from '@/lib/firebase-client';
 import { useRouter } from 'next/navigation';
 
 

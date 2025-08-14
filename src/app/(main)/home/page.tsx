@@ -12,7 +12,7 @@ import { AppointmentCard } from '@/components/appointment-card';
 import { format, parse, isToday, isFuture } from 'date-fns';
 import { useAuth } from '@/context/auth-context';
 import { collection, onSnapshot, query, where, orderBy, limit } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db } from '@/lib/firebase-client';
 import { useRouter } from 'next/navigation';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { MedicationReminderDialog } from '@/components/medication-reminder-dialog';

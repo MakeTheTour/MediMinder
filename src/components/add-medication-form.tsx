@@ -7,7 +7,7 @@ import * as z from 'zod';
 import { useRouter } from 'next/navigation';
 import { Plus, Trash2 } from 'lucide-react';
 import { addDoc, collection } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db } from '@/lib/firebase-client';
 import { Button } from '@/components/ui/button';
 import {
   Form,

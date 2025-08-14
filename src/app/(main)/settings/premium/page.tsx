@@ -9,7 +9,7 @@ import { CheckCircle2, Star, Users, Loader2, CreditCard } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { doc, setDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { db } from "@/lib/firebase-client";
 import { sendPremiumConfirmationEmail } from "@/ai/flows/send-premium-confirmation-email";
 
 const premiumFeatures = [

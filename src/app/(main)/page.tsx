@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -11,7 +12,7 @@ import { AppointmentCard } from '@/components/appointment-card';
 import { format } from 'date-fns';
 import { useAuth } from '@/context/auth-context';
 import { collection, onSnapshot } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db } from '@/lib/firebase-client';
 
 export default function HomePage() {
   const { user } = useAuth();
