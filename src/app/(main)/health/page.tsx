@@ -95,28 +95,6 @@ export default function HealthPage() {
       
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2"><BrainCircuit /> AI Insights</CardTitle>
-          <CardDescription>Personalized insights based on your recent health data.</CardDescription>
-        </CardHeader>
-        <CardContent>
-            {insights ? (
-                <div className="space-y-2 p-4 bg-primary/10 rounded-lg">
-                    <p><strong>Insight:</strong> {insights.insight}</p>
-                    <p><strong>Suggestion:</strong> {insights.suggestion}</p>
-                </div>
-            ): (
-                 <p className="text-muted-foreground text-sm">Click the button to generate insights from your logged data.</p>
-            )}
-        </CardContent>
-        <CardHeader>
-             <Button onClick={handleGetInsights} disabled={loadingInsights || (isGuest && healthMetrics.length === 0)}>
-                {loadingInsights ? 'Generating...' : 'Generate New Insights'}
-            </Button>
-        </CardHeader>
-      </Card>
-
-      <Card>
-        <CardHeader>
           <CardTitle className="flex items-center gap-2"><Activity /> History Log</CardTitle>
           <CardDescription>Your most recent health readings.</CardDescription>
         </CardHeader>
@@ -139,6 +117,27 @@ export default function HealthPage() {
           )}
         </CardContent>
       </Card>
+      
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><BrainCircuit /> AI Insights</CardTitle>
+          <CardDescription>Personalized insights based on your recent health data.</CardDescription>
+        </CardHeader>
+        <CardContent>
+            {insights ? (
+                <div className="space-y-2 p-4 bg-primary/10 rounded-lg">
+                    <p><strong>Insight:</strong> {insights.insight}</p>
+                    <p><strong>Suggestion:</strong> {insights.suggestion}</p>
+                </div>
+            ): (
+                 <p className="text-muted-foreground text-sm">Click the button to generate insights from your logged data.</p>
+            )}
+             <Button onClick={handleGetInsights} disabled={loadingInsights || (isGuest && healthMetrics.length === 0)} className="mt-4">
+                {loadingInsights ? 'Generating...' : 'Generate New Insights'}
+            </Button>
+        </CardContent>
+      </Card>
+
     </div>
   );
 }
