@@ -42,7 +42,7 @@ Health Data:
 
 Based on this data, provide one insight and one suggestion for {{{userName}}}.
 Example Insight: "Your blood pressure readings have been consistent this week. Great job staying on track!"
-Example Suggestion: "Consider a short walk after meals to help with your blood sugar levels."
+Example Suggestigation: "Consider a short walk after meals to help with your blood sugar levels."
 Keep the tone positive and supportive.
   `,
 });
