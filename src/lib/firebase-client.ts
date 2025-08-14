@@ -13,12 +13,8 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase for client-side usage
-let app: App;
-if (!getApps().length) {
-  app = initializeApp(firebaseConfig);
-} else {
-  app = getApp();
-}
+// This pattern prevents re-initializing the app on every render
+const app: App = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
 const auth: Auth = getAuth(app);
 const db: Firestore = getFirestore(app);

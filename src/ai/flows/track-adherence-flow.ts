@@ -43,7 +43,7 @@ const trackAdherenceFlow = ai.defineFlow(
   },
   async (input) => {
     try {
-      const adherenceLog: AdherenceLog = {
+      const adherenceLog: Omit<AdherenceLog, 'id'> = {
         ...input,
         takenAt: new Date(input.takenAt).toISOString(),
       };

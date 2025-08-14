@@ -1,4 +1,3 @@
-
 // src/lib/firebase.ts - SERVER-SIDE ADMIN USE ONLY
 import { initializeApp, getApps, getApp, App } from 'firebase/app';
 import { getFirestore, Firestore } from 'firebase/firestore';
@@ -13,6 +12,7 @@ const firebaseConfig = {
 };
 
 // This is for server-side use (e.g., Genkit flows)
+// Using a unique name ensures it doesn't conflict with the client-side app
 const app: App = getApps().find(app => app.name === 'server') || initializeApp(firebaseConfig, "server");
 const db: Firestore = getFirestore(app);
 
