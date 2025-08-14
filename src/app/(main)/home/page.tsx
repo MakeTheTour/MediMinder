@@ -73,7 +73,7 @@ export default function HomePage() {
       setFirestoreAdherence([]);
       setFamilyMembers([]);
     }
-  }, [user, isGuest, setLocalMedications, setLocalAppointments, setLocalAdherence]);
+  }, [user, isGuest]);
 
   const activeMedications = isGuest ? localMedications : firestoreMedications;
   const activeAppointments = isGuest ? localAppointments : firestoreAppointments;
@@ -186,7 +186,7 @@ export default function HomePage() {
             }
         });
     });
-  }, [todaysMedications, adherenceLogs, user, isGuest, localAdherence, setLocalAdherence, handleFamilyAlert]);
+  }, [todaysMedications, adherenceLogs, user, isGuest, localAdherence, handleFamilyAlert, setLocalAdherence]);
 
 
   useEffect(() => {
@@ -333,3 +333,5 @@ export default function HomePage() {
     </>
   );
 }
+
+    
