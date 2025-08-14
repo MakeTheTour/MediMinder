@@ -118,5 +118,3 @@ export default function FamilyPage() {
     </div>
   );
 }
-
-    
