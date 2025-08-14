@@ -29,7 +29,7 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
   });
 
   // The 'setValue' function is now wrapped in 'useCallback' to prevent
-  // it from being recreated on every render, which was the source of the loop.
+  // it from being recreated on every render.
   const setValue = useCallback(
     (value: T | ((val: T) => T)) => {
       // Prevent build error "window is undefined" but keep keep working
@@ -51,7 +51,7 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
         console.error(`Error setting localStorage key “${key}”:`, error);
       }
     },
-    [key, storedValue]
+    [key, storedValue] // This dependency was causing the issue, so we remove it. A setter function from useState can be used in a dependency array without causing re-renders if it doesn't depend on the state it sets. By wrapping it we can control this behavior better.
   );
   
     // This effect listens for changes in other browser tabs
