@@ -29,7 +29,7 @@ import Link from 'next/link';
 const profileSchema = z.object({
   name: z.string().min(1, 'Name is required.'),
   email: z.string().email('Invalid email address.'),
-  photoURL: z.string().optional(),
+  photoURL: z.string().url("Please enter a valid URL.").or(z.literal('')).optional(),
   dateOfBirth: z.string().optional(),
   height: z.coerce.number().optional(),
   gender: z.string().optional(),
@@ -43,9 +43,7 @@ export function ProfileForm() {
   const router = useRouter();
   const { toast } = useToast();
   const { user } = useAuth();
-  const [photoPreview, setPhotoPreview] = useState<string | null>(user?.photoURL || null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
+  
   const form = useForm<z.infer<typeof profileSchema>>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
@@ -81,39 +79,26 @@ export function ProfileForm() {
                     state: userData.state || '',
                     postcode: userData.postcode || '',
                 });
-                setPhotoPreview(user.photoURL || userData.photoURL || null);
             } else {
                  form.reset({
                     name: user.displayName || '',
                     email: user.email || '',
                     photoURL: user.photoURL || '',
                     dateOfBirth: '',
-                    height: '',
+                    height: '' as any, // Using any to reset since number can't be ''
                     gender: '',
                     country: '',
                     city: '',
                     state: '',
                     postcode: '',
                  });
-                 setPhotoPreview(user.photoURL || null);
             }
         }
         fetchUserData();
     }
   }, [user, form]);
-
-  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const dataUrl = reader.result as string;
-        setPhotoPreview(dataUrl);
-        form.setValue('photoURL', dataUrl);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
+  
+  const photoURL = form.watch('photoURL');
 
 
   async function onSubmit(values: z.infer<typeof profileSchema>) {
@@ -123,30 +108,24 @@ export function ProfileForm() {
     }
 
     try {
-        // Update Firebase Auth profile (name and photo)
         await updateProfile(user, { 
             displayName: values.name,
             photoURL: values.photoURL,
         });
         
-        // Create a separate object for Firestore without the photoURL
-        const { photoURL, ...firestoreData } = values;
-
-        // Update Firestore document with the rest of the data
-        const userRef = doc(db, 'users', user.uid);
-        await setDoc(userRef, firestoreData, { merge: true });
+        await setDoc(doc(db, 'users', user.uid), values, { merge: true });
 
         toast({
             title: 'Profile Updated',
             description: 'Your information has been saved successfully.',
         });
-        router.refresh(); // Refresh to update user data across the app
+        router.refresh(); 
         router.push('/settings');
-    } catch (error) {
+    } catch (error: any) {
          console.error("Profile update error:", error);
          toast({
             title: 'Error',
-            description: 'Could not update profile. Please try again.',
+            description: error.message || 'Could not update profile. Please try again.',
             variant: 'destructive',
         });
     }
@@ -164,20 +143,23 @@ export function ProfileForm() {
             <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                 <div className="flex flex-col items-center space-y-4">
-                  <Avatar className="h-24 w-24 cursor-pointer" onClick={() => fileInputRef.current?.click()}>
-                    <AvatarImage src={photoPreview || undefined} alt="Profile picture" />
+                  <Avatar className="h-24 w-24">
+                    <AvatarImage src={photoURL || undefined} alt="Profile picture" />
                     <AvatarFallback>{form.getValues('name')?.charAt(0) || user?.email?.charAt(0)}</AvatarFallback>
                   </Avatar>
-                   <Input 
-                    type="file" 
-                    ref={fileInputRef} 
-                    className="hidden" 
-                    accept="image/*"
-                    onChange={handlePhotoChange}
-                  />
-                  <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
-                    Change Picture
-                  </Button>
+                  <FormField
+                    control={form.control}
+                    name="photoURL"
+                    render={({ field }) => (
+                        <FormItem className="w-full">
+                        <FormLabel>Photo URL</FormLabel>
+                        <FormControl>
+                            <Input placeholder="https://example.com/image.png" {...field} value={field.value || ''} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
                 </div>
 
                 <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
