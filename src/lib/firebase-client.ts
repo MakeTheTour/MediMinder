@@ -5,7 +5,7 @@ import { getAuth, Auth } from 'firebase/auth';
 import { getFirestore, Firestore } from 'firebase/firestore';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBnSjiOBYUbovMxm3yMCD8O8ol8ibr9Y-0",
+  apiKey: "AIzaSyA2KHvo4yu7WkroavIUbmitH3YxqebXzlU",
   authDomain: "mediminder-50jgi.firebaseapp.com",
   projectId: "mediminder-50jgi",
   storageBucket: "mediminder-50jgi.firebasestorage.app",
