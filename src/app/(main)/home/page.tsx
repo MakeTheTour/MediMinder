@@ -205,6 +205,10 @@ export default function HomePage() {
         const reminderId = `${appt.id}-${reminderType}`;
         if (!sentAppointmentReminders.includes(reminderId)) {
           const reminderTime = reminderType === '24h' ? 24 : 1;
+          
+          const sound = new Audio('/notification.mp3');
+          sound.play().catch(e => console.error("Failed to play notification sound:", e));
+          
           toast({
             title: `Appointment Reminder (${reminderTime}h)`,
             description: `Your appointment with Dr. ${appt.doctorName} is coming up.`,
