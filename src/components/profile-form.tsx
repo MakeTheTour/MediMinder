@@ -21,15 +21,17 @@ import {
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/context/auth-context';
 import { useToast } from '@/hooks/use-toast';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
+import Link from 'next/link';
 
 const profileSchema = z.object({
   name: z.string().min(1, 'Name is required.'),
   email: z.string().email('Invalid email address.'),
   photoURL: z.string().optional(),
   dateOfBirth: z.string().optional(),
+  height: z.coerce.number().optional(),
   gender: z.string().optional(),
   country: z.string().optional(),
   city: z.string().optional(),
@@ -51,6 +53,7 @@ export function ProfileForm() {
       email: user?.email || '',
       photoURL: user?.photoURL || '',
       dateOfBirth: '',
+      height: undefined,
       gender: '',
       country: '',
       city: '',
@@ -71,6 +74,7 @@ export function ProfileForm() {
                     email: user.email || userData.email || '',
                     photoURL: user.photoURL || userData.photoURL || '',
                     dateOfBirth: userData.dateOfBirth || '',
+                    height: userData.height || undefined,
                     gender: userData.gender || '',
                     country: userData.country || '',
                     city: userData.city || '',
@@ -134,6 +138,9 @@ export function ProfileForm() {
     <Card>
         <CardHeader>
             <CardTitle>Your Details</CardTitle>
+            <CardDescription>
+                Provide some basic information to personalize your experience.
+            </CardDescription>
         </CardHeader>
         <CardContent>
             <Form {...form}>
@@ -190,6 +197,19 @@ export function ProfileForm() {
                             <FormLabel>Date of Birth</FormLabel>
                             <FormControl>
                                 <Input type="date" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                    <FormField
+                        control={form.control}
+                        name="height"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Height (cm)</FormLabel>
+                            <FormControl>
+                                <Input type="number" placeholder="e.g., 175" {...field} />
                             </FormControl>
                             <FormMessage />
                             </FormItem>
@@ -274,6 +294,11 @@ export function ProfileForm() {
                 <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
                     {form.formState.isSubmitting ? 'Saving...' : 'Save Changes'}
                 </Button>
+                 <div className="text-center text-sm">
+                    <Link href="/home" className="text-muted-foreground hover:text-primary">
+                        Skip for now
+                    </Link>
+                </div>
             </form>
             </Form>
         </CardContent>

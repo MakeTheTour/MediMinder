@@ -50,7 +50,11 @@ export default function SignupPage() {
         createdAt: new Date().toISOString(),
       });
       
-      router.push('/home');
+      toast({
+        title: 'Account Created!',
+        description: "Welcome to MediMinder. Let's set up your profile.",
+      });
+      router.push('/settings/profile');
     } catch (error: any) {
       toast({
         variant: 'destructive',

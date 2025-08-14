@@ -48,6 +48,7 @@ export interface UserProfile {
   email: string;
   photoURL?: string;
   dateOfBirth?: string;
+  height?: number;
   gender?: string;
   country?: string;
   state?: string;
