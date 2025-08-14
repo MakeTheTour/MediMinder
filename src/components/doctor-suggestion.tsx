@@ -18,7 +18,7 @@ const symptomSchema = z.object({
   symptoms: z.string().min(10, 'Please describe your symptoms in at least 10 characters.'),
 });
 
-export function SymptomChecker() {
+export function DoctorSuggestion() {
   const { toast } = useToast();
   const { isGuest } = useAuth();
   const [recommendation, setRecommendation] = useState<SpecialistRecommendationOutput | null>(null);
@@ -56,7 +56,7 @@ export function SymptomChecker() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Stethoscope />
-              Symptom Checker
+              Doctor Suggestion
             </CardTitle>
             <CardDescription>
               Describe your symptoms, and our AI will suggest a type of specialist to consult. This is not medical advice.
@@ -107,7 +107,7 @@ export function SymptomChecker() {
               ) : (
                 <>
                   <Sparkles className="mr-2 h-4 w-4" />
-                   {isGuest ? 'Sign in to use' : 'Get Recommendation'}
+                   {isGuest ? 'Sign in to use' : 'Get Suggestion'}
                 </>
               )}
             </Button>

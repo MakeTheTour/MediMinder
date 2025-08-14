@@ -15,7 +15,7 @@ import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import { generateHealthInsights, HealthInsightsOutput } from '@/ai/flows/health-insights-flow';
 import { useToast } from '@/hooks/use-toast';
-import { SymptomChecker } from '@/components/symptom-checker';
+import { DoctorSuggestion } from '@/components/doctor-suggestion';
 
 function HealthHistoryItem({ metric }: { metric: HealthMetric }) {
     return (
@@ -91,7 +91,7 @@ export default function HealthPage() {
         </Button>
       </header>
       
-      <SymptomChecker />
+      <DoctorSuggestion />
       
       <Card>
         <CardHeader>
