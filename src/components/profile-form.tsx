@@ -74,7 +74,7 @@ export function ProfileForm() {
                     email: user.email || userData.email || '',
                     photoURL: user.photoURL || userData.photoURL || '',
                     dateOfBirth: userData.dateOfBirth || '',
-                    height: userData.height || undefined,
+                    height: userData.height || '',
                     gender: userData.gender || '',
                     country: userData.country || '',
                     city: userData.city || '',
@@ -87,6 +87,13 @@ export function ProfileForm() {
                     name: user.displayName || '',
                     email: user.email || '',
                     photoURL: user.photoURL || '',
+                    dateOfBirth: '',
+                    height: '',
+                    gender: '',
+                    country: '',
+                    city: '',
+                    state: '',
+                    postcode: '',
                  });
                  setPhotoPreview(user.photoURL || null);
             }
@@ -116,15 +123,18 @@ export function ProfileForm() {
     }
 
     try {
-        if (values.name !== user.displayName || values.photoURL !== user.photoURL) {
-            await updateProfile(user, { 
-              displayName: values.name,
-              photoURL: values.photoURL,
-            });
-        }
+        // Update Firebase Auth profile (name and photo)
+        await updateProfile(user, { 
+            displayName: values.name,
+            photoURL: values.photoURL,
+        });
         
+        // Create a separate object for Firestore without the photoURL
+        const { photoURL, ...firestoreData } = values;
+
+        // Update Firestore document with the rest of the data
         const userRef = doc(db, 'users', user.uid);
-        await setDoc(userRef, values, { merge: true });
+        await setDoc(userRef, firestoreData, { merge: true });
 
         toast({
             title: 'Profile Updated',
@@ -133,6 +143,7 @@ export function ProfileForm() {
         router.refresh(); // Refresh to update user data across the app
         router.push('/settings');
     } catch (error) {
+         console.error("Profile update error:", error);
          toast({
             title: 'Error',
             description: 'Could not update profile. Please try again.',
