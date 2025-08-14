@@ -42,7 +42,8 @@ User's Symptoms: "{{{symptoms}}}"
 User's City: "{{{city}}}"
 
 Based on the symptoms, first recommend a specialist and provide a brief reasoning.
-Then, suggest a specific, top-rated doctor of that specialty in the user's city, including their name and full address.
+Then, acting as if you have access to a list of top-rated doctors, generate a plausible name and full address for a fictional, top-rated doctor of that specialty in the user's city.
+For example, for "San Francisco", you could suggest "Dr. Eleanor Vance" at "450 Sutter St, San Francisco, CA 94108".
 {{else}}
 Based on these symptoms, recommend a specialist and provide a very brief, one-sentence reasoning. For example, if the user reports chest pain, you might recommend a "Cardiologist" with the reasoning "Cardiologists specialize in heart-related issues, which can be a cause of chest pain."
 {{/if}}
