@@ -74,6 +74,7 @@ export function SymptomChecker() {
                       placeholder="e.g., I've had a persistent cough and mild fever for three days..."
                       {...field}
                       rows={4}
+                      disabled={isGuest}
                     />
                   </FormControl>
                   <FormMessage />
@@ -106,7 +107,7 @@ export function SymptomChecker() {
               ) : (
                 <>
                   <Sparkles className="mr-2 h-4 w-4" />
-                  Get Recommendation
+                   {isGuest ? 'Sign in to use' : 'Get Recommendation'}
                 </>
               )}
             </Button>
