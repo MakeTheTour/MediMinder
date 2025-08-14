@@ -1,3 +1,4 @@
+
 // src/lib/firebase-client.ts - CLIENT-SIDE USE ONLY
 import { initializeApp, getApps, getApp, App } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
