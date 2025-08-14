@@ -1,7 +1,7 @@
 
 'use client';
 
-import { Pill, Clock, Trash2, MoreVertical, ShieldAlert } from 'lucide-react';
+import { Pill, Clock, Trash2, MoreVertical, ShieldAlert, Pencil } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Medication } from '@/lib/types';
 import {
@@ -17,10 +17,11 @@ interface MedicationCardProps {
   medication: Medication;
   onDelete?: (id: string) => void;
   onFamilyAlert?: (medication: Medication) => void;
+  onEdit?: (id: string) => void;
   specificTime?: string;
 }
 
-export function MedicationCard({ medication, onDelete, onFamilyAlert, specificTime }: MedicationCardProps) {
+export function MedicationCard({ medication, onDelete, onFamilyAlert, specificTime, onEdit }: MedicationCardProps) {
   const displayTimes = specificTime ? [specificTime] : medication.times;
 
   return (
@@ -36,7 +37,7 @@ export function MedicationCard({ medication, onDelete, onFamilyAlert, specificTi
               <p className="text-sm text-muted-foreground">{medication.intake_qty} {medication.dosage}</p>
             </div>
           </div>
-          {(onDelete || onFamilyAlert) && (
+          {(onDelete || onFamilyAlert || onEdit) && (
              <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
@@ -45,13 +46,19 @@ export function MedicationCard({ medication, onDelete, onFamilyAlert, specificTi
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                {onEdit && (
+                    <DropdownMenuItem onClick={() => onEdit(medication.id)}>
+                        <Pencil className="mr-2 h-4 w-4" />
+                        Edit
+                    </DropdownMenuItem>
+                )}
                 {onFamilyAlert && (
                   <DropdownMenuItem onClick={() => onFamilyAlert(medication)}>
                       <ShieldAlert className="mr-2 h-4 w-4" />
                       Alert Family
                   </DropdownMenuItem>
                 )}
-                {onDelete && onFamilyAlert && <DropdownMenuSeparator />}
+                {(onDelete && (onFamilyAlert || onEdit)) && <DropdownMenuSeparator />}
                 {onDelete && (
                     <DropdownMenuItem onClick={() => onDelete(medication.id)} className="text-destructive">
                       <Trash2 className="mr-2 h-4 w-4" />

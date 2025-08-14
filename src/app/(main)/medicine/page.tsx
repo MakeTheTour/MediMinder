@@ -16,10 +16,12 @@ import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent } from '@/components/ui/card';
 import { useLocalStorage } from '@/hooks/use-local-storage';
+import { useRouter } from 'next/navigation';
 
 export default function MedicinePage() {
   const { user, isGuest } = useAuth();
   const { toast } = useToast();
+  const router = useRouter();
 
   const [localMedications, setLocalMedications] = useLocalStorage<Medication[]>('guest-medications', []);
   const [localAppointments, setLocalAppointments] = useLocalStorage<Appointment[]>('guest-appointments', []);
@@ -50,6 +52,14 @@ export default function MedicinePage() {
 
   const medications = isGuest ? localMedications : firestoreMedications;
   const appointments = isGuest ? localAppointments : firestoreAppointments;
+
+  const handleEditMedication = (id: string) => {
+    router.push(`/medicine/edit/${id}`);
+  };
+
+  const handleEditAppointment = (id: string) => {
+    router.push(`/appointments/edit/${id}`);
+  };
 
   const handleDeleteMedication = async (id: string) => {
     if(isGuest) {
@@ -132,7 +142,7 @@ export default function MedicinePage() {
                {medications.length > 0 ? (
                 <div className="space-y-4">
                   {medications.map(med => (
-                    <MedicationCard key={med.id} medication={med} onDelete={handleDeleteMedication} />
+                    <MedicationCard key={med.id} medication={med} onDelete={handleDeleteMedication} onEdit={handleEditMedication} />
                   ))}
                 </div>
               ) : (
@@ -153,7 +163,7 @@ export default function MedicinePage() {
               {appointments.length > 0 ? (
                 <div className="space-y-4">
                   {appointments.map(app => (
-                    <AppointmentCard key={app.id} appointment={app} onDelete={handleDeleteAppointment} />
+                    <AppointmentCard key={app.id} appointment={app} onDelete={handleDeleteAppointment} onEdit={handleEditAppointment}/>
                   ))}
                 </div>
               ) : (

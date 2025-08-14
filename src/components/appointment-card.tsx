@@ -1,7 +1,7 @@
 
 'use client';
 
-import { Stethoscope, Clock, MapPin, Trash2, MoreVertical, FileText } from 'lucide-react';
+import { Stethoscope, Clock, MapPin, Trash2, MoreVertical, FileText, Pencil } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Appointment } from '@/lib/types';
 import { format } from 'date-fns';
@@ -22,9 +22,10 @@ import {
 interface AppointmentCardProps {
   appointment: Appointment;
   onDelete?: (id: string) => void;
+  onEdit?: (id: string) => void;
 }
 
-export function AppointmentCard({ appointment, onDelete }: AppointmentCardProps) {
+export function AppointmentCard({ appointment, onDelete, onEdit }: AppointmentCardProps) {
   return (
      <Collapsible asChild>
         <Card className="w-full overflow-hidden transition-all hover:shadow-md bg-muted/20 border">
@@ -47,7 +48,7 @@ export function AppointmentCard({ appointment, onDelete }: AppointmentCardProps)
                             </Button>
                         </CollapsibleTrigger>
                      )}
-                    {onDelete && (
+                    {(onDelete || onEdit) && (
                         <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
@@ -56,10 +57,18 @@ export function AppointmentCard({ appointment, onDelete }: AppointmentCardProps)
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => onDelete(appointment.id)} className="text-destructive">
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete
-                            </DropdownMenuItem>
+                            {onEdit && (
+                                <DropdownMenuItem onClick={() => onEdit(appointment.id)}>
+                                    <Pencil className="mr-2 h-4 w-4" />
+                                    Edit
+                                </DropdownMenuItem>
+                            )}
+                            {onDelete && (
+                                <DropdownMenuItem onClick={() => onDelete(appointment.id)} className="text-destructive">
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                                </DropdownMenuItem>
+                            )}
                         </DropdownMenuContent>
                         </DropdownMenu>
                     )}
