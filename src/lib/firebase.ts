@@ -1,10 +1,9 @@
-
 // src/lib/firebase.ts - SERVER-SIDE ADMIN USE ONLY
 import { initializeApp, getApps, getApp, App } from 'firebase/app';
 import { getFirestore, Firestore } from 'firebase/firestore';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyA2KHvo4yu7WkroavIUbmitH3YxqebXzlU",
+  apiKey: "AIzaSyAiVdC8RuN8ooQ4gGEBZgC5y_8jWoH5Aos",
   authDomain: "mediminder-50jgi.firebaseapp.com",
   projectId: "mediminder-50jgi",
   storageBucket: "mediminder-50jgi.appspot.com",

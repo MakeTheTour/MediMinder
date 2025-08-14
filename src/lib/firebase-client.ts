@@ -1,11 +1,10 @@
-
 // src/lib/firebase-client.ts - CLIENT-SIDE USE ONLY
 import { initializeApp, getApps, getApp, App } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
 import { getFirestore, Firestore } from 'firebase/firestore';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyA2KHvo4yu7WkroavIUbmitH3YxqebXzlU",
+  apiKey: "AIzaSyAiVdC8RuN8ooQ4gGEBZgC5y_8jWoH5Aos",
   authDomain: "mediminder-50jgi.firebaseapp.com",
   projectId: "mediminder-50jgi",
   storageBucket: "mediminder-50jgi.appspot.com",
