@@ -71,4 +71,5 @@ export interface AdherenceLog {
     takenAt: string; // ISO string
     status: 'taken' | 'skipped' | 'missed';
     userId: string;
+    scheduledTime?: string;
 }

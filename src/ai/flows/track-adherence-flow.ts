@@ -21,6 +21,7 @@ const AdherenceInputSchema = z.object({
     takenAt: z.string().datetime(),
     status: z.enum(['taken', 'skipped', 'missed']),
     userId: z.string(),
+    scheduledTime: z.string().optional(),
 });
 export type AdherenceInput = z.infer<typeof AdherenceInputSchema>;
 

@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Medication, Appointment, AdherenceLog, FamilyMember } from '@/lib/types';
 import { MedicationCard } from '@/components/medication-card';
 import { AppointmentCard } from '@/components/appointment-card';
-import { format, parse, isToday, isFuture } from 'date-fns';
+import { format, parse, isToday, isFuture, subMinutes } from 'date-fns';
 import { useAuth } from '@/context/auth-context';
 import { collection, onSnapshot, query, where, orderBy, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase-client';
@@ -124,16 +124,17 @@ export default function HomePage() {
     
     for (const med of todaysMedications) {
       for (const time of med.times) {
-        const reminderTime = parse(time, 'HH:mm', new Date());
+        const scheduledTime = parse(time, 'HH:mm', new Date());
+        const reminderTime = subMinutes(scheduledTime, 10);
         
         // Check if a log already exists for this specific medication at this specific time on this day
         const alreadyHandled = adherenceLogs.some(
           log => log.medicationId === med.id && 
                  format(new Date(log.takenAt), 'yyyy-MM-dd') === format(now, 'yyyy-MM-dd') &&
-                 format(parse(time, 'HH:mm', new Date()), 'HH:mm') === format(reminderTime, 'HH:mm')
+                 log.scheduledTime === time
         );
         
-        if (now >= reminderTime && !alreadyHandled) {
+        if (now >= reminderTime && now < scheduledTime && !alreadyHandled) {
           setReminder({ medication: med, time });
           return; // Show one reminder at a time
         }
@@ -149,23 +150,21 @@ export default function HomePage() {
   }, [checkReminders]);
 
 
-  const handleReminderAction = async (medication: Medication, status: 'taken' | 'skipped') => {
+  const handleReminderAction = async (medication: Medication, scheduledTime: string, status: 'taken' | 'skipped') => {
     const logEntry: Omit<AdherenceLog, 'id'> = {
       medicationId: medication.id,
       medicationName: medication.name,
       takenAt: new Date().toISOString(),
       status: status,
-      userId: user?.uid || 'guest'
+      userId: user?.uid || 'guest',
+      scheduledTime: scheduledTime,
     };
 
     if (isGuest || !user) {
       setLocalAdherence([...localAdherence, { ...logEntry, id: new Date().toISOString() }]);
     } else {
       await trackAdherence({
-          medicationId: medication.id,
-          medicationName: medication.name,
-          takenAt: new Date().toISOString(),
-          status: status,
+          ...logEntry,
           userId: user.uid,
       });
     }
@@ -213,8 +212,8 @@ export default function HomePage() {
             isOpen={!!reminder}
             medication={reminder.medication}
             time={reminder.time}
-            onTake={() => handleReminderAction(reminder.medication, 'taken')}
-            onSkip={() => handleReminderAction(reminder.medication, 'skipped')}
+            onTake={() => handleReminderAction(reminder.medication, reminder.time, 'taken')}
+            onSkip={() => handleReminderAction(reminder.medication, reminder.time, 'skipped')}
         />
     )}
     <div className="container mx-auto max-w-2xl p-4 space-y-6">
