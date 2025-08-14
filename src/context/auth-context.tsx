@@ -25,6 +25,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const storedIsGuest = typeof window !== 'undefined' && window.sessionStorage.getItem('isGuest') === 'true';
     if (storedIsGuest) {
         setIsGuestState(true);
+        setLoading(false);
     }
 
     const unsubscribe = onAuthStateChanged(auth, (user) => {

@@ -12,7 +12,7 @@ const firebaseConfig = {
 };
 
 // This is for server-side use (e.g., Genkit flows)
-const app: App = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig, "server");
+const app: App = getApps().find(app => app.name === 'server') || initializeApp(firebaseConfig, "server");
 const db: Firestore = getFirestore(app);
 
 export { db };
