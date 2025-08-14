@@ -19,7 +19,7 @@ const AdherenceInputSchema = z.object({
     medicationId: z.string(),
     medicationName: z.string(),
     takenAt: z.string().datetime(),
-    status: z.enum(['taken', 'skipped', 'missed']),
+    status: z.enum(['taken', 'skipped', 'missed', 'stock_out', 'muted']),
     userId: z.string(),
     scheduledTime: z.string().optional(),
 });

@@ -50,7 +50,6 @@ export interface UserProfile {
   dateOfBirth?: string;
   gender?: string;
   country?: string;
-  city?: string;
   state?: string;
   postcode?: string;
 }
@@ -69,7 +68,7 @@ export interface AdherenceLog {
     medicationId: string;
     medicationName: string;
     takenAt: string; // ISO string
-    status: 'taken' | 'skipped' | 'missed';
+    status: 'taken' | 'skipped' | 'missed' | 'stock_out' | 'muted';
     userId: string;
     scheduledTime?: string;
 }

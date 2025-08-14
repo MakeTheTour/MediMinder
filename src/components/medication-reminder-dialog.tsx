@@ -22,6 +22,7 @@ interface MedicationReminderDialogProps {
   time: string;
   onTake: () => void;
   onSkip: () => void;
+  onStockOut: () => void;
 }
 
 export function MedicationReminderDialog({
@@ -30,6 +31,7 @@ export function MedicationReminderDialog({
   time,
   onTake,
   onSkip,
+  onStockOut,
 }: MedicationReminderDialogProps) {
   const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
 
@@ -80,9 +82,12 @@ export function MedicationReminderDialog({
              </div>
         </div>
         <AlertDialogFooter className="grid grid-cols-2 gap-4">
-          <Button variant="outline" onClick={onSkip}>Skip</Button>
-          <Button onClick={onTake}>I've Taken It</Button>
+          <Button variant="outline" onClick={onSkip}>Mute</Button>
+          <Button onClick={onTake}>Complete</Button>
         </AlertDialogFooter>
+         <Button variant="destructive" className="w-full" onClick={onStockOut}>
+            Out of Stock
+        </Button>
       </AlertDialogContent>
     </AlertDialog>
   );

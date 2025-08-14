@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Medication, Appointment, AdherenceLog, FamilyMember } from '@/lib/types';
 import { MedicationCard } from '@/components/medication-card';
 import { AppointmentCard } from '@/components/appointment-card';
-import { format, parse, isToday, isFuture, subMinutes } from 'date-fns';
+import { format, parse, isToday, isFuture, subMinutes, addMinutes, differenceInMinutes } from 'date-fns';
 import { useAuth } from '@/context/auth-context';
 import { collection, onSnapshot, query, where, orderBy, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase-client';
@@ -90,7 +90,7 @@ export default function HomePage() {
     });
   }, [activeMedications]);
 
-    const handleFamilyAlert = useCallback(async (medication: Medication) => {
+    const handleFamilyAlert = useCallback(async (medication: Medication, reason: string) => {
         if (isGuest || !user) {
             toast({ title: 'Sign In Required', description: 'Please sign in to alert family members.', variant: 'destructive'});
             return;
@@ -105,7 +105,7 @@ export default function HomePage() {
             toast({ title: 'Sending Alert...', description: `Notifying ${acceptedFamilyMember.name}.` });
             const result = await generateFamilyAlert({
                 patientName: user.displayName || 'A family member',
-                medicationName: medication.name,
+                medicationName: `${medication.name} (${reason})`,
                 familyName: acceptedFamilyMember.name,
             });
             // Here you would typically send the alert via SMS/email
@@ -125,7 +125,6 @@ export default function HomePage() {
     for (const med of todaysMedications) {
       for (const time of med.times) {
         const scheduledTime = parse(time, 'HH:mm', new Date());
-        const reminderTime = subMinutes(scheduledTime, 10);
         
         // Check if a log already exists for this specific medication at this specific time on this day
         const alreadyHandled = adherenceLogs.some(
@@ -134,6 +133,8 @@ export default function HomePage() {
                  log.scheduledTime === time
         );
         
+        // Reminder window: 10 mins before to scheduled time
+        const reminderTime = subMinutes(scheduledTime, 10);
         if (now >= reminderTime && now < scheduledTime && !alreadyHandled) {
           setReminder({ medication: med, time });
           return; // Show one reminder at a time
@@ -142,15 +143,66 @@ export default function HomePage() {
     }
   }, [adherenceLogs, todaysMedications, reminder]);
 
+  const checkMissedDoses = useCallback(() => {
+    const now = new Date();
+    todaysMedications.forEach(med => {
+        med.times.forEach(async time => {
+            const scheduledTime = parse(time, 'HH:mm', new Date());
+            const thirtyMinsAfter = addMinutes(scheduledTime, 30);
+            
+            if (now > thirtyMinsAfter) {
+                const wasHandled = adherenceLogs.some(log => 
+                    log.medicationId === med.id &&
+                    format(new Date(log.takenAt), 'yyyy-MM-dd') === format(now, 'yyyy-MM-dd') &&
+                    log.scheduledTime === time &&
+                    (log.status === 'taken' || log.status === 'stock_out')
+                );
+                
+                const alreadyAlerted = adherenceLogs.some(log =>
+                     log.medicationId === med.id &&
+                     format(new Date(log.takenAt), 'yyyy-MM-dd') === format(now, 'yyyy-MM-dd') &&
+                     log.scheduledTime === time &&
+                     log.status === 'missed'
+                );
+
+                if (!wasHandled && !alreadyAlerted) {
+                    console.log(`Dose missed for ${med.name} at ${time}. Alerting family.`);
+                    await handleFamilyAlert(med, 'dose missed');
+                    // Log the missed dose to prevent re-alerting
+                    const logEntry: Omit<AdherenceLog, 'id'> = {
+                        medicationId: med.id,
+                        medicationName: med.name,
+                        takenAt: new Date().toISOString(),
+                        status: 'missed',
+                        userId: user?.uid || 'guest',
+                        scheduledTime: time,
+                    };
+                    if (isGuest || !user) {
+                        setLocalAdherence([...localAdherence, { ...logEntry, id: new Date().toISOString() }]);
+                    } else {
+                        await trackAdherence({ ...logEntry, userId: user.uid });
+                    }
+                }
+            }
+        });
+    });
+  }, [todaysMedications, adherenceLogs, user, isGuest, localAdherence, setLocalAdherence, handleFamilyAlert]);
+
+
   useEffect(() => {
-    const interval = setInterval(checkReminders, 30000); // Check every 30 seconds
-    checkReminders(); // Check immediately on load
+    const reminderInterval = setInterval(checkReminders, 30000); // Check every 30 seconds
+    const missedDoseInterval = setInterval(checkMissedDoses, 60000 * 5); // Check every 5 minutes
+    checkReminders();
+    checkMissedDoses();
 
-    return () => clearInterval(interval);
-  }, [checkReminders]);
+    return () => {
+      clearInterval(reminderInterval);
+      clearInterval(missedDoseInterval);
+    };
+  }, [checkReminders, checkMissedDoses]);
 
 
-  const handleReminderAction = async (medication: Medication, scheduledTime: string, status: 'taken' | 'skipped') => {
+  const handleReminderAction = async (medication: Medication, scheduledTime: string, status: 'taken' | 'skipped' | 'stock_out' | 'muted') => {
     const logEntry: Omit<AdherenceLog, 'id'> = {
       medicationId: medication.id,
       medicationName: medication.name,
@@ -169,8 +221,8 @@ export default function HomePage() {
       });
     }
 
-    if (status === 'skipped') {
-        handleFamilyAlert(medication);
+    if (status === 'stock_out') {
+        handleFamilyAlert(medication, 'is out of stock');
     }
     setReminder(null);
   };
@@ -213,7 +265,8 @@ export default function HomePage() {
             medication={reminder.medication}
             time={reminder.time}
             onTake={() => handleReminderAction(reminder.medication, reminder.time, 'taken')}
-            onSkip={() => handleReminderAction(reminder.medication, reminder.time, 'skipped')}
+            onSkip={() => handleReminderAction(reminder.medication, reminder.time, 'muted')}
+            onStockOut={() => handleReminderAction(reminder.medication, reminder.time, 'stock_out')}
         />
     )}
     <div className="container mx-auto max-w-2xl p-4 space-y-6">
