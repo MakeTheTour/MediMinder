@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Medication, Appointment, AdherenceLog, FamilyMember } from '@/lib/types';
 import { MedicationCard } from '@/components/medication-card';
 import { AppointmentCard } from '@/components/appointment-card';
-import { format, parse, isToday, isFuture, subMinutes, addMinutes, differenceInMinutes } from 'date-fns';
+import { format, parse, isToday, isFuture, subMinutes, addMinutes, differenceInMinutes, differenceInHours } from 'date-fns';
 import { useAuth } from '@/context/auth-context';
 import { collection, onSnapshot, query, where, orderBy, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase-client';
@@ -19,6 +19,7 @@ import { MedicationReminderDialog } from '@/components/medication-reminder-dialo
 import { trackAdherence } from '@/ai/flows/track-adherence-flow';
 import { useToast } from '@/hooks/use-toast';
 import { generateFamilyAlert } from '@/ai/flows/family-alert-flow';
+import { generateAppointmentReminder } from '@/ai/flows/appointment-reminder-flow';
 
 export default function HomePage() {
   const { user, isGuest } = useAuth();
@@ -28,6 +29,7 @@ export default function HomePage() {
   const [localMedications, setLocalMedications] = useLocalStorage<Medication[]>('guest-medications', []);
   const [localAppointments, setLocalAppointments] = useLocalStorage<Appointment[]>('guest-appointments', []);
   const [localAdherence, setLocalAdherence] = useLocalStorage<AdherenceLog[]>('guest-adherence', []);
+  const [sentAppointmentReminders, setSentAppointmentReminders] = useLocalStorage<string[]>('sent-appointment-reminders', []);
 
   const [firestoreMedications, setFirestoreMedications] = useState<Medication[]>([]);
   const [firestoreAppointments, setFirestoreAppointments] = useState<Appointment[]>([]);
@@ -73,7 +75,7 @@ export default function HomePage() {
       setFirestoreAdherence([]);
       setFamilyMembers([]);
     }
-  }, [user, isGuest]);
+  }, [user, isGuest, setLocalAdherence, setLocalAppointments, setLocalMedications]);
 
   const activeMedications = isGuest ? localMedications : firestoreMedications;
   const activeAppointments = isGuest ? localAppointments : firestoreAppointments;
@@ -189,17 +191,75 @@ export default function HomePage() {
   }, [todaysMedications, adherenceLogs, user, isGuest, localAdherence, handleFamilyAlert, setLocalAdherence]);
 
 
+  const checkAppointmentReminders = useCallback(async () => {
+    if (isGuest || !user) return;
+
+    const now = new Date();
+    const acceptedFamilyMember = familyMembers.find(m => m.status === 'accepted');
+
+    for (const appt of activeAppointments) {
+      const apptDateTime = parse(`${appt.date} ${appt.time}`, 'yyyy-MM-dd HH:mm', new Date());
+      const hoursUntil = differenceInHours(apptDateTime, now);
+
+      const checkAndSend = async (reminderType: '24h' | '1h') => {
+        const reminderId = `${appt.id}-${reminderType}`;
+        if (!sentAppointmentReminders.includes(reminderId)) {
+          const reminderTime = reminderType === '24h' ? 24 : 1;
+          toast({
+            title: `Appointment Reminder (${reminderTime}h)`,
+            description: `Your appointment with Dr. ${appt.doctorName} is coming up.`,
+          });
+
+          if (acceptedFamilyMember) {
+            const result = await generateAppointmentReminder({
+              patientName: user.displayName || 'A family member',
+              familyName: acceptedFamilyMember.name,
+              doctorName: appt.doctorName,
+              specialty: appt.specialty,
+              appointmentDate: appt.date,
+              appointmentTime: appt.time,
+              reminderTime: `${reminderTime} hour(s)`
+            });
+            console.log("Appointment Reminder for Family:", result.reminderMessage);
+             toast({
+                title: 'Family Notified',
+                description: `${acceptedFamilyMember.name} was reminded about the appointment.`,
+                variant: 'default',
+            });
+          }
+          
+          setSentAppointmentReminders([...sentAppointmentReminders, reminderId]);
+        }
+      };
+
+      // Check for 24-hour reminder (between 23 and 24 hours)
+      if (hoursUntil > 23 && hoursUntil <= 24) {
+        await checkAndSend('24h');
+      }
+
+      // Check for 1-hour reminder (between 0 and 1 hours)
+      if (hoursUntil > 0 && hoursUntil <= 1) {
+        await checkAndSend('1h');
+      }
+    }
+  }, [isGuest, user, activeAppointments, sentAppointmentReminders, setSentAppointmentReminders, familyMembers, toast]);
+
+
   useEffect(() => {
     const reminderInterval = setInterval(checkReminders, 30000); // Check every 30 seconds
     const missedDoseInterval = setInterval(checkMissedDoses, 60000 * 5); // Check every 5 minutes
+    const appointmentReminderInterval = setInterval(checkAppointmentReminders, 60000 * 10); // Check every 10 minutes
+
     checkReminders();
     checkMissedDoses();
+    checkAppointmentReminders();
 
     return () => {
       clearInterval(reminderInterval);
       clearInterval(missedDoseInterval);
+      clearInterval(appointmentReminderInterval);
     };
-  }, [checkReminders, checkMissedDoses]);
+  }, [checkReminders, checkMissedDoses, checkAppointmentReminders]);
 
 
   const handleReminderAction = async (medication: Medication, scheduledTime: string, status: 'taken' | 'skipped' | 'stock_out' | 'muted') => {
@@ -222,7 +282,7 @@ export default function HomePage() {
     }
 
     if (status === 'stock_out') {
-        handleFamilyAlert(medication, 'is out of stock');
+        await handleFamilyAlert(medication, 'is out of stock');
     }
     setReminder(null);
   };
@@ -333,5 +393,3 @@ export default function HomePage() {
     </>
   );
 }
-
-    
