@@ -10,7 +10,6 @@ const firebaseConfig = {
   storageBucket: "mediminder-50jgi.firebasestorage.app",
   messagingSenderId: "811154320643",
   appId: "1:811154320643:web:42107016d08f6bcc568d36",
-  measurementId: "",
 };
 
 
