@@ -40,7 +40,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         router.push('/login');
       } else {
         // Check if the logged-in user is the admin
-        const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
+        // For now, we will use a hardcoded value.
+        const adminEmail = "admin@example.com";
         if (user.email === adminEmail) {
           setIsAdmin(true);
         } else {
