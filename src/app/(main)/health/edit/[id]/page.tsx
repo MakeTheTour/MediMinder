@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { EditHealthMetricForm } from '@/components/edit-health-metric-form';
@@ -15,4 +14,3 @@ export default function EditHealthMetricPage({ params }: { params: { id: string 
     </div>
   );
 }
-

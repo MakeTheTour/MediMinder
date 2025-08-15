@@ -1,5 +1,4 @@
 
-
 'use client';
 import { EditMedicationForm } from '@/components/edit-medication-form';
 
@@ -14,4 +13,3 @@ export default function EditMedicationPage({ params }: { params: { id: string }}
     </div>
   );
 }
-
