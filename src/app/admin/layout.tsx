@@ -39,7 +39,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     if (!loading) {
       if (!user) {
         // If not logged in, redirect to user login. They can login as admin there.
-        router.push('/login');
+        router.push('/admin/login');
       } else {
         // Check if the logged-in user is the admin
         // For now, we will use a hardcoded value.

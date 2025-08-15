@@ -43,6 +43,7 @@ export default function MainLayout({ children }: { children: ReactNode }) {
     return <>{children}</>;
   }
 
+
   if (!user && !isGuest) {
     return null;
   }
