@@ -2,7 +2,7 @@
 'use client'
 
 import Link from 'next/link';
-import { User, Bell, Mic, ChevronRight, LogOut, Star } from 'lucide-react';
+import { User, Bell, Mic, ChevronRight, LogOut, Star, LineChart } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -25,6 +25,12 @@ const settingsItems = [
     icon: Bell,
     title: 'Notifications',
     description: 'Manage alert preferences.',
+  },
+  {
+    href: '/settings/reports',
+    icon: LineChart,
+    title: 'View Reports',
+    description: 'Check medication adherence.',
   },
   {
     href: '/settings/premium',
