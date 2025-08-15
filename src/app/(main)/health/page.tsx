@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, HeartPulse, BrainCircuit, Activity, Utensils, Dumbbell, Pill, AlertCircle, Trash2, Pencil } from 'lucide-react';
+import { Plus, HeartPulse, BrainCircuit, Activity, Utensils, Dumbbell, Pill, AlertCircle, Trash2, Pencil, MoreVertical } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -16,6 +16,12 @@ import { generateHealthInsights, HealthInsightsOutput } from '@/ai/flows/health-
 import { useToast } from '@/hooks/use-toast';
 import { DoctorSuggestion } from '@/components/doctor-suggestion';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 function HealthHistoryItem({ metric, onDelete, onEdit }: { metric: HealthMetric, onDelete: (id: string) => void, onEdit: (id: string) => void }) {
     return (
@@ -29,14 +35,24 @@ function HealthHistoryItem({ metric, onDelete, onEdit }: { metric: HealthMetric,
                     {metric.heartRate && <p><span className="text-muted-foreground">Heart Rate: </span>{metric.heartRate} bpm</p>}
                 </div>
             </div>
-            <div className="flex items-center gap-2">
-                <Button variant="ghost" size="icon" onClick={() => metric.id && onEdit(metric.id)}>
-                    <Pencil className="h-4 w-4 text-muted-foreground" />
-                </Button>
-                <Button variant="ghost" size="icon" onClick={() => metric.id && onDelete(metric.id)}>
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                </Button>
-            </div>
+             <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+                        <MoreVertical className="h-4 w-4" />
+                        <span className="sr-only">More options</span>
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => metric.id && onEdit(metric.id)}>
+                        <Pencil className="mr-2 h-4 w-4" />
+                        Edit
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => metric.id && onDelete(metric.id)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete
+                    </DropdownMenuItem>
+                </DropdownMenuContent>
+            </DropdownMenu>
         </div>
     )
 }
