@@ -12,9 +12,10 @@ import {
   SidebarProvider,
   SidebarTrigger,
   SidebarInset,
+  SidebarFooter,
 } from '@/components/ui/sidebar';
 import { usePathname, useRouter } from 'next/navigation';
-import { Users, LayoutDashboard, DollarSign, Megaphone, CreditCard, User } from 'lucide-react';
+import { Users, LayoutDashboard, DollarSign, Megaphone, CreditCard, User, LogOut } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/context/auth-context';
 import { Loader2 } from 'lucide-react';
@@ -32,7 +33,7 @@ const adminNavItems = [
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const { user, loading } = useAuth();
+  const { user, loading, logout } = useAuth();
   const router = useRouter();
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
 
@@ -53,6 +54,11 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       }
     }
   }, [user, loading, router, pathname]);
+  
+  const handleSignOut = async () => {
+    await logout();
+    router.push('/admin/login');
+  }
 
   if (pathname === '/admin/login') {
     return <>{children}</>;
@@ -100,6 +106,12 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               ))}
             </SidebarMenu>
           </SidebarContent>
+           <SidebarFooter>
+            <Button variant="ghost" className="w-full justify-start gap-2" onClick={handleSignOut}>
+              <LogOut className="h-4 w-4" />
+              <span>Sign Out</span>
+            </Button>
+          </SidebarFooter>
         </Sidebar>
         <SidebarInset>
              <main className="flex-1 p-4">{children}</main>
