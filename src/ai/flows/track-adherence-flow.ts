@@ -19,9 +19,10 @@ const AdherenceInputSchema = z.object({
     medicationId: z.string(),
     medicationName: z.string(),
     takenAt: z.string().datetime(),
-    status: z.enum(['taken', 'skipped', 'missed', 'stock_out', 'muted']),
+    status: z.enum(['taken', 'skipped', 'missed', 'stock_out', 'muted', 'snoozed']),
     userId: z.string(),
     scheduledTime: z.string().optional(),
+    snoozeDuration: z.number().optional(),
 });
 export type AdherenceInput = z.infer<typeof AdherenceInputSchema>;
 
@@ -66,5 +67,7 @@ const trackAdherenceFlow = ai.defineFlow(
     }
   }
 );
+
+    
 
     

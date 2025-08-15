@@ -20,6 +20,7 @@ import { trackAdherence } from '@/ai/flows/track-adherence-flow';
 import { useToast } from '@/hooks/use-toast';
 import { generateFamilyAlert } from '@/ai/flows/family-alert-flow';
 import { generateAppointmentReminder } from '@/ai/flows/appointment-reminder-flow';
+import { intelligentSnooze } from '@/ai/flows/intelligent-snooze';
 
 export default function HomePage() {
   const { user, isGuest } = useAuth();
@@ -31,6 +32,7 @@ export default function HomePage() {
   const [localAdherence, setLocalAdherence] = useLocalStorage<AdherenceLog[]>('guest-adherence', []);
   const [sentAppointmentReminders, setSentAppointmentReminders] = useLocalStorage<string[]>('sent-appointment-reminders', []);
   const [sentNotifications, setSentNotifications] = useLocalStorage<string[]>('sent-notifications', []);
+  const [snoozedUntil, setSnoozedUntil] = useLocalStorage<Record<string, string>>('snoozed-until', {});
 
 
   const [firestoreMedications, setFirestoreMedications] = useState<Medication[]>([]);
@@ -150,7 +152,9 @@ export default function HomePage() {
         const notificationId = `${med.id}-${time}-${format(now, 'yyyy-MM-dd')}`;
         const alreadyNotified = sentNotifications.includes(notificationId);
 
-        if (now >= scheduledTime && now < addMinutes(scheduledTime, 1) && !alreadyHandled && !alreadyNotified) {
+        const isSnoozed = snoozedUntil[notificationId] && new Date(snoozedUntil[notificationId]) > now;
+
+        if (now >= scheduledTime && now < addMinutes(scheduledTime, 1) && !alreadyHandled && !alreadyNotified && !isSnoozed) {
           
           if (Notification.permission === "granted") {
             new Notification("Medication Reminder", {
@@ -168,7 +172,7 @@ export default function HomePage() {
         }
       }
     }
-  }, [adherenceLogs, activeMedications, reminder, sentNotifications, setSentNotifications]);
+  }, [adherenceLogs, activeMedications, reminder, sentNotifications, setSentNotifications, snoozedUntil]);
 
   const checkMissedDoses = useCallback(async () => {
     const now = new Date();
@@ -219,7 +223,7 @@ export default function HomePage() {
             }
         }
     }
-  }, [activeMedications, adherenceLogs, user, isGuest, localAdherence, handleFamilyAlert, setLocalAdherence, toast]);
+  }, [activeMedications, adherenceLogs, user, isGuest, handleFamilyAlert, setLocalAdherence, toast]);
 
 
   const checkAppointmentReminders = useCallback(async () => {
@@ -319,6 +323,55 @@ export default function HomePage() {
     }
     setReminder(null);
   };
+  
+    const handleSnooze = async (medication: Medication, time: string) => {
+        setReminder(null);
+        try {
+            const pastSnoozes = adherenceLogs
+                .filter(log => log.medicationId === medication.id && log.status === 'snoozed')
+                .map(log => log.snoozeDuration || 5); // Default to 5 mins if no duration
+
+            const { snoozeInterval, reasoning } = await intelligentSnooze({
+                medicationType: medication.dosage,
+                pastSnoozeBehavior: pastSnoozes,
+                userSchedule: "User has a meeting from 10:00 to 11:00 AM.", // Example schedule
+            });
+            
+            toast({
+                title: `Snoozed for ${snoozeInterval} minutes`,
+                description: reasoning,
+            });
+
+            const notificationId = `${medication.id}-${time}-${format(new Date(), 'yyyy-MM-dd')}`;
+            const snoozedTime = addMinutes(new Date(), snoozeInterval);
+            
+            setSnoozedUntil(prev => ({...prev, [notificationId]: snoozedTime.toISOString() }));
+            
+            // Log snooze to adherence
+            const logEntry: Omit<AdherenceLog, 'id'> = {
+                medicationId: medication.id,
+                medicationName: medication.name,
+                takenAt: new Date().toISOString(),
+                status: 'snoozed',
+                userId: user?.uid || 'guest',
+                scheduledTime: time,
+                snoozeDuration: snoozeInterval,
+            };
+
+            if (isGuest || !user) {
+                setLocalAdherence([...localAdherence, { ...logEntry, id: new Date().toISOString() }]);
+            } else {
+                await trackAdherence({ ...logEntry, userId: user.uid });
+            }
+
+        } catch (error) {
+            toast({
+                title: "Could not snooze",
+                description: "Something went wrong. Please try again.",
+                variant: 'destructive'
+            });
+        }
+    };
 
 
   const todaysAppointments = useMemo(() => {
@@ -359,6 +412,7 @@ export default function HomePage() {
             onTake={() => handleReminderAction(reminder.medication, reminder.time, 'taken')}
             onSkip={() => handleReminderAction(reminder.medication, reminder.time, 'muted')}
             onStockOut={() => handleReminderAction(reminder.medication, reminder.time, 'stock_out')}
+            onSnooze={() => handleSnooze(reminder.medication, reminder.time)}
         />
     )}
     <div className="container mx-auto max-w-2xl p-4 space-y-6">
@@ -467,5 +521,7 @@ export default function HomePage() {
     </>
   );
 }
+
+    
 
     

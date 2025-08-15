@@ -71,7 +71,10 @@ export interface AdherenceLog {
     medicationId: string;
     medicationName: string;
     takenAt: string; // ISO string
-    status: 'taken' | 'skipped' | 'missed' | 'stock_out' | 'muted';
+    status: 'taken' | 'skipped' | 'missed' | 'stock_out' | 'muted' | 'snoozed';
     userId: string;
     scheduledTime?: string;
+    snoozeDuration?: number;
 }
+
+    

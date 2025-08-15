@@ -11,8 +11,8 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Medication } from '@/lib/types';
-import { Pill, BellRing } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { Pill, BellRing, Hourglass } from 'lucide-react';
+import { useEffect } from 'react';
 
 interface MedicationReminderDialogProps {
   isOpen: boolean;
@@ -21,6 +21,7 @@ interface MedicationReminderDialogProps {
   onTake: () => void;
   onSkip: () => void;
   onStockOut: () => void;
+  onSnooze: () => void;
 }
 
 export function MedicationReminderDialog({
@@ -30,16 +31,14 @@ export function MedicationReminderDialog({
   onTake,
   onSkip,
   onStockOut,
+  onSnooze,
 }: MedicationReminderDialogProps) {
-  const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
-
   useEffect(() => {
     let sound: HTMLAudioElement | null = null;
     if (isOpen) {
       // Play a sound when the dialog opens
       sound = new Audio('/notification.mp3'); // Assuming you have a sound file in /public
       sound.play().catch(e => console.error("Failed to play notification sound:", e));
-      setAudio(sound);
     }
     
     // Cleanup on component unmount or when dialog closes
@@ -76,9 +75,15 @@ export function MedicationReminderDialog({
              </div>
         </div>
         <AlertDialogFooter className="grid grid-cols-2 gap-4">
-          <Button variant="outline" onClick={onSkip}>Mute</Button>
+          <Button variant="outline" onClick={onSnooze}>
+            <Hourglass className="mr-2 h-4 w-4" />
+            Snooze
+          </Button>
           <Button onClick={onTake}>Complete</Button>
         </AlertDialogFooter>
+         <Button variant="ghost" className="w-full" onClick={onSkip}>
+            Skip Dose
+        </Button>
          <Button variant="destructive" className="w-full" onClick={onStockOut}>
             Out of Stock
         </Button>
@@ -86,3 +91,5 @@ export function MedicationReminderDialog({
     </AlertDialog>
   );
 }
+
+    
