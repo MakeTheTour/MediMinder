@@ -22,9 +22,13 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/context/auth-context';
 import { HealthMetric } from '@/lib/types';
 import { format } from 'date-fns';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { Calendar } from './ui/calendar';
+import { cn } from '@/lib/utils';
+import { CalendarIcon } from 'lucide-react';
 
 const healthMetricSchema = z.object({
-  date: z.string(),
+  date: z.date(),
   weight: z.coerce.number().optional(),
   systolic: z.coerce.number().optional(),
   diastolic: z.coerce.number().optional(),
@@ -49,7 +53,6 @@ export function EditHealthMetricForm({ healthMetricId }: EditHealthMetricFormPro
   const form = useForm<z.infer<typeof healthMetricSchema>>({
     resolver: zodResolver(healthMetricSchema),
     defaultValues: {
-      date: '',
       weight: undefined,
       systolic: undefined,
       diastolic: undefined,
@@ -72,7 +75,7 @@ export function EditHealthMetricForm({ healthMetricId }: EditHealthMetricFormPro
         if (docSnap.exists()) {
             const data = docSnap.data() as HealthMetric;
             form.reset({
-                date: format(new Date(data.date), 'yyyy-MM-dd'),
+                date: new Date(data.date),
                 weight: data.weight,
                 systolic: data.bloodPressure?.systolic,
                 diastolic: data.bloodPressure?.diastolic,
@@ -94,7 +97,7 @@ export function EditHealthMetricForm({ healthMetricId }: EditHealthMetricFormPro
     }
     
     const healthMetricData = {
-        date: new Date(values.date).toISOString(),
+        date: values.date.toISOString(),
         weight: values.weight,
         bloodPressure: (values.systolic && values.diastolic) ? { systolic: values.systolic, diastolic: values.diastolic } : undefined,
         bloodSugar: values.bloodSugar,
@@ -123,12 +126,38 @@ export function EditHealthMetricForm({ healthMetricId }: EditHealthMetricFormPro
           control={form.control}
           name="date"
           render={({ field }) => (
-            <FormItem>
-              <FormLabel>Date</FormLabel>
-              <FormControl>
-                <Input type="date" {...field} />
-              </FormControl>
-              <FormMessage />
+            <FormItem className="flex flex-col">
+                <FormLabel>Date</FormLabel>
+                <Popover>
+                    <PopoverTrigger asChild>
+                        <FormControl>
+                        <Button
+                            variant={"outline"}
+                            className={cn(
+                            "pl-3 text-left font-normal",
+                            !field.value && "text-muted-foreground"
+                            )}
+                        >
+                            {field.value ? (
+                            format(field.value, "dd/MM/yy")
+                            ) : (
+                            <span>Pick a date</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                        </Button>
+                        </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                        mode="single"
+                        selected={field.value}
+                        onSelect={field.onChange}
+                        disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
+                        initialFocus
+                        />
+                    </PopoverContent>
+                </Popover>
+                <FormMessage />
             </FormItem>
           )}
         />

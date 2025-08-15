@@ -5,7 +5,7 @@ import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useRouter } from 'next/navigation';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, CalendarIcon } from 'lucide-react';
 import { addDoc, collection } from 'firebase/firestore';
 import { db } from '@/lib/firebase-client';
 import { Button } from '@/components/ui/button';
@@ -32,6 +32,10 @@ import { Medication, Frequency } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/context/auth-context';
 import { useLocalStorage } from '@/hooks/use-local-storage';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { Calendar } from './ui/calendar';
+import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 const medicationSchema = z.object({
   name: z.string().min(1, 'Medication name is required.'),
@@ -41,8 +45,8 @@ const medicationSchema = z.object({
   food_relation: z.enum(['before', 'after', 'with']),
   food_time_minutes: z.coerce.number().optional(),
 
-  start_date: z.string().min(1, 'Start date is required'),
-  end_date: z.string().min(1, 'End date is required'),
+  start_date: z.date({ required_error: "A start date is required."}),
+  end_date: z.date({ required_error: "An end date is required."}),
 
   frequency: z.enum(['Daily', 'Hourly', 'Weekly', 'Monthly']),
   times: z.array(z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, 'Invalid time format (HH:MM)')).min(1, 'At least one time is required.'),
@@ -90,8 +94,8 @@ export function AddMedicationForm() {
       intake_qty: 1,
       food_relation: 'with',
       food_time_minutes: 30,
-      start_date: new Date().toISOString().split('T')[0],
-      end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      start_date: new Date(),
+      end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
       frequency: 'Daily',
       times: ['09:00'],
       daysOfWeek: [],
@@ -109,6 +113,8 @@ export function AddMedicationForm() {
   async function onSubmit(values: z.infer<typeof medicationSchema>) {
     const medicationData: Omit<Medication, 'id'> = {
       ...values,
+      start_date: values.start_date.toISOString(),
+      end_date: values.end_date.toISOString(),
       frequency: values.frequency as Frequency,
     };
       
@@ -261,24 +267,76 @@ export function AddMedicationForm() {
                 control={form.control}
                 name="start_date"
                 render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="flex flex-col">
                         <FormLabel>Start Date</FormLabel>
-                        <FormControl>
-                            <Input type="date" {...field} />
-                        </FormControl>
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <FormControl>
+                                <Button
+                                    variant={"outline"}
+                                    className={cn(
+                                    "pl-3 text-left font-normal",
+                                    !field.value && "text-muted-foreground"
+                                    )}
+                                >
+                                    {field.value ? (
+                                    format(field.value, "dd/MM/yy")
+                                    ) : (
+                                    <span>Pick a date</span>
+                                    )}
+                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                                </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                mode="single"
+                                selected={field.value}
+                                onSelect={field.onChange}
+                                disabled={(date) => date < new Date("1900-01-01")}
+                                initialFocus
+                                />
+                            </PopoverContent>
+                        </Popover>
                         <FormMessage />
                     </FormItem>
                 )}
             />
-            <FormField
+             <FormField
                 control={form.control}
                 name="end_date"
                 render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="flex flex-col">
                         <FormLabel>End Date</FormLabel>
-                        <FormControl>
-                            <Input type="date" {...field} />
-                        </FormControl>
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <FormControl>
+                                <Button
+                                    variant={"outline"}
+                                    className={cn(
+                                    "pl-3 text-left font-normal",
+                                    !field.value && "text-muted-foreground"
+                                    )}
+                                >
+                                    {field.value ? (
+                                    format(field.value, "dd/MM/yy")
+                                    ) : (
+                                    <span>Pick a date</span>
+                                    )}
+                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                                </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                mode="single"
+                                selected={field.value}
+                                onSelect={field.onChange}
+                                disabled={(date) => date < (form.getValues('start_date') || new Date())}
+                                initialFocus
+                                />
+                            </PopoverContent>
+                        </Popover>
                         <FormMessage />
                     </FormItem>
                 )}

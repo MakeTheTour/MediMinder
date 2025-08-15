@@ -26,12 +26,17 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import Link from 'next/link';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { Calendar } from './ui/calendar';
+import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
+import { CalendarIcon } from 'lucide-react';
 
 const profileSchema = z.object({
   name: z.string().min(1, 'Name is required.'),
   email: z.string().email('Invalid email address.'),
   photoURL: z.string().url("Please enter a valid URL.").or(z.literal('')).optional(),
-  dateOfBirth: z.string().optional(),
+  dateOfBirth: z.date().optional(),
   height: z.coerce.number().optional(),
   gender: z.string().optional(),
   country: z.string().optional(),
@@ -51,7 +56,7 @@ export function ProfileForm() {
       name: '',
       email: '',
       photoURL: '',
-      dateOfBirth: '',
+      dateOfBirth: undefined,
       height: undefined,
       gender: '',
       country: '',
@@ -72,8 +77,8 @@ export function ProfileForm() {
                     name: user.displayName || userData.name || '',
                     email: user.email || userData.email || '',
                     photoURL: user.photoURL || userData.photoURL || '',
-                    dateOfBirth: userData.dateOfBirth || '',
-                    height: userData.height || '',
+                    dateOfBirth: userData.dateOfBirth ? new Date(userData.dateOfBirth) : undefined,
+                    height: userData.height || undefined,
                     gender: userData.gender || '',
                     country: userData.country || '',
                     city: userData.city || '',
@@ -85,13 +90,6 @@ export function ProfileForm() {
                     name: user.displayName || '',
                     email: user.email || '',
                     photoURL: user.photoURL || '',
-                    dateOfBirth: '',
-                    height: '' as any, // Using any to reset since number can't be ''
-                    gender: '',
-                    country: '',
-                    city: '',
-                    state: '',
-                    postcode: '',
                  });
             }
         }
@@ -120,7 +118,10 @@ export function ProfileForm() {
             await updateEmail(user, values.email);
         }
         
-        await setDoc(doc(db, 'users', user.uid), values, { merge: true });
+        await setDoc(doc(db, 'users', user.uid), {
+            ...values,
+            dateOfBirth: values.dateOfBirth ? values.dateOfBirth.toISOString() : null,
+        }, { merge: true });
 
         toast({
             title: 'Profile Updated',
@@ -204,12 +205,38 @@ export function ProfileForm() {
                         control={form.control}
                         name="dateOfBirth"
                         render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>Date of Birth</FormLabel>
-                            <FormControl>
-                                <Input type="date" {...field} value={field.value || ''}/>
-                            </FormControl>
-                            <FormMessage />
+                            <FormItem className="flex flex-col">
+                                <FormLabel>Date of Birth</FormLabel>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <FormControl>
+                                        <Button
+                                            variant={"outline"}
+                                            className={cn(
+                                            "pl-3 text-left font-normal",
+                                            !field.value && "text-muted-foreground"
+                                            )}
+                                        >
+                                            {field.value ? (
+                                            format(field.value, "dd/MM/yy")
+                                            ) : (
+                                            <span>Pick a date</span>
+                                            )}
+                                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                        </Button>
+                                        </FormControl>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0" align="start">
+                                        <Calendar
+                                        mode="single"
+                                        selected={field.value}
+                                        onSelect={field.onChange}
+                                        disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
+                                        initialFocus
+                                        />
+                                    </PopoverContent>
+                                </Popover>
+                                <FormMessage />
                             </FormItem>
                         )}
                         />

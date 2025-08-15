@@ -23,11 +23,16 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/context/auth-context';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { Appointment } from '@/lib/types';
+import { CalendarIcon } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { Calendar } from './ui/calendar';
+import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
 
 const appointmentSchema = z.object({
   doctorName: z.string().min(1, 'Doctor name is required.'),
   specialty: z.string().min(1, 'Specialty is required.'),
-  date: z.string().min(1, 'Date is required.'),
+  date: z.date({ required_error: 'A date is required.' }),
   time: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, 'Invalid time format (HH:MM)'),
   location: z.string().min(1, 'Location is required.'),
   notes: z.string().optional(),
@@ -48,7 +53,6 @@ export function EditAppointmentForm({ appointmentId }: EditAppointmentFormProps)
     defaultValues: {
       doctorName: '',
       specialty: '',
-      date: '',
       time: '',
       location: '',
       notes: '',
@@ -57,20 +61,25 @@ export function EditAppointmentForm({ appointmentId }: EditAppointmentFormProps)
 
   useEffect(() => {
     const fetchAppointmentData = async () => {
+        let apptToEdit;
         if (isGuest) {
-            const apptToEdit = localAppointments.find(a => a.id === appointmentId);
-            if (apptToEdit) {
-                form.reset(apptToEdit);
-            }
+            apptToEdit = localAppointments.find(a => a.id === appointmentId);
         } else if (user) {
             const docRef = doc(db, "users", user.uid, "appointments", appointmentId);
             const docSnap = await getDoc(docRef);
             if (docSnap.exists()) {
-                form.reset(docSnap.data());
+                apptToEdit = docSnap.data();
             } else {
                 toast({ title: "Error", description: "Appointment not found.", variant: "destructive" });
                 router.push('/medicine');
             }
+        }
+        
+        if (apptToEdit) {
+            form.reset({
+                ...apptToEdit,
+                date: new Date(apptToEdit.date),
+            });
         }
     };
     fetchAppointmentData();
@@ -78,8 +87,13 @@ export function EditAppointmentForm({ appointmentId }: EditAppointmentFormProps)
 
 
   async function onSubmit(values: z.infer<typeof appointmentSchema>) {
+     const appointmentData = {
+        ...values,
+        date: format(values.date, 'yyyy-MM-dd'),
+    }
+    
     if (isGuest) {
-        const updatedAppointments = localAppointments.map(appt => appt.id === appointmentId ? { ...appt, ...values } : appt);
+        const updatedAppointments = localAppointments.map(appt => appt.id === appointmentId ? { ...appt, ...appointmentData } : appt);
         setLocalAppointments(updatedAppointments);
         toast({
             title: "Appointment Updated Locally",
@@ -96,7 +110,7 @@ export function EditAppointmentForm({ appointmentId }: EditAppointmentFormProps)
     
     try {
         const apptRef = doc(db, 'users', user.uid, 'appointments', appointmentId);
-        await updateDoc(apptRef, values);
+        await updateDoc(apptRef, appointmentData);
         toast({
             title: "Appointment Updated",
             description: `Your appointment with Dr. ${values.doctorName} has been updated.`,
@@ -138,18 +152,44 @@ export function EditAppointmentForm({ appointmentId }: EditAppointmentFormProps)
           )}
         />
         <div className="grid grid-cols-2 gap-4">
-            <FormField
-            control={form.control}
-            name="date"
-            render={({ field }) => (
-                <FormItem>
-                <FormLabel>Date</FormLabel>
-                <FormControl>
-                    <Input type="date" {...field} />
-                </FormControl>
-                <FormMessage />
-                </FormItem>
-            )}
+             <FormField
+                control={form.control}
+                name="date"
+                render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                        <FormLabel>Date</FormLabel>
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <FormControl>
+                                <Button
+                                    variant={"outline"}
+                                    className={cn(
+                                    "pl-3 text-left font-normal",
+                                    !field.value && "text-muted-foreground"
+                                    )}
+                                >
+                                    {field.value ? (
+                                    format(field.value, "dd/MM/yy")
+                                    ) : (
+                                    <span>Pick a date</span>
+                                    )}
+                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                                </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                mode="single"
+                                selected={field.value}
+                                onSelect={field.onChange}
+                                disabled={(date) => date < new Date("1900-01-01")}
+                                initialFocus
+                                />
+                            </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                    </FormItem>
+                )}
             />
             <FormField
             control={form.control}

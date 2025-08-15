@@ -22,9 +22,13 @@ import { useAuth } from '@/context/auth-context';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { HealthMetric } from '@/lib/types';
 import { format } from 'date-fns';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { Calendar } from './ui/calendar';
+import { CalendarIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 const healthMetricSchema = z.object({
-  date: z.string(),
+  date: z.date(),
   weight: z.coerce.number().optional(),
   systolic: z.coerce.number().optional(),
   diastolic: z.coerce.number().optional(),
@@ -47,7 +51,7 @@ export function AddHealthMetricForm() {
   const form = useForm<z.infer<typeof healthMetricSchema>>({
     resolver: zodResolver(healthMetricSchema),
     defaultValues: {
-      date: format(new Date(), 'yyyy-MM-dd'),
+      date: new Date(),
       weight: undefined,
       systolic: undefined,
       diastolic: undefined,
@@ -67,7 +71,7 @@ export function AddHealthMetricForm() {
     }
     
     const healthMetricData: Omit<HealthMetric, 'id' | 'userId'> = {
-        date: new Date(values.date).toISOString(),
+        date: values.date.toISOString(),
         weight: values.weight,
         bloodPressure: (values.systolic && values.diastolic) ? { systolic: values.systolic, diastolic: values.diastolic } : undefined,
         bloodSugar: values.bloodSugar,
@@ -99,12 +103,38 @@ export function AddHealthMetricForm() {
           control={form.control}
           name="date"
           render={({ field }) => (
-            <FormItem>
-              <FormLabel>Date</FormLabel>
-              <FormControl>
-                <Input type="date" {...field} />
-              </FormControl>
-              <FormMessage />
+             <FormItem className="flex flex-col">
+                <FormLabel>Date</FormLabel>
+                <Popover>
+                    <PopoverTrigger asChild>
+                        <FormControl>
+                        <Button
+                            variant={"outline"}
+                            className={cn(
+                            "pl-3 text-left font-normal",
+                            !field.value && "text-muted-foreground"
+                            )}
+                        >
+                            {field.value ? (
+                            format(field.value, "dd/MM/yy")
+                            ) : (
+                            <span>Pick a date</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                        </Button>
+                        </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                        mode="single"
+                        selected={field.value}
+                        onSelect={field.onChange}
+                        disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
+                        initialFocus
+                        />
+                    </PopoverContent>
+                </Popover>
+                <FormMessage />
             </FormItem>
           )}
         />
