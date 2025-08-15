@@ -29,7 +29,7 @@ export interface Appointment {
 }
 
 export const HealthMetricSchema = z.object({
-    id: z.string(),
+    id: z.string().optional(),
     date: z.string(), // ISO String
     weight: z.number().optional(),
     bloodPressure: z.object({
@@ -38,22 +38,24 @@ export const HealthMetricSchema = z.object({
     }).optional(),
     bloodSugar: z.number().optional(),
     heartRate: z.number().optional(),
-    userId: z.string(),
+    userId: z.string().optional(),
 });
 export type HealthMetric = z.infer<typeof HealthMetricSchema>;
 
+export const UserProfileSchema = z.object({
+  name: z.string(),
+  email: z.string(),
+  photoURL: z.string().optional(),
+  dateOfBirth: z.string().optional(),
+  height: z.number().optional(),
+  gender: z.string().optional(),
+  country: z.string().optional(),
+  state: z.string().optional(),
+  postcode: z.string().optional(),
+  city: z.string().optional(),
+});
+export type UserProfile = z.infer<typeof UserProfileSchema>;
 
-export interface UserProfile {
-  name: string;
-  email: string;
-  photoURL?: string;
-  dateOfBirth?: string;
-  height?: number;
-  gender?: string;
-  country?: string;
-  state?: string;
-  postcode?: string;
-}
 
 export interface FamilyMember {
   id: string;

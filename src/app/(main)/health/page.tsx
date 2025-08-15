@@ -2,20 +2,20 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, HeartPulse, BrainCircuit, Activity, Utensils, Dumbbell, Pill } from 'lucide-react';
+import { Plus, HeartPulse, BrainCircuit, Activity, Utensils, Dumbbell, Pill, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { HealthMetric } from '@/lib/types';
+import { HealthMetric, UserProfile } from '@/lib/types';
 import { useAuth } from '@/context/auth-context';
-import { collection, onSnapshot, query, orderBy, limit } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, getDoc, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase-client';
-import { useLocalStorage } from '@/hooks/use-local-storage';
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import { generateHealthInsights, HealthInsightsOutput } from '@/ai/flows/health-insights-flow';
 import { useToast } from '@/hooks/use-toast';
 import { DoctorSuggestion } from '@/components/doctor-suggestion';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 function HealthHistoryItem({ metric }: { metric: HealthMetric }) {
     return (
@@ -34,23 +34,39 @@ export default function HealthPage() {
     const router = useRouter();
     const { toast } = useToast();
     
-    const [localHealthMetrics, setLocalHealthMetrics] = useLocalStorage<HealthMetric[]>('guest-health-metrics', []);
-    const [firestoreHealthMetrics, setFirestoreHealthMetrics] = useState<HealthMetric[]>([]);
+    const [healthMetrics, setHealthMetrics] = useState<HealthMetric[]>([]);
+    const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
     const [insights, setInsights] = useState<HealthInsightsOutput | null>(null);
     const [loadingInsights, setLoadingInsights] = useState(false);
-
-    const healthMetrics = (isGuest ? localHealthMetrics : firestoreHealthMetrics).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    const [loadingProfile, setLoadingProfile] = useState(true);
 
     useEffect(() => {
         if (!user || isGuest) {
-            setFirestoreHealthMetrics([]);
+            setHealthMetrics([]);
+            setUserProfile(null);
+            setLoadingProfile(false);
             return;
         };
+
         const q = query(collection(db, 'users', user.uid, 'healthMetrics'), orderBy('date', 'desc'));
-        const unsub = onSnapshot(q, (snapshot) => {
-            setFirestoreHealthMetrics(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as HealthMetric)));
+        const unsubHealth = onSnapshot(q, (snapshot) => {
+            setHealthMetrics(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as HealthMetric)));
         });
-        return () => unsub();
+        
+        const fetchUserProfile = async () => {
+            setLoadingProfile(true);
+            const userRef = doc(db, 'users', user.uid);
+            const userSnap = await getDoc(userRef);
+            if (userSnap.exists()) {
+                setUserProfile(userSnap.data() as UserProfile);
+            }
+            setLoadingProfile(false);
+        };
+        fetchUserProfile();
+        
+        return () => {
+          unsubHealth();
+        }
     }, [user, isGuest]);
     
     const handleGetInsights = async () => {
@@ -58,11 +74,16 @@ export default function HealthPage() {
             toast({ title: "Not Enough Data", description: "Log some health data first to get insights."});
             return;
         }
+        if (!userProfile) {
+            toast({ title: "Profile Needed", description: "Please complete your profile to generate insights."});
+            return;
+        }
+
         setLoadingInsights(true);
         try {
             const result = await generateHealthInsights({
                 healthMetrics: healthMetrics.slice(0, 10), // Send last 10 records
-                userName: user?.displayName || "user",
+                userProfile: userProfile,
             });
             setInsights(result);
         } catch (e) {
@@ -72,7 +93,7 @@ export default function HealthPage() {
     }
     
     const handleAddClick = () => {
-        if (isGuest) {
+        if (isGuest || !user) {
             router.push('/login');
         } else {
             router.push('/health/add');
@@ -101,8 +122,8 @@ export default function HealthPage() {
         <CardContent>
           {healthMetrics.length > 0 ? (
             <div className="space-y-4">
-              {healthMetrics.map(metric => (
-                <HealthHistoryItem key={metric.id} metric={metric} />
+              {healthMetrics.map((metric, index) => (
+                <HealthHistoryItem key={metric.id || index} metric={metric} />
               ))}
             </div>
           ) : (
@@ -124,6 +145,19 @@ export default function HealthPage() {
           <CardDescription>Personalized insights based on your recent health data.</CardDescription>
         </CardHeader>
         <CardContent>
+            {loadingProfile ? (
+                 <p className="text-sm text-muted-foreground">Loading profile to generate insights...</p>
+            ) : (!userProfile?.height || healthMetrics.length === 0 || !healthMetrics[0].weight) && !isGuest && (
+                 <Alert variant="default" className="mb-4">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Get BMI Insights!</AlertTitle>
+                    <AlertDescription>
+                        To get BMI-based insights, please make sure you have added your height in your{' '}
+                        <Link href="/settings/profile" className="font-bold underline">profile</Link>
+                        {' '}and logged your weight.
+                    </AlertDescription>
+                </Alert>
+            )}
             {insights ? (
                 <div className="space-y-4 p-4 bg-primary/10 rounded-lg">
                     <p className="font-semibold text-foreground">Insight:</p>
@@ -155,7 +189,7 @@ export default function HealthPage() {
             ): (
                  <p className="text-muted-foreground text-sm">Click the button to generate insights from your logged data.</p>
             )}
-             <Button onClick={handleGetInsights} disabled={loadingInsights || (isGuest && healthMetrics.length === 0)} className="mt-4">
+             <Button onClick={handleGetInsights} disabled={loadingInsights || isGuest || loadingProfile} className="mt-4">
                 {loadingInsights ? 'Generating...' : 'Generate New Insights'}
             </Button>
         </CardContent>
