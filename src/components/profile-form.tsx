@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useRouter } from 'next/navigation';
-import { updateProfile } from 'firebase/auth';
+import { updateProfile, sendPasswordResetEmail, updateEmail } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase-client';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/context/auth-context';
@@ -108,10 +109,16 @@ export function ProfileForm() {
     }
 
     try {
-        await updateProfile(user, { 
-            displayName: values.name,
-            photoURL: values.photoURL,
-        });
+        if (values.name !== user.displayName || values.photoURL !== user.photoURL) {
+            await updateProfile(user, { 
+                displayName: values.name,
+                photoURL: values.photoURL,
+            });
+        }
+        
+        if (values.email && values.email !== user.email) {
+            await updateEmail(user, values.email);
+        }
         
         await setDoc(doc(db, 'users', user.uid), values, { merge: true });
 
@@ -128,6 +135,27 @@ export function ProfileForm() {
             description: error.message || 'Could not update profile. Please try again.',
             variant: 'destructive',
         });
+    }
+  }
+
+  async function handleChangePassword() {
+    if (!user || !user.email) {
+      toast({ title: 'Error', description: 'Could not find user email.', variant: 'destructive' });
+      return;
+    }
+    try {
+      await sendPasswordResetEmail(auth, user.email);
+      toast({
+        title: 'Password Reset Email Sent',
+        description: `An email has been sent to ${user.email} with instructions to reset your password.`,
+      });
+    } catch (error: any) {
+      console.error("Password reset error:", error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Could not send password reset email. Please try again.',
+        variant: 'destructive',
+      });
     }
   }
 
@@ -183,8 +211,11 @@ export function ProfileForm() {
                         <FormItem>
                         <FormLabel>Email Address</FormLabel>
                         <FormControl>
-                            <Input type="email" placeholder="e.g., john.doe@example.com" {...field} disabled />
+                            <Input type="email" placeholder="e.g., john.doe@example.com" {...field} />
                         </FormControl>
+                         <FormDescription>
+                           Changing your email may require you to re-login.
+                        </FormDescription>
                         <FormMessage />
                         </FormItem>
                     )}
@@ -291,9 +322,14 @@ export function ProfileForm() {
                         )}
                     />
                 </div>
-                <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
-                    {form.formState.isSubmitting ? 'Saving...' : 'Save Changes'}
-                </Button>
+                 <div className="flex flex-col sm:flex-row gap-4">
+                    <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+                        {form.formState.isSubmitting ? 'Saving...' : 'Save Changes'}
+                    </Button>
+                     <Button type="button" variant="outline" className="w-full" onClick={handleChangePassword}>
+                        Change Password
+                    </Button>
+                </div>
                  <div className="text-center text-sm">
                     <Link href="/home" className="text-muted-foreground hover:text-primary">
                         Skip for now
