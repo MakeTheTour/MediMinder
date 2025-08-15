@@ -85,7 +85,7 @@ export default function AdminUsersPage() {
                     </TableCell>
                     <TableCell>{user.email}</TableCell>
                     <TableCell>
-                      {user.createdAt ? format(new Date(user.createdAt), 'PP') : 'N/A'}
+                      {user.createdAt ? format(new Date(user.createdAt), 'dd/MM/yy') : 'N/A'}
                     </TableCell>
                     <TableCell>
                        <Badge variant="secondary">Active</Badge>

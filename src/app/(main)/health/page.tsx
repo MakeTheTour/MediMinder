@@ -27,7 +27,7 @@ function HealthHistoryItem({ metric, onDelete, onEdit }: { metric: HealthMetric,
     return (
         <div className="p-4 rounded-lg bg-muted/50 flex flex-wrap gap-x-6 gap-y-2 text-sm items-center justify-between">
             <div>
-                <p className="w-full font-semibold text-foreground">{format(new Date(metric.date), 'MMMM d, yyyy')}</p>
+                <p className="w-full font-semibold text-foreground">{format(new Date(metric.date), 'dd/MM/yy')}</p>
                 <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1">
                     {metric.weight && <p><span className="text-muted-foreground">Weight: </span>{metric.weight} kg</p>}
                     {metric.bloodPressure && <p><span className="text-muted-foreground">BP: </span>{metric.bloodPressure.systolic}/{metric.bloodPressure.diastolic} mmHg</p>}

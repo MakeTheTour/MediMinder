@@ -87,7 +87,7 @@ export function AppointmentCard({ appointment, onDelete, onEdit }: AppointmentCa
                  <div className="space-y-2 text-sm text-muted-foreground">
                     <div className="flex items-center gap-2">
                         <Clock className="h-4 w-4" />
-                        <span>{format(new Date(`${appointment.date}T00:00:00`), 'EEE, MMM d, yyyy')} at {formatTime(appointment.time)}</span>
+                        <span>{format(new Date(`${appointment.date}T00:00:00`), 'EEE, dd/MM/yy')} at {formatTime(appointment.time)}</span>
                     </div>
                     <div className="flex items-center gap-2">
                         <MapPin className="h-4 w-4" />

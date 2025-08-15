@@ -418,7 +418,7 @@ export default function HomePage() {
     <div className="container mx-auto max-w-2xl p-4 space-y-6">
       <header className="mb-6">
         <h1 className="text-3xl font-bold text-foreground">{greeting}, {user?.displayName || 'Guest'}!</h1>
-        <p className="text-muted-foreground">{format(new Date(), 'EEEE, MMMM d')}</p>
+        <p className="text-muted-foreground">{format(new Date(), 'EEEE, dd/MM/yy')}</p>
       </header>
       
       {nextMedication && (
@@ -521,7 +521,3 @@ export default function HomePage() {
     </>
   );
 }
-
-    
-
-    
