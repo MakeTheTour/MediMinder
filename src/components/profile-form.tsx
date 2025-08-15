@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useRouter } from 'next/navigation';
-import { updateProfile, sendPasswordResetEmail, updateEmail } from 'firebase/auth';
+import { updateProfile, updateEmail } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase-client';
 import { Button } from '@/components/ui/button';
@@ -138,26 +138,6 @@ export function ProfileForm() {
     }
   }
 
-  async function handleChangePassword() {
-    if (!user || !user.email) {
-      toast({ title: 'Error', description: 'Could not find user email.', variant: 'destructive' });
-      return;
-    }
-    try {
-      await sendPasswordResetEmail(auth, user.email);
-      toast({
-        title: 'Password Reset Email Sent',
-        description: `An email has been sent to ${user.email} with instructions to reset your password.`,
-      });
-    } catch (error: any) {
-      console.error("Password reset error:", error);
-      toast({
-        title: 'Error',
-        description: error.message || 'Could not send password reset email. Please try again.',
-        variant: 'destructive',
-      });
-    }
-  }
 
   return (
     <Card>
@@ -325,9 +305,6 @@ export function ProfileForm() {
                  <div className="flex flex-col sm:flex-row gap-4">
                     <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
                         {form.formState.isSubmitting ? 'Saving...' : 'Save Changes'}
-                    </Button>
-                     <Button type="button" variant="outline" className="w-full" onClick={handleChangePassword}>
-                        Change Password
                     </Button>
                 </div>
                  <div className="text-center text-sm">

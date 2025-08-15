@@ -2,7 +2,7 @@
 'use client'
 
 import Link from 'next/link';
-import { User, Bell, Mic, ChevronRight, LogOut, Star, LineChart } from 'lucide-react';
+import { User, Bell, Mic, ChevronRight, LogOut, Star, LineChart, KeyRound } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,12 @@ const settingsItems = [
     icon: User,
     title: 'Profile Management',
     description: 'Update your personal details.',
+  },
+  {
+    href: '/settings/change-password',
+    icon: KeyRound,
+    title: 'Change Password',
+    description: 'Update your account password.',
   },
   {
     href: '/settings/voice',
@@ -60,7 +66,7 @@ export default function SettingsPage() {
         {settingsItems.map((item) => (
           <Link
             key={item.title}
-            href={(item.href === '/settings/profile' && isGuest) ? '/login' : item.href}
+            href={((item.href === '/settings/profile' || item.href === '/settings/change-password') && isGuest) ? '/login' : item.href}
             className="flex items-center justify-between rounded-lg border bg-card p-4 text-card-foreground shadow-sm transition-colors hover:bg-muted/50"
           >
             <div className="flex items-center gap-4">
