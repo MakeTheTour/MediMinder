@@ -336,6 +336,15 @@ export default function HomePage() {
     });
     return futureAppointments[0] || null;
   }, [activeAppointments]);
+  
+  const nextMedication = useMemo(() => {
+    const now = new Date();
+    const upcomingMedications = todaysMedications.filter(item => {
+      const scheduledTime = parse(item.time, 'HH:mm', new Date());
+      return scheduledTime > now;
+    });
+    return upcomingMedications[0] || null;
+  }, [todaysMedications]);
 
 
   useEffect(() => {
@@ -362,6 +371,20 @@ export default function HomePage() {
         <h1 className="text-3xl font-bold text-foreground">{greeting}, {user?.displayName || 'Guest'}!</h1>
         <p className="text-muted-foreground">{format(new Date(), 'EEEE, MMMM d')}</p>
       </header>
+      
+      {nextMedication && (
+        <Card className="bg-primary/10 border-primary/20">
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-primary">
+                    <PillIcon/>
+                    Next Medication
+                </CardTitle>
+            </CardHeader>
+            <CardContent>
+                <MedicationCard medication={nextMedication.data} specificTime={nextMedication.time} />
+            </CardContent>
+        </Card>
+      )}
       
       {nextAppointment && (
         <Card className="bg-primary/10 border-primary/20">
