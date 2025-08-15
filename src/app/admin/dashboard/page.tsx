@@ -1,10 +1,44 @@
 
 'use client'
 
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, DollarSign, Megaphone } from "lucide-react";
+import { Users, DollarSign, Megaphone, Loader2 } from "lucide-react";
+import { collection, onSnapshot } from 'firebase/firestore';
+import { db } from '@/lib/firebase-client';
+
+interface User {
+  isPremium?: boolean;
+  premiumCycle?: 'monthly' | 'yearly';
+}
 
 export default function AdminDashboardPage() {
+  const [userCount, setUserCount] = useState<number>(0);
+  const [revenue, setRevenue] = useState<number>(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'users'), (snapshot) => {
+      const users = snapshot.docs.map(doc => doc.data() as User);
+      setUserCount(users.length);
+
+      let totalRevenue = 0;
+      users.forEach(user => {
+        if (user.isPremium) {
+          if (user.premiumCycle === 'yearly') {
+            totalRevenue += 99.99;
+          } else {
+            totalRevenue += 9.99;
+          }
+        }
+      });
+      setRevenue(totalRevenue);
+      setLoading(false);
+    });
+
+    return () => unsub();
+  }, []);
+
   return (
     <div className="container mx-auto p-4">
        <header className="mb-6">
@@ -21,23 +55,31 @@ export default function AdminDashboardPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">+1,234</div>
+            {loading ? (
+                <Loader2 className="h-6 w-6 animate-spin" />
+            ) : (
+                <div className="text-2xl font-bold">{userCount}</div>
+            )}
             <p className="text-xs text-muted-foreground">
-              +20.1% from last month
+              Total registered users
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Revenue
+              Estimated Monthly Revenue
             </CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">$4,231.89</div>
+             {loading ? (
+                <Loader2 className="h-6 w-6 animate-spin" />
+            ) : (
+                <div className="text-2xl font-bold">${revenue.toFixed(2)}</div>
+            )}
             <p className="text-xs text-muted-foreground">
-              +15.2% from last month
+              Based on premium subscriptions
             </p>
           </CardContent>
         </Card>
@@ -47,9 +89,9 @@ export default function AdminDashboardPage() {
             <Megaphone className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">+5</div>
+            <div className="text-2xl font-bold">0</div>
             <p className="text-xs text-muted-foreground">
-              2 running campaigns
+              No active campaigns
             </p>
           </CardContent>
         </Card>
