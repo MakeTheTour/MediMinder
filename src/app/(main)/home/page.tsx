@@ -341,7 +341,8 @@ export default function HomePage() {
     const now = new Date();
     const upcomingMedications = todaysMedications.filter(item => {
       const scheduledTime = parse(item.time, 'HH:mm', new Date());
-      return scheduledTime > now;
+      // Check if the medication is in the future but not more than 3 hours away
+      return scheduledTime > now && differenceInHours(scheduledTime, now) < 3;
     });
     return upcomingMedications[0] || null;
   }, [todaysMedications]);
