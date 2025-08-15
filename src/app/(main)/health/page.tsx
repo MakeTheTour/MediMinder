@@ -2,13 +2,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, HeartPulse, BrainCircuit, Activity, Utensils, Dumbbell, Pill, AlertCircle } from 'lucide-react';
+import { Plus, HeartPulse, BrainCircuit, Activity, Utensils, Dumbbell, Pill, AlertCircle, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { HealthMetric, UserProfile } from '@/lib/types';
 import { useAuth } from '@/context/auth-context';
-import { collection, onSnapshot, query, orderBy, getDoc, doc } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, getDoc, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase-client';
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
@@ -17,14 +17,21 @@ import { useToast } from '@/hooks/use-toast';
 import { DoctorSuggestion } from '@/components/doctor-suggestion';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
-function HealthHistoryItem({ metric }: { metric: HealthMetric }) {
+function HealthHistoryItem({ metric, onDelete }: { metric: HealthMetric, onDelete: (id: string) => void }) {
     return (
-        <div className="p-4 rounded-lg bg-muted/50 flex flex-wrap gap-x-6 gap-y-2 text-sm">
-            <p className="w-full font-semibold text-foreground">{format(new Date(metric.date), 'MMMM d, yyyy')}</p>
-            {metric.weight && <p><span className="text-muted-foreground">Weight: </span>{metric.weight} kg</p>}
-            {metric.bloodPressure && <p><span className="text-muted-foreground">BP: </span>{metric.bloodPressure.systolic}/{metric.bloodPressure.diastolic} mmHg</p>}
-            {metric.bloodSugar && <p><span className="text-muted-foreground">Sugar: </span>{metric.bloodSugar} mg/dL</p>}
-            {metric.heartRate && <p><span className="text-muted-foreground">Heart Rate: </span>{metric.heartRate} bpm</p>}
+        <div className="p-4 rounded-lg bg-muted/50 flex flex-wrap gap-x-6 gap-y-2 text-sm items-center justify-between">
+            <div>
+                <p className="w-full font-semibold text-foreground">{format(new Date(metric.date), 'MMMM d, yyyy')}</p>
+                <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1">
+                    {metric.weight && <p><span className="text-muted-foreground">Weight: </span>{metric.weight} kg</p>}
+                    {metric.bloodPressure && <p><span className="text-muted-foreground">BP: </span>{metric.bloodPressure.systolic}/{metric.bloodPressure.diastolic} mmHg</p>}
+                    {metric.bloodSugar && <p><span className="text-muted-foreground">Sugar: </span>{metric.bloodSugar} mg/dL</p>}
+                    {metric.heartRate && <p><span className="text-muted-foreground">Heart Rate: </span>{metric.heartRate} bpm</p>}
+                </div>
+            </div>
+            <Button variant="ghost" size="icon" onClick={() => metric.id && onDelete(metric.id)}>
+                <Trash2 className="h-4 w-4 text-destructive" />
+            </Button>
         </div>
     )
 }
@@ -92,6 +99,19 @@ export default function HealthPage() {
         setLoadingInsights(false);
     }
     
+    const handleDeleteHealthMetric = async (id: string) => {
+        if (isGuest || !user) {
+            toast({ title: "Cannot Delete", description: "You must be signed in to delete history." });
+            return;
+        }
+        try {
+            await deleteDoc(doc(db, 'users', user.uid, 'healthMetrics', id));
+            toast({ title: "History Deleted", description: "The health reading has been removed." });
+        } catch (error) {
+            toast({ title: "Error", description: "Could not delete the reading. Please try again.", variant: 'destructive' });
+        }
+    };
+    
     const handleAddClick = () => {
         if (isGuest || !user) {
             router.push('/login');
@@ -113,31 +133,6 @@ export default function HealthPage() {
       </header>
       
       <DoctorSuggestion />
-      
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Activity /> History Log</CardTitle>
-          <CardDescription>Your most recent health readings.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {healthMetrics.length > 0 ? (
-            <div className="space-y-4">
-              {healthMetrics.map((metric, index) => (
-                <HealthHistoryItem key={metric.id || index} metric={metric} />
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-10">
-                <HeartPulse className="mx-auto h-12 w-12 text-muted-foreground" />
-                <h3 className="mt-4 text-lg font-semibold">{isGuest ? "Sign in to track your health" : "No Health Data Logged"}</h3>
-                <p className="mt-1 text-sm text-muted-foreground">{isGuest ? "Create an account or sign in to save and track your health metrics." : "Add your first health reading to see your history here."}</p>
-                 <Button onClick={handleAddClick} size="sm" className="mt-4">
-                    <Plus className="mr-2 h-4 w-4" /> {isGuest ? 'Sign In' : 'Add First Reading'}
-                </Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
       
       <Card>
         <CardHeader>
@@ -192,6 +187,31 @@ export default function HealthPage() {
              <Button onClick={handleGetInsights} disabled={loadingInsights || isGuest || loadingProfile} className="mt-4">
                 {loadingInsights ? 'Generating...' : 'Generate New Insights'}
             </Button>
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><Activity /> History Log</CardTitle>
+          <CardDescription>Your most recent health readings.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {healthMetrics.length > 0 ? (
+            <div className="space-y-4">
+              {healthMetrics.map((metric) => (
+                <HealthHistoryItem key={metric.id} metric={metric} onDelete={handleDeleteHealthMetric} />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-10">
+                <HeartPulse className="mx-auto h-12 w-12 text-muted-foreground" />
+                <h3 className="mt-4 text-lg font-semibold">{isGuest ? "Sign in to track your health" : "No Health Data Logged"}</h3>
+                <p className="mt-1 text-sm text-muted-foreground">{isGuest ? "Create an account or sign in to save and track your health metrics." : "Add your first health reading to see your history here."}</p>
+                 <Button onClick={handleAddClick} size="sm" className="mt-4">
+                    <Plus className="mr-2 h-4 w-4" /> {isGuest ? 'Sign In' : 'Add First Reading'}
+                </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
 
