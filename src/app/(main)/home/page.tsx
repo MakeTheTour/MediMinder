@@ -30,6 +30,8 @@ export default function HomePage() {
   const [localAppointments, setLocalAppointments] = useLocalStorage<Appointment[]>('guest-appointments', []);
   const [localAdherence, setLocalAdherence] = useLocalStorage<AdherenceLog[]>('guest-adherence', []);
   const [sentAppointmentReminders, setSentAppointmentReminders] = useLocalStorage<string[]>('sent-appointment-reminders', []);
+  const [sentNotifications, setSentNotifications] = useLocalStorage<string[]>('sent-notifications', []);
+
 
   const [firestoreMedications, setFirestoreMedications] = useState<Medication[]>([]);
   const [firestoreAppointments, setFirestoreAppointments] = useState<Appointment[]>([]);
@@ -124,8 +126,6 @@ export default function HomePage() {
 
 
   const checkReminders = useCallback(() => {
-    if (reminder) return; // Don't check for new reminders if one is already showing
-
     const now = new Date();
     
     const medsForToday = activeMedications.filter(med => {
@@ -147,14 +147,28 @@ export default function HomePage() {
                  log.scheduledTime === time
         );
         
-        const reminderTime = subMinutes(scheduledTime, 10);
-        if (now >= reminderTime && now < scheduledTime && !alreadyHandled) {
-          setReminder({ medication: med, time });
-          return;
+        const notificationId = `${med.id}-${time}-${format(now, 'yyyy-MM-dd')}`;
+        const alreadyNotified = sentNotifications.includes(notificationId);
+
+        if (now >= scheduledTime && now < addMinutes(scheduledTime, 1) && !alreadyHandled && !alreadyNotified) {
+          
+          if (Notification.permission === "granted") {
+            new Notification("Medication Reminder", {
+              body: `It's time to take your ${med.name}.`,
+              icon: '/icon.png' 
+            });
+          }
+          
+          if (!reminder) {
+            setReminder({ medication: med, time });
+          }
+
+          setSentNotifications(prev => [...prev, notificationId]);
+          return; 
         }
       }
     }
-  }, [adherenceLogs, activeMedications, reminder]);
+  }, [adherenceLogs, activeMedications, reminder, sentNotifications, setSentNotifications]);
 
   const checkMissedDoses = useCallback(() => {
     const now = new Date();
@@ -267,7 +281,7 @@ export default function HomePage() {
 
 
   useEffect(() => {
-    const reminderInterval = setInterval(checkReminders, 30000); // Check every 30 seconds
+    const reminderInterval = setInterval(checkReminders, 10000); // Check every 10 seconds
     const missedDoseInterval = setInterval(checkMissedDoses, 60000 * 5); // Check every 5 minutes
     const appointmentReminderInterval = setInterval(checkAppointmentReminders, 60000 * 10); // Check every 10 minutes
 
