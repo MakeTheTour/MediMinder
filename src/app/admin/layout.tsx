@@ -36,13 +36,14 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
 
   useEffect(() => {
+    if (pathname === '/admin/login') {
+        setIsAdmin(true); // Allow login page to render
+        return;
+    }
     if (!loading) {
       if (!user) {
-        // If not logged in, redirect to user login. They can login as admin there.
         router.push('/admin/login');
       } else {
-        // Check if the logged-in user is the admin
-        // For now, we will use a hardcoded value.
         const adminEmail = "admin@example.com";
         if (user.email === adminEmail) {
           setIsAdmin(true);
@@ -51,8 +52,11 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         }
       }
     }
-  }, [user, loading, router]);
+  }, [user, loading, router, pathname]);
 
+  if (pathname === '/admin/login') {
+    return <>{children}</>;
+  }
 
   if (loading || isAdmin === null) {
       return (
