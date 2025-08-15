@@ -36,23 +36,19 @@ export function MedicationReminderDialog({
   const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
 
   useEffect(() => {
+    let sound: HTMLAudioElement | null = null;
     if (isOpen) {
       // Play a sound when the dialog opens
-      const sound = new Audio('/notification.mp3'); // Assuming you have a sound file in /public
+      sound = new Audio('/notification.mp3'); // Assuming you have a sound file in /public
       sound.play().catch(e => console.error("Failed to play notification sound:", e));
       setAudio(sound);
-    } else {
-      // Stop the sound if the dialog is closed
-      if (audio) {
-        audio.pause();
-        audio.currentTime = 0;
-      }
     }
     
-    // Cleanup on component unmount
+    // Cleanup on component unmount or when dialog closes
     return () => {
-      if (audio) {
-        audio.pause();
+      if (sound) {
+        sound.pause();
+        sound.currentTime = 0;
       }
     }
   }, [isOpen]);

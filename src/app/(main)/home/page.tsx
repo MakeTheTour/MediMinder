@@ -181,7 +181,7 @@ export default function HomePage() {
         return false;
     });
 
-    medsForToday.forEach(med => {
+    medsForToday.forEach(async med => {
         med.times.forEach(async time => {
             const scheduledTime = parse(time, 'HH:mm', new Date());
             const thirtyMinsAfter = addMinutes(scheduledTime, 30);

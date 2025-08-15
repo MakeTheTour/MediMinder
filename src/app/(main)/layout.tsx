@@ -26,10 +26,13 @@ export default function MainLayout({ children }: { children: ReactNode }) {
   }, [user, loading, router, isGuest, pathname]);
 
   useEffect(() => {
-    if ("Notification" in window && Notification.permission === "default") {
+    // Request notification permission on component mount
+    if (typeof window !== "undefined" && "Notification" in window) {
+      if (Notification.permission === "default") {
         Notification.requestPermission();
+      }
     }
-  }, [])
+  }, []);
 
   if (loading && !isGuest) {
     return (
