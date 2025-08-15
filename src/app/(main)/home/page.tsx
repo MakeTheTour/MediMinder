@@ -361,13 +361,14 @@ export default function HomePage() {
         <CardContent>
           {sortedSchedule.length > 0 ? (
             <div className="space-y-4">
-              {sortedSchedule.map((item, index) => (
-                item.type === 'medication' ? (
-                   <MedicationCard key={`${item.data.id}-${item.time}`} medication={item.data} specificTime={item.time} />
+              {sortedSchedule.map((item, index) => {
+                const key = `${item.type}-${item.data.id}-${item.time}-${index}`;
+                return item.type === 'medication' ? (
+                  <MedicationCard key={key} medication={item.data} specificTime={item.time} />
                 ) : (
-                  <AppointmentCard key={item.data.id} appointment={item.data} />
+                  <AppointmentCard key={key} appointment={item.data} />
                 )
-              ))}
+              })}
             </div>
           ) : (
             <div className="text-center py-10">
