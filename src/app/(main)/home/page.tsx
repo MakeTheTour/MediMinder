@@ -386,7 +386,7 @@ export default function HomePage() {
             </div>
             <Button asChild size="sm" variant="outline">
               <Link href="/medicine/add">
-                <Plus className="mr-2 h-4 w-4" /> Add
+                <Plus className="mr-2 h-4 w-4" /> Add Medicine
               </Link>
             </Button>
           </div>
