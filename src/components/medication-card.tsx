@@ -1,9 +1,10 @@
 
 'use client';
 
-import { Pill, Clock, Trash2, MoreVertical, ShieldAlert, Pencil } from 'lucide-react';
+import { Pill, Clock, Trash2, MoreVertical, ShieldAlert, Pencil, CalendarDays, Utensils } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Medication } from '@/lib/types';
+import { differenceInDays, formatDistanceToNowStrict } from 'date-fns';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,6 +24,43 @@ interface MedicationCardProps {
 
 export function MedicationCard({ medication, onDelete, onFamilyAlert, specificTime, onEdit }: MedicationCardProps) {
   const displayTimes = specificTime ? [specificTime] : medication.times;
+
+  const getDayInfo = () => {
+    try {
+        const startDate = new Date(medication.start_date);
+        const endDate = new Date(medication.end_date);
+        const today = new Date();
+        
+        // Ensure we don't show negative days if start date is in the future
+        if (today < startDate) {
+            const daysUntilStart = formatDistanceToNowStrict(startDate, { unit: 'day', roundingMethod: 'ceil'});
+            return `Starts in ${daysUntilStart}`;
+        }
+        
+        const totalDays = differenceInDays(endDate, startDate) + 1;
+        const runningDay = differenceInDays(today, startDate) + 1;
+
+        if (runningDay > totalDays) return `Finished`;
+
+        return `Day ${runningDay} of ${totalDays}`;
+    } catch(e) {
+        return 'Invalid date';
+    }
+  };
+
+  const getFoodInfo = () => {
+    switch (medication.food_relation) {
+        case 'before':
+            return `${medication.food_time_minutes || ''} min before food`;
+        case 'after':
+            return `${medication.food_time_minutes || ''} min after food`;
+        case 'with':
+            return 'With food';
+        default:
+            return 'No specific food relation';
+    }
+  };
+
 
   return (
     <Card className="w-full overflow-hidden transition-all hover:shadow-md bg-muted/20 border">
@@ -69,9 +107,19 @@ export function MedicationCard({ medication, onDelete, onFamilyAlert, specificTi
             </DropdownMenu>
           )}
         </div>
-        <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
-          <Clock className="h-4 w-4" />
-          <span>{displayTimes.join(', ')}</span>
+        <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-y-2 gap-x-4 text-sm text-muted-foreground">
+          <div className="flex items-center gap-2">
+            <Clock className="h-4 w-4 shrink-0" />
+            <span>{displayTimes.join(', ')}</span>
+          </div>
+           <div className="flex items-center gap-2">
+            <Utensils className="h-4 w-4 shrink-0" />
+            <span>{getFoodInfo()}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <CalendarDays className="h-4 w-4 shrink-0" />
+            <span>{getDayInfo()}</span>
+          </div>
         </div>
       </CardContent>
     </Card>
