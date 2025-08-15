@@ -339,12 +339,8 @@ export default function HomePage() {
   
   const nextMedication = useMemo(() => {
     const now = new Date();
-    const upcomingMedications = todaysMedications.filter(item => {
-      const scheduledTime = parse(item.time, 'HH:mm', new Date());
-      // Check if the medication is in the future but not more than 3 hours away
-      return scheduledTime > now && differenceInHours(scheduledTime, now) < 3;
-    });
-    return upcomingMedications[0] || null;
+    // Find the first medication time in the sorted list that is in the future
+    return todaysMedications.find(item => parse(item.time, 'HH:mm', new Date()) > now) || null;
   }, [todaysMedications]);
 
 
