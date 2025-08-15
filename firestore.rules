@@ -3,24 +3,32 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Helper function to check if a user is an admin
+    
+    // Function to check if a user is an admin
     function isAdmin() {
-      return request.auth.token.email.matches('.*@mediminder.com$');
+      return request.auth != null && request.auth.token.email.matches('.*@mediminder\\.com');
     }
 
-    // Rules for the 'users' collection
-    match /users/{userId} {
-      // Any authenticated user can create their own document (e.g., on sign-up)
-      // They can read, update their own document.
-      // Admins can read any user document.
-      allow read, update: if request.auth.uid == userId || isAdmin();
-      allow create: if request.auth.uid == userId;
+    // Function to check if the user is the owner of the document
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
 
-      // Rules for user-specific sub-collections
+    match /users/{userId} {
+      // Admins can read/write any user document
+      allow read, write: if isAdmin();
+      
+      // Users can create, read, update, and delete their own document
+      allow create: if isOwner(userId);
+      allow read, update, delete: if isOwner(userId);
+
+      // Subcollections rules
       match /{subcollection}/{docId} {
-        // Users can perform any action on documents in their own subcollections.
-        allow read, write, delete, create: if request.auth.uid == userId;
+        // Admins have full access to all subcollections
+        allow read, write: if isAdmin();
+        
+        // Users can read/write to their own subcollections
+        allow read, write: if isOwner(userId);
       }
     }
   }
