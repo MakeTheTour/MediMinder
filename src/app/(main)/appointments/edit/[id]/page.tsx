@@ -1,4 +1,5 @@
 
+
 'use client';
 import { EditAppointmentForm } from '@/components/edit-appointment-form';
 
@@ -13,3 +14,4 @@ export default function EditAppointmentPage({ params }: { params: { id: string }
     </div>
   );
 }
+
