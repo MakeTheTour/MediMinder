@@ -1,6 +1,6 @@
 // src/lib/firebase-client.ts - CLIENT-SIDE USE ONLY
 import { initializeApp, getApps, getApp, App } from 'firebase/app';
-import { getAuth, Auth } from 'firebase/auth';
+import { getAuth, Auth, initializeAuth, browserLocalPersistence, indexedDBLocalPersistence, browserSessionPersistence } from 'firebase/auth';
 import { getFirestore, Firestore } from 'firebase/firestore';
 
 const firebaseConfig = {
@@ -16,7 +16,9 @@ const firebaseConfig = {
 // This pattern prevents re-initializing the app on every render
 const app: App = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
-const auth: Auth = getAuth(app);
+const auth: Auth = initializeAuth(app, {
+  persistence: [browserLocalPersistence, indexedDBLocalPersistence, browserSessionPersistence]
+});
 const db: Firestore = getFirestore(app);
 
 export { app, auth, db };
