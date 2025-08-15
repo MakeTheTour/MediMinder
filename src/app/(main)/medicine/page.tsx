@@ -131,7 +131,7 @@ export default function MedicinePage() {
             </TabsTrigger>
           </TabsList>
            <Button asChild size="sm" variant="outline">
-                <Link href={isGuest ? "/medicine/add" : (medications.length > 0 ? "/medicine/add" : "/appointments/add")}>
+                <Link href={"/medicine/add"}>
                   <Plus className="mr-2 h-4 w-4" /> Add New
                 </Link>
             </Button>

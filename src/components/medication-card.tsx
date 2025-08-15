@@ -60,7 +60,7 @@ export function MedicationCard({ medication, onDelete, onFamilyAlert, specificTi
                 )}
                 {(onDelete && (onFamilyAlert || onEdit)) && <DropdownMenuSeparator />}
                 {onDelete && (
-                    <DropdownMenuItem onClick={() => onDelete(medication.id)} className="text-destructive">
+                    <DropdownMenuItem onClick={() => onDelete(medication.id)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
                       <Trash2 className="mr-2 h-4 w-4" />
                       Delete
                     </DropdownMenuItem>

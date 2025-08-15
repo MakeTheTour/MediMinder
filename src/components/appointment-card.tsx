@@ -2,7 +2,7 @@
 'use client';
 
 import { Stethoscope, Clock, MapPin, Trash2, MoreVertical, FileText, Pencil } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Appointment } from '@/lib/types';
 import { format } from 'date-fns';
 import {
@@ -64,7 +64,7 @@ export function AppointmentCard({ appointment, onDelete, onEdit }: AppointmentCa
                                 </DropdownMenuItem>
                             )}
                             {onDelete && (
-                                <DropdownMenuItem onClick={() => onDelete(appointment.id)} className="text-destructive">
+                                <DropdownMenuItem onClick={() => onDelete(appointment.id)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
                                 <Trash2 className="mr-2 h-4 w-4" />
                                 Delete
                                 </DropdownMenuItem>
@@ -78,7 +78,7 @@ export function AppointmentCard({ appointment, onDelete, onEdit }: AppointmentCa
                  <div className="space-y-2 text-sm text-muted-foreground">
                     <div className="flex items-center gap-2">
                         <Clock className="h-4 w-4" />
-                        <span>{format(new Date(appointment.date), 'EEE, MMM d')} at {appointment.time}</span>
+                        <span>{format(new Date(`${appointment.date}T${appointment.time}`), 'EEE, MMM d, yyyy')} at {appointment.time}</span>
                     </div>
                     <div className="flex items-center gap-2">
                         <MapPin className="h-4 w-4" />
