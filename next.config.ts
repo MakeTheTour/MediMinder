@@ -19,6 +19,11 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  serverActions: {
+    // 2 minutes timeout for server actions
+    // @see https://nextjs.org/docs/app/api-reference/next-config-js/serverActions#executiontimeout
+    executionTimeout: 120,
+  }
 };
 
 export default nextConfig;
