@@ -84,6 +84,35 @@ export default function AdminPaymentsPage() {
             </div>
           </CardContent>
         </Card>
+        
+        <Card>
+          <CardHeader>
+            <CardTitle>PayPal</CardTitle>
+            <CardDescription>Manage PayPal integration.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between rounded-lg border p-4">
+              <Label htmlFor="paypal-enabled" className="flex flex-col space-y-1">
+                <span>Enable PayPal</span>
+              </Label>
+              <Switch id="paypal-enabled" defaultChecked />
+            </div>
+            <div className="flex items-center justify-between rounded-lg border p-4">
+              <Label htmlFor="paypal-sandbox" className="flex flex-col space-y-1">
+                <span>Sandbox Mode</span>
+              </Label>
+              <Switch id="paypal-sandbox" defaultChecked />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="paypal-client-id">Client ID</Label>
+              <Input id="paypal-client-id" placeholder="Your PayPal Client ID" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="paypal-client-secret">Client Secret</Label>
+              <Input id="paypal-client-secret" type="password" placeholder="Your PayPal Client Secret" />
+            </div>
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader>

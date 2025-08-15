@@ -47,6 +47,13 @@ const PayoneerIcon = () => (
     </svg>
 );
 
+const PayPalIcon = () => (
+    <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path fill="#003087" d="M20.3,5.1c-0.4-1.8-2-3.1-3.9-3.1H7.4c-1.9,0-3.5,1.4-3.9,3.2C3.4,5.8,3.3,6.5,3.3,7.2c0,1.3,0.3,2.6,1,3.7 c0.7,1.1,1.7,1.9,2.8,2.4l-0.1,0.6c-0.1,0.5,0.3,1,0.8,1h1.8c0.4,0,0.7-0.3,0.8-0.7l0.3-1.8c0,0,0.2-1,0.3-1.3 c0.1-0.3,0.4-0.6,0.8-0.6h2.8c1.9,0,3.5-1.2,3.9-2.9c0.3-1.2,0-2.4-0.8-3.3C21.9,6.9,21.2,5.9,20.3,5.1z M16.7,9.6 c-0.3,1.3-1.5,2.2-2.9,2.2H11c-0.4,0-0.7,0.3-0.8,0.7L10,13.9c0,0,0,0,0,0c-0.1,0.6-0.7,1.1-1.3,1.1H7.4c-0.4,0-0.8-0.4-0.6-0.8 l0.3-1.7c0.2-1,0.5-2,0.9-2.9C8.3,9.2,8.7,8.8,9.1,8.5c0.4-0.3,0.9-0.5,1.4-0.6h3.4c1.4,0,2.6,0.8,2.9,2.1C16.8,9.3,16.8,9.4,16.7,9.6z"></path>
+        <path fill="#009cde" d="M6.3,13.7c0.7,1.1,1.7,1.9,2.8,2.4l-0.4,2.4c-0.1,0.4,0.3,0.8,0.7,0.8h1.8c0.4,0,0.7-0.3,0.8-0.7l0.4-2.4 c0,0,0,0,0,0c1.1-0.2,2.1-0.7,2.8-1.5c-0.4,1.7-2,3-3.9,3H7.4c-1.9,0-3.5-1.4-3.9-3.2C3.4,13,3.3,12.3,3.3,11.5 c0-0.6,0.1-1.2,0.2-1.8c-0.1,0.4-0.1,0.8-0.1,1.2C3.4,12.2,3.8,13.1,4.4,13.7C5,14,5.6,14.1,6.3,13.7z"></path>
+    </svg>
+);
+
 
 export default function PremiumPage() {
   const { user, isGuest } = useAuth();
@@ -56,7 +63,7 @@ export default function PremiumPage() {
   const [paymentMethod, setPaymentMethod] = useState<string | null>(null);
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
 
-  const handleUpgrade = async (method: 'Stripe' | 'Payoneer') => {
+  const handleUpgrade = async (method: 'Stripe' | 'Payoneer' | 'PayPal') => {
     if (isGuest || !user) {
       router.push('/login');
       return;
@@ -147,6 +154,19 @@ export default function PremiumPage() {
                     <>
                         <StripeIcon/>
                         Pay with Stripe
+                    </>
+                 )}
+            </Button>
+            <Button className="w-full" size="lg" onClick={() => handleUpgrade('PayPal')} disabled={isUpgrading}>
+                 {isUpgrading && paymentMethod === 'PayPal' ? (
+                    <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Processing with PayPal...
+                    </>
+                 ) : (
+                    <>
+                        <PayPalIcon/>
+                        Pay with PayPal
                     </>
                  )}
             </Button>
