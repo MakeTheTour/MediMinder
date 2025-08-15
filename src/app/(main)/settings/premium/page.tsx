@@ -5,12 +5,15 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle2, Star, Users, Loader2, CreditCard } from "lucide-react";
+import { CheckCircle2, Star, Users, Loader2 } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { doc, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase-client";
 import { sendPremiumConfirmationEmail } from "@/ai/flows/send-premium-confirmation-email";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
 
 const premiumFeatures = [
   {
@@ -51,6 +54,7 @@ export default function PremiumPage() {
   const { toast } = useToast();
   const [isUpgrading, setIsUpgrading] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<string | null>(null);
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
 
   const handleUpgrade = async (method: 'Stripe' | 'Payoneer') => {
     if (isGuest || !user) {
@@ -67,7 +71,7 @@ export default function PremiumPage() {
       
       // Update user in firestore
       const userRef = doc(db, 'users', user.uid);
-      await setDoc(userRef, { isPremium: true }, { merge: true });
+      await setDoc(userRef, { isPremium: true, premiumCycle: billingCycle }, { merge: true });
 
       // Send confirmation email
       await sendPremiumConfirmationEmail({
@@ -107,8 +111,18 @@ export default function PremiumPage() {
                 <Star className="h-8 w-8" />
             </div>
           <CardTitle className="text-3xl">Unlock Premium</CardTitle>
-          <CardDescription>
-            Supercharge your health management with powerful new tools for you and your loved ones.
+          <div className="flex items-center justify-center space-x-2 pt-4">
+            <Label htmlFor="billing-cycle">Monthly</Label>
+            <Switch
+                id="billing-cycle"
+                checked={billingCycle === 'yearly'}
+                onCheckedChange={(checked) => setBillingCycle(checked ? 'yearly' : 'monthly')}
+            />
+            <Label htmlFor="billing-cycle">Yearly</Label>
+            <Badge variant="secondary">Save 17%</Badge>
+          </div>
+          <CardDescription className="pt-2">
+            {billingCycle === 'monthly' ? '$9.99 / month' : '$99.99 / year'}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
