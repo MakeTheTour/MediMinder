@@ -379,8 +379,17 @@ export default function HomePage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2"><PillIcon/> Today's Medications</CardTitle>
-          <CardDescription>Your medication schedule for today.</CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2"><PillIcon/> Today's Medications</CardTitle>
+              <CardDescription>Your medication schedule for today.</CardDescription>
+            </div>
+            <Button asChild size="sm" variant="outline">
+              <Link href="/medicine/add">
+                <Plus className="mr-2 h-4 w-4" /> Add
+              </Link>
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {todaysMedications.length > 0 ? (
