@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, HeartPulse, BrainCircuit, Activity } from 'lucide-react';
+import { Plus, HeartPulse, BrainCircuit, Activity, Utensils, Dumbbell, Pill } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -125,9 +125,32 @@ export default function HealthPage() {
         </CardHeader>
         <CardContent>
             {insights ? (
-                <div className="space-y-2 p-4 bg-primary/10 rounded-lg">
-                    <p><strong>Insight:</strong> {insights.insight}</p>
-                    <p><strong>Suggestion:</strong> {insights.suggestion}</p>
+                <div className="space-y-4 p-4 bg-primary/10 rounded-lg">
+                    <p className="font-semibold text-foreground">Insight:</p>
+                    <p className="italic">"{insights.insight}"</p>
+                    <div className="border-t border-primary/20 pt-4 space-y-4">
+                        <div className="flex items-start gap-3">
+                           <Utensils className="h-5 w-5 text-primary mt-1 shrink-0" />
+                           <div>
+                                <h4 className="font-semibold text-foreground">Food Suggestion</h4>
+                                <p className="text-sm">{insights.foodSuggestion}</p>
+                           </div>
+                        </div>
+                         <div className="flex items-start gap-3">
+                           <Dumbbell className="h-5 w-5 text-primary mt-1 shrink-0" />
+                           <div>
+                                <h4 className="font-semibold text-foreground">Exercise Suggestion</h4>
+                                <p className="text-sm">{insights.exerciseSuggestion}</p>
+                           </div>
+                        </div>
+                         <div className="flex items-start gap-3">
+                           <Pill className="h-5 w-5 text-primary mt-1 shrink-0" />
+                           <div>
+                                <h4 className="font-semibold text-foreground">Medication Observation</h4>
+                                <p className="text-sm">{insights.medicationObservation}</p>
+                           </div>
+                        </div>
+                    </div>
                 </div>
             ): (
                  <p className="text-muted-foreground text-sm">Click the button to generate insights from your logged data.</p>
