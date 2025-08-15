@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Plus, ShieldAlert, Stethoscope } from 'lucide-react';
+import { Plus, ShieldAlert, Stethoscope, Pill as PillIcon, CalendarDays } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -84,12 +84,16 @@ export default function HomePage() {
   const todaysMedications = useMemo(() => {
     const today = new Date();
     const dayOfWeek = today.getDay(); // Sunday - 0, Monday - 1
-    return activeMedications.filter(med => {
+    const unsortedMeds = activeMedications.filter(med => {
         if (med.frequency === 'Daily') return true;
         if (med.frequency === 'Weekly') return med.daysOfWeek?.includes(dayOfWeek);
         if (med.frequency === 'Monthly') return med.dayOfMonth === today.getDate();
         return false;
     });
+
+    return unsortedMeds.flatMap(med => med.times.map(time => ({ time, data: med })))
+                       .sort((a, b) => a.time.localeCompare(b.time));
+
   }, [activeMedications]);
 
     const handleFamilyAlert = useCallback(async (medication: Medication, reason: string) => {
@@ -124,30 +128,46 @@ export default function HomePage() {
 
     const now = new Date();
     
-    for (const med of todaysMedications) {
+    const medsForToday = activeMedications.filter(med => {
+        const today = new Date();
+        const dayOfWeek = today.getDay();
+        if (med.frequency === 'Daily') return true;
+        if (med.frequency === 'Weekly') return med.daysOfWeek?.includes(dayOfWeek);
+        if (med.frequency === 'Monthly') return med.dayOfMonth === today.getDate();
+        return false;
+    });
+    
+    for (const med of medsForToday) {
       for (const time of med.times) {
         const scheduledTime = parse(time, 'HH:mm', new Date());
         
-        // Check if a log already exists for this specific medication at this specific time on this day
         const alreadyHandled = adherenceLogs.some(
           log => log.medicationId === med.id && 
                  format(new Date(log.takenAt), 'yyyy-MM-dd') === format(now, 'yyyy-MM-dd') &&
                  log.scheduledTime === time
         );
         
-        // Reminder window: 10 mins before to scheduled time
         const reminderTime = subMinutes(scheduledTime, 10);
         if (now >= reminderTime && now < scheduledTime && !alreadyHandled) {
           setReminder({ medication: med, time });
-          return; // Show one reminder at a time
+          return;
         }
       }
     }
-  }, [adherenceLogs, todaysMedications, reminder]);
+  }, [adherenceLogs, activeMedications, reminder]);
 
   const checkMissedDoses = useCallback(() => {
     const now = new Date();
-    todaysMedications.forEach(med => {
+    const medsForToday = activeMedications.filter(med => {
+        const today = new Date();
+        const dayOfWeek = today.getDay();
+        if (med.frequency === 'Daily') return true;
+        if (med.frequency === 'Weekly') return med.daysOfWeek?.includes(dayOfWeek);
+        if (med.frequency === 'Monthly') return med.dayOfMonth === today.getDate();
+        return false;
+    });
+
+    medsForToday.forEach(med => {
         med.times.forEach(async time => {
             const scheduledTime = parse(time, 'HH:mm', new Date());
             const thirtyMinsAfter = addMinutes(scheduledTime, 30);
@@ -170,7 +190,6 @@ export default function HomePage() {
                 if (!wasHandled && !alreadyAlerted) {
                     console.log(`Dose missed for ${med.name} at ${time}. Alerting family.`);
                     await handleFamilyAlert(med, 'dose missed');
-                    // Log the missed dose to prevent re-alerting
                     const logEntry: Omit<AdherenceLog, 'id'> = {
                         medicationId: med.id,
                         medicationName: med.name,
@@ -188,7 +207,7 @@ export default function HomePage() {
             }
         });
     });
-  }, [todaysMedications, adherenceLogs, user, isGuest, localAdherence, handleFamilyAlert, setLocalAdherence]);
+  }, [activeMedications, adherenceLogs, user, isGuest, localAdherence, handleFamilyAlert, setLocalAdherence]);
 
 
   const checkAppointmentReminders = useCallback(async () => {
@@ -236,12 +255,10 @@ export default function HomePage() {
         }
       };
 
-      // Check for 24-hour reminder (between 23 and 24 hours)
       if (hoursUntil > 23 && hoursUntil <= 24) {
         await checkAndSend('24h');
       }
 
-      // Check for 1-hour reminder (between 0 and 1 hours)
       if (hoursUntil > 0 && hoursUntil <= 1) {
         await checkAndSend('1h');
       }
@@ -293,7 +310,9 @@ export default function HomePage() {
 
 
   const todaysAppointments = useMemo(() => {
-    return activeAppointments.filter(app => isToday(new Date(app.date)));
+    return activeAppointments
+      .filter(app => isToday(new Date(app.date)))
+      .sort((a,b) => a.time.localeCompare(b.time));
   }, [activeAppointments]);
 
   const nextAppointment = useMemo(() => {
@@ -311,15 +330,6 @@ export default function HomePage() {
     else if (hour < 18) setGreeting('Good Afternoon');
     else setGreeting('Good Evening');
   }, []);
-
-  const sortedSchedule = useMemo(() => {
-    const items = [
-      ...todaysMedications.flatMap(med => med.times.map(time => ({ type: 'medication' as const, time, data: med }))),
-      ...todaysAppointments.map(app => ({ type: 'appointment' as const, time: app.time, data: app }))
-    ];
-    return items.sort((a, b) => a.time.localeCompare(b.time));
-  }, [todaysMedications, todaysAppointments]);
-
 
   return (
     <>
@@ -355,36 +365,54 @@ export default function HomePage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Today's Schedule</CardTitle>
-          <CardDescription>All your medications and appointments for today.</CardDescription>
+          <CardTitle className="flex items-center gap-2"><PillIcon/> Today's Medications</CardTitle>
+          <CardDescription>Your medication schedule for today.</CardDescription>
         </CardHeader>
         <CardContent>
-          {sortedSchedule.length > 0 ? (
+          {todaysMedications.length > 0 ? (
             <div className="space-y-4">
-              {sortedSchedule.map((item, index) => {
-                const key = `${item.type}-${item.data.id}-${item.time}-${index}`;
-                return item.type === 'medication' ? (
-                  <MedicationCard key={key} medication={item.data} specificTime={item.time} />
-                ) : (
-                  <AppointmentCard key={key} appointment={item.data} />
-                )
-              })}
+              {todaysMedications.map((item, index) => (
+                  <MedicationCard key={`${item.data.id}-${item.time}-${index}`} medication={item.data} specificTime={item.time} />
+              ))}
             </div>
           ) : (
             <div className="text-center py-10">
-              <p className="text-muted-foreground mb-4">{isGuest ? "Try adding a medication or appointment to see it here." : "You have no items on your schedule today!"}</p>
-              <div className="flex justify-center gap-4">
+              <p className="text-muted-foreground mb-4">{isGuest ? "Try adding a medication to see it here." : "You have no medications scheduled for today."}</p>
                 <Button asChild>
                   <Link href="/medicine/add">
                     <Plus className="mr-2 h-4 w-4" /> Add Medication
                   </Link>
                 </Button>
+               {isGuest && (
+                 <p className="text-sm text-muted-foreground mt-4">
+                  <Link href="/login" className="text-primary underline">Sign in</Link> to save your schedule across devices.
+                 </p>
+                )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+      
+       <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><CalendarDays/> Today's Appointments</CardTitle>
+          <CardDescription>Your appointments for today.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {todaysAppointments.length > 0 ? (
+            <div className="space-y-4">
+              {todaysAppointments.map((item) => (
+                  <AppointmentCard key={item.id} appointment={item} />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-10">
+              <p className="text-muted-foreground mb-4">{isGuest ? "Try adding an appointment to see it here." : "You have no appointments scheduled for today."}</p>
                  <Button asChild variant="secondary">
                    <Link href="/appointments/add">
                     <Plus className="mr-2 h-4 w-4" /> Add Appointment
                   </Link>
                 </Button>
-              </div>
                {isGuest && (
                  <p className="text-sm text-muted-foreground mt-4">
                   <Link href="/login" className="text-primary underline">Sign in</Link> to save your schedule across devices.
