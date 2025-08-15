@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, HeartPulse, BrainCircuit, Activity, Utensils, Dumbbell, Pill, AlertCircle, Trash2 } from 'lucide-react';
+import { Plus, HeartPulse, BrainCircuit, Activity, Utensils, Dumbbell, Pill, AlertCircle, Trash2, Pencil } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -17,7 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import { DoctorSuggestion } from '@/components/doctor-suggestion';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
-function HealthHistoryItem({ metric, onDelete }: { metric: HealthMetric, onDelete: (id: string) => void }) {
+function HealthHistoryItem({ metric, onDelete, onEdit }: { metric: HealthMetric, onDelete: (id: string) => void, onEdit: (id: string) => void }) {
     return (
         <div className="p-4 rounded-lg bg-muted/50 flex flex-wrap gap-x-6 gap-y-2 text-sm items-center justify-between">
             <div>
@@ -29,9 +29,14 @@ function HealthHistoryItem({ metric, onDelete }: { metric: HealthMetric, onDelet
                     {metric.heartRate && <p><span className="text-muted-foreground">Heart Rate: </span>{metric.heartRate} bpm</p>}
                 </div>
             </div>
-            <Button variant="ghost" size="icon" onClick={() => metric.id && onDelete(metric.id)}>
-                <Trash2 className="h-4 w-4 text-destructive" />
-            </Button>
+            <div className="flex items-center gap-2">
+                <Button variant="ghost" size="icon" onClick={() => metric.id && onEdit(metric.id)}>
+                    <Pencil className="h-4 w-4 text-muted-foreground" />
+                </Button>
+                <Button variant="ghost" size="icon" onClick={() => metric.id && onDelete(metric.id)}>
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
+            </div>
         </div>
     )
 }
@@ -99,6 +104,10 @@ export default function HealthPage() {
         setLoadingInsights(false);
     }
     
+    const handleEditHealthMetric = (id: string) => {
+        router.push(`/health/edit/${id}`);
+    };
+    
     const handleDeleteHealthMetric = async (id: string) => {
         if (isGuest || !user) {
             toast({ title: "Cannot Delete", description: "You must be signed in to delete history." });
@@ -133,6 +142,31 @@ export default function HealthPage() {
       </header>
       
       <DoctorSuggestion />
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><Activity /> History Log</CardTitle>
+          <CardDescription>Your most recent health readings.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {healthMetrics.length > 0 ? (
+            <div className="space-y-4">
+              {healthMetrics.map((metric) => (
+                <HealthHistoryItem key={metric.id} metric={metric} onEdit={handleEditHealthMetric} onDelete={handleDeleteHealthMetric} />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-10">
+                <HeartPulse className="mx-auto h-12 w-12 text-muted-foreground" />
+                <h3 className="mt-4 text-lg font-semibold">{isGuest ? "Sign in to track your health" : "No Health Data Logged"}</h3>
+                <p className="mt-1 text-sm text-muted-foreground">{isGuest ? "Create an account or sign in to save and track your health metrics." : "Add your first health reading to see your history here."}</p>
+                 <Button onClick={handleAddClick} size="sm" className="mt-4">
+                    <Plus className="mr-2 h-4 w-4" /> {isGuest ? 'Sign In' : 'Add First Reading'}
+                </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
       
       <Card>
         <CardHeader>
@@ -187,31 +221,6 @@ export default function HealthPage() {
              <Button onClick={handleGetInsights} disabled={loadingInsights || isGuest || loadingProfile} className="mt-4">
                 {loadingInsights ? 'Generating...' : 'Generate New Insights'}
             </Button>
-        </CardContent>
-      </Card>
-      
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Activity /> History Log</CardTitle>
-          <CardDescription>Your most recent health readings.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {healthMetrics.length > 0 ? (
-            <div className="space-y-4">
-              {healthMetrics.map((metric) => (
-                <HealthHistoryItem key={metric.id} metric={metric} onDelete={handleDeleteHealthMetric} />
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-10">
-                <HeartPulse className="mx-auto h-12 w-12 text-muted-foreground" />
-                <h3 className="mt-4 text-lg font-semibold">{isGuest ? "Sign in to track your health" : "No Health Data Logged"}</h3>
-                <p className="mt-1 text-sm text-muted-foreground">{isGuest ? "Create an account or sign in to save and track your health metrics." : "Add your first health reading to see your history here."}</p>
-                 <Button onClick={handleAddClick} size="sm" className="mt-4">
-                    <Plus className="mr-2 h-4 w-4" /> {isGuest ? 'Sign In' : 'Add First Reading'}
-                </Button>
-            </div>
-          )}
         </CardContent>
       </Card>
 
