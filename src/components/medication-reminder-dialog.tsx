@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Medication } from '@/lib/types';
 import { Pill, BellRing, Hourglass } from 'lucide-react';
 import { useEffect } from 'react';
+import { format, parse } from 'date-fns';
 
 interface MedicationReminderDialogProps {
   isOpen: boolean;
@@ -50,6 +51,14 @@ export function MedicationReminderDialog({
     }
   }, [isOpen]);
 
+  const formatTime = (time24h: string) => {
+    try {
+      return format(parse(time24h, 'HH:mm', new Date()), 'h:mm a');
+    } catch {
+      return time24h; // Fallback to original if parsing fails
+    }
+  }
+
   if (!isOpen) return null;
 
   return (
@@ -71,7 +80,7 @@ export function MedicationReminderDialog({
              <Pill className="h-6 w-6 text-muted-foreground" />
              <div>
                 <p className="font-semibold">{medication.intake_qty} {medication.dosage}</p>
-                <p className="text-sm">Scheduled for {time}</p>
+                <p className="text-sm">Scheduled for {formatTime(time)}</p>
              </div>
         </div>
         <AlertDialogFooter className="grid grid-cols-2 gap-4">
@@ -91,5 +100,3 @@ export function MedicationReminderDialog({
     </AlertDialog>
   );
 }
-
-    

@@ -4,7 +4,7 @@
 import { Stethoscope, Clock, MapPin, Trash2, MoreVertical, FileText, Pencil } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Appointment } from '@/lib/types';
-import { format } from 'date-fns';
+import { format, parse } from 'date-fns';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,6 +26,15 @@ interface AppointmentCardProps {
 }
 
 export function AppointmentCard({ appointment, onDelete, onEdit }: AppointmentCardProps) {
+  
+  const formatTime = (time24h: string) => {
+    try {
+      return format(parse(time24h, 'HH:mm', new Date()), 'h:mm a');
+    } catch {
+      return time24h; // Fallback to original if parsing fails
+    }
+  }
+
   return (
      <Collapsible asChild>
         <Card className="w-full overflow-hidden transition-all hover:shadow-md bg-muted/20 border">
@@ -78,7 +87,7 @@ export function AppointmentCard({ appointment, onDelete, onEdit }: AppointmentCa
                  <div className="space-y-2 text-sm text-muted-foreground">
                     <div className="flex items-center gap-2">
                         <Clock className="h-4 w-4" />
-                        <span>{format(new Date(`${appointment.date}T${appointment.time}`), 'EEE, MMM d, yyyy')} at {appointment.time}</span>
+                        <span>{format(new Date(`${appointment.date}T00:00:00`), 'EEE, MMM d, yyyy')} at {formatTime(appointment.time)}</span>
                     </div>
                     <div className="flex items-center gap-2">
                         <MapPin className="h-4 w-4" />

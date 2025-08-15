@@ -4,7 +4,7 @@
 import { Pill, Clock, Trash2, MoreVertical, ShieldAlert, Pencil, CalendarDays, Utensils } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Medication } from '@/lib/types';
-import { differenceInDays, formatDistanceToNowStrict } from 'date-fns';
+import { differenceInDays, formatDistanceToNowStrict, parse, format } from 'date-fns';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,7 +23,18 @@ interface MedicationCardProps {
 }
 
 export function MedicationCard({ medication, onDelete, onFamilyAlert, specificTime, onEdit }: MedicationCardProps) {
+
+  const formatTime = (time24h: string) => {
+    try {
+      return format(parse(time24h, 'HH:mm', new Date()), 'h:mm a');
+    } catch {
+      return time24h; // Fallback to original if parsing fails
+    }
+  }
+
   const displayTimes = specificTime ? [specificTime] : medication.times;
+  const formattedTimes = displayTimes.map(formatTime).join(', ');
+
 
   const getDayInfo = () => {
     try {
@@ -110,7 +121,7 @@ export function MedicationCard({ medication, onDelete, onFamilyAlert, specificTi
         <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-y-2 gap-x-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-2">
             <Clock className="h-4 w-4 shrink-0" />
-            <span>{displayTimes.join(', ')}</span>
+            <span>{formattedTimes}</span>
           </div>
            <div className="flex items-center gap-2">
             <Utensils className="h-4 w-4 shrink-0" />
