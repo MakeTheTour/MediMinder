@@ -29,7 +29,7 @@ export default function AdminUsersPage() {
       try {
         const usersCollection = collection(db, 'users');
         const userSnapshot = await getDocs(usersCollection);
-        const usersList = userSnapshot.docs.map(doc => doc.data() as User);
+        const usersList = userSnapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as User));
         setUsers(usersList);
       } catch (error) {
         console.error("Error fetching users: ", error);
