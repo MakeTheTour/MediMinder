@@ -48,6 +48,11 @@ export function AddHealthMetricForm() {
     resolver: zodResolver(healthMetricSchema),
     defaultValues: {
       date: format(new Date(), 'yyyy-MM-dd'),
+      weight: undefined,
+      systolic: undefined,
+      diastolic: undefined,
+      bloodSugar: undefined,
+      heartRate: undefined,
     },
   });
 
@@ -111,7 +116,7 @@ export function AddHealthMetricForm() {
             <FormItem>
               <FormLabel>Weight (kg)</FormLabel>
               <FormControl>
-                <Input type="number" step="0.1" placeholder="e.g., 70.5" {...field} />
+                <Input type="number" step="0.1" placeholder="e.g., 70.5" {...field} value={field.value ?? ''} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -127,7 +132,7 @@ export function AddHealthMetricForm() {
                 render={({ field }) => (
                     <FormItem>
                     <FormControl>
-                        <Input type="number" placeholder="Systolic (e.g., 120)" {...field} />
+                        <Input type="number" placeholder="Systolic (e.g., 120)" {...field} value={field.value ?? ''} />
                     </FormControl>
                     <FormMessage />
                     </FormItem>
@@ -139,7 +144,7 @@ export function AddHealthMetricForm() {
                 render={({ field }) => (
                     <FormItem>
                     <FormControl>
-                        <Input type="number" placeholder="Diastolic (e.g., 80)" {...field} />
+                        <Input type="number" placeholder="Diastolic (e.g., 80)" {...field} value={field.value ?? ''} />
                     </FormControl>
                     <FormMessage />
                     </FormItem>
@@ -155,7 +160,7 @@ export function AddHealthMetricForm() {
             <FormItem>
               <FormLabel>Blood Sugar (mg/dL)</FormLabel>
               <FormControl>
-                <Input type="number" placeholder="e.g., 90" {...field} />
+                <Input type="number" placeholder="e.g., 90" {...field} value={field.value ?? ''} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -169,7 +174,7 @@ export function AddHealthMetricForm() {
             <FormItem>
               <FormLabel>Heart Rate (bpm)</FormLabel>
               <FormControl>
-                <Input type="number" placeholder="e.g., 75" {...field} />
+                <Input type="number" placeholder="e.g., 75" {...field} value={field.value ?? ''} />
               </FormControl>
               <FormMessage />
             </FormItem>
