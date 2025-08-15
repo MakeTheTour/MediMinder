@@ -36,16 +36,15 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
 
   useEffect(() => {
-    if (pathname === '/admin/login') {
-        setIsAdmin(true); // Allow login page to render
+    if (pathname === '/admin/login' || pathname === '/admin/signup') {
+        setIsAdmin(true); // Allow login/signup page to render
         return;
     }
     if (!loading) {
       if (!user) {
         router.push('/admin/login');
       } else {
-        const adminEmail = "admin@example.com";
-        if (user.email === adminEmail) {
+        if (user.email?.endsWith('@admin.com')) {
           setIsAdmin(true);
         } else {
           setIsAdmin(false);
@@ -54,7 +53,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     }
   }, [user, loading, router, pathname]);
 
-  if (pathname === '/admin/login') {
+  if (pathname === '/admin/login' || pathname === '/admin/signup') {
     return <>{children}</>;
   }
 

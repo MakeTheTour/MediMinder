@@ -12,6 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
+import Link from 'next/link';
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address.'),
@@ -31,7 +32,7 @@ export default function AdminLoginPage() {
   });
 
   const handleAdminSignIn = async (values: z.infer<typeof loginSchema>) => {
-    if (values.email !== 'admin@example.com') {
+    if (!values.email.endsWith('@admin.com')) {
         toast({
             variant: 'destructive',
             title: 'Access Denied',
@@ -69,7 +70,7 @@ export default function AdminLoginPage() {
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input type="email" placeholder="admin@example.com" {...field} />
+                      <Input type="email" placeholder="admin@admin.com" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -93,6 +94,12 @@ export default function AdminLoginPage() {
               </Button>
             </form>
           </Form>
+           <p className="mt-4 text-center text-sm text-muted-foreground">
+            Need an admin account?{' '}
+            <Link href="/admin/signup" className="font-semibold text-primary hover:underline">
+              Create Admin Account
+            </Link>
+          </p>
         </CardContent>
       </Card>
     </div>

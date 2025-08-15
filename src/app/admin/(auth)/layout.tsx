@@ -10,12 +10,12 @@ export default function AdminAuthLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && user && user.email === 'admin@example.com') {
+    if (!loading && user && user.email?.endsWith('@admin.com')) {
       router.push('/admin/dashboard');
     }
   }, [user, loading, router]);
 
-  if (loading || (user && user.email === 'admin@example.com')) {
+  if (loading || (user && user.email?.endsWith('@admin.com'))) {
     return null; // Or a loading spinner
   }
 
