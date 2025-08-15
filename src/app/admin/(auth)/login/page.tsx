@@ -32,7 +32,7 @@ export default function AdminLoginPage() {
   });
 
   const handleAdminSignIn = async (values: z.infer<typeof loginSchema>) => {
-    if (!values.email.endsWith('@admin.com')) {
+    if (values.email !== 'admin@mediminder.com') {
         toast({
             variant: 'destructive',
             title: 'Access Denied',
@@ -70,7 +70,7 @@ export default function AdminLoginPage() {
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input type="email" placeholder="admin@admin.com" {...field} />
+                      <Input type="email" placeholder="admin@mediminder.com" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -94,12 +94,6 @@ export default function AdminLoginPage() {
               </Button>
             </form>
           </Form>
-           <p className="mt-4 text-center text-sm text-muted-foreground">
-            Need an admin account?{' '}
-            <Link href="/admin/signup" className="font-semibold text-primary hover:underline">
-              Create Admin Account
-            </Link>
-          </p>
         </CardContent>
       </Card>
     </div>
