@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Medication, Appointment, AdherenceLog, FamilyMember } from '@/lib/types';
 import { MedicationCard } from '@/components/medication-card';
 import { AppointmentCard } from '@/components/appointment-card';
-import { format, parse, isToday, isFuture, addMinutes, differenceInHours } from 'date-fns';
+import { format, parse, isToday, isFuture, addMinutes, differenceInHours, differenceInMinutes } from 'date-fns';
 import { useAuth } from '@/context/auth-context';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase-client';
@@ -170,7 +170,7 @@ export default function HomePage() {
     }
   }, [adherenceLogs, activeMedications, reminder, sentNotifications, setSentNotifications]);
 
-  const checkMissedDoses = useCallback(() => {
+  const checkMissedDoses = useCallback(async () => {
     const now = new Date();
     const medsForToday = activeMedications.filter(med => {
         const today = new Date();
@@ -181,29 +181,27 @@ export default function HomePage() {
         return false;
     });
 
-    medsForToday.forEach(async med => {
-        med.times.forEach(async time => {
+    for (const med of medsForToday) {
+        for (const time of med.times) {
             const scheduledTime = parse(time, 'HH:mm', new Date());
-            const thirtyMinsAfter = addMinutes(scheduledTime, 30);
-            
-            if (now > thirtyMinsAfter) {
+            const minutesSinceScheduled = differenceInMinutes(now, scheduledTime);
+
+            if (minutesSinceScheduled > 30) {
                 const wasHandled = adherenceLogs.some(log => 
                     log.medicationId === med.id &&
                     format(new Date(log.takenAt), 'yyyy-MM-dd') === format(now, 'yyyy-MM-dd') &&
-                    log.scheduledTime === time &&
-                    (log.status === 'taken' || log.status === 'stock_out')
+                    log.scheduledTime === time
                 );
                 
-                const alreadyAlerted = adherenceLogs.some(log =>
-                     log.medicationId === med.id &&
-                     format(new Date(log.takenAt), 'yyyy-MM-dd') === format(now, 'yyyy-MM-dd') &&
-                     log.scheduledTime === time &&
-                     log.status === 'missed'
-                );
+                if (!wasHandled) {
+                    toast({
+                        title: `Dose Missed: ${med.name}`,
+                        description: `You missed your ${time} dose. Notifying family.`,
+                        variant: 'destructive',
+                    });
 
-                if (!wasHandled && !alreadyAlerted) {
-                    console.log(`Dose missed for ${med.name} at ${time}. Alerting family.`);
                     await handleFamilyAlert(med, 'dose missed');
+
                     const logEntry: Omit<AdherenceLog, 'id'> = {
                         medicationId: med.id,
                         medicationName: med.name,
@@ -213,15 +211,15 @@ export default function HomePage() {
                         scheduledTime: time,
                     };
                     if (isGuest || !user) {
-                        setLocalAdherence([...localAdherence, { ...logEntry, id: new Date().toISOString() }]);
+                        setLocalAdherence(prev => [...prev, { ...logEntry, id: new Date().toISOString() }]);
                     } else {
                         await trackAdherence({ ...logEntry, userId: user.uid });
                     }
                 }
             }
-        });
-    });
-  }, [activeMedications, adherenceLogs, user, isGuest, localAdherence, handleFamilyAlert, setLocalAdherence]);
+        }
+    }
+  }, [activeMedications, adherenceLogs, user, isGuest, localAdherence, handleFamilyAlert, setLocalAdherence, toast]);
 
 
   const checkAppointmentReminders = useCallback(async () => {
@@ -265,7 +263,7 @@ export default function HomePage() {
             });
           }
           
-          setSentAppointmentReminders([...sentAppointmentReminders, reminderId]);
+          setSentAppointmentReminders(prev => [...prev, reminderId]);
         }
       };
 
@@ -469,3 +467,5 @@ export default function HomePage() {
     </>
   );
 }
+
+    
