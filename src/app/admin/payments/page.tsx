@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
+import { Textarea } from "@/components/ui/textarea";
 
 export default function AdminPaymentsPage() {
   const { toast } = useToast();
@@ -35,11 +36,14 @@ export default function AdminPaymentsPage() {
             <div className="flex items-center justify-between rounded-lg border p-4">
               <Label htmlFor="stripe-enabled" className="flex flex-col space-y-1">
                 <span>Enable Stripe</span>
-                <span className="font-normal leading-snug text-muted-foreground">
-                  Allow users to pay with Stripe.
-                </span>
               </Label>
               <Switch id="stripe-enabled" defaultChecked />
+            </div>
+             <div className="flex items-center justify-between rounded-lg border p-4">
+              <Label htmlFor="stripe-test-mode" className="flex flex-col space-y-1">
+                <span>Test Mode</span>
+              </Label>
+              <Switch id="stripe-test-mode" defaultChecked />
             </div>
             <div className="space-y-2">
               <Label htmlFor="stripe-pk">Publishable Key</Label>
@@ -61,11 +65,14 @@ export default function AdminPaymentsPage() {
             <div className="flex items-center justify-between rounded-lg border p-4">
               <Label htmlFor="payoneer-enabled" className="flex flex-col space-y-1">
                 <span>Enable Payoneer</span>
-                <span className="font-normal leading-snug text-muted-foreground">
-                  Allow users to pay with Payoneer.
-                </span>
               </Label>
               <Switch id="payoneer-enabled" defaultChecked/>
+            </div>
+             <div className="flex items-center justify-between rounded-lg border p-4">
+              <Label htmlFor="payoneer-test-mode" className="flex flex-col space-y-1">
+                <span>Test Mode</span>
+              </Label>
+              <Switch id="payoneer-test-mode" />
             </div>
              <div className="space-y-2">
               <Label htmlFor="payoneer-user">Payoneer Username</Label>
@@ -77,6 +84,94 @@ export default function AdminPaymentsPage() {
             </div>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>SSLCommerz</CardTitle>
+            <CardDescription>Manage SSLCommerz integration.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between rounded-lg border p-4">
+              <Label htmlFor="ssl-enabled">Enable SSLCommerz</Label>
+              <Switch id="ssl-enabled" />
+            </div>
+            <div className="flex items-center justify-between rounded-lg border p-4">
+              <Label htmlFor="ssl-sandbox">Sandbox Mode</Label>
+              <Switch id="ssl-sandbox" defaultChecked />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="ssl-store-id">Store ID</Label>
+              <Input id="ssl-store-id" placeholder="Your Store ID" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="ssl-store-password">Store Password</Label>
+              <Input id="ssl-store-password" type="password" placeholder="Your Store Password" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>bKash</CardTitle>
+            <CardDescription>Manage bKash integration.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between rounded-lg border p-4">
+              <Label htmlFor="bkash-enabled">Enable bKash</Label>
+              <Switch id="bkash-enabled" />
+            </div>
+            <div className="flex items-center justify-between rounded-lg border p-4">
+              <Label htmlFor="bkash-sandbox">Sandbox Mode</Label>
+              <Switch id="bkash-sandbox" defaultChecked />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="bkash-app-key">App Key</Label>
+              <Input id="bkash-app-key" placeholder="Your bKash App Key" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="bkash-app-secret">App Secret</Label>
+              <Input id="bkash-app-secret" type="password" placeholder="Your bKash App Secret" />
+            </div>
+             <div className="space-y-2">
+              <Label htmlFor="bkash-username">Username</Label>
+              <Input id="bkash-username" placeholder="Your bKash Username" />
+            </div>
+             <div className="space-y-2">
+              <Label htmlFor="bkash-password">Password</Label>
+              <Input id="bkash-password" type="password" placeholder="Your bKash Password" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Nagad</CardTitle>
+            <CardDescription>Manage Nagad integration.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between rounded-lg border p-4">
+              <Label htmlFor="nagad-enabled">Enable Nagad</Label>
+              <Switch id="nagad-enabled" />
+            </div>
+            <div className="flex items-center justify-between rounded-lg border p-4">
+              <Label htmlFor="nagad-sandbox">Sandbox Mode (UAT)</Label>
+              <Switch id="nagad-sandbox" defaultChecked />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="nagad-merchant-id">Merchant ID</Label>
+              <Input id="nagad-merchant-id" placeholder="Your Nagad Merchant ID" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="nagad-private-key">Merchant Private Key</Label>
+              <Textarea id="nagad-private-key" placeholder="Paste your private key here" />
+            </div>
+             <div className="space-y-2">
+              <Label htmlFor="nagad-public-key">PG Public Key</Label>
+              <Textarea id="nagad-public-key" placeholder="Paste the payment gateway's public key here" />
+            </div>
+          </CardContent>
+        </Card>
+
       </div>
 
        <div className="mt-8">
