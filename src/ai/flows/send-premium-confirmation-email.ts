@@ -56,9 +56,15 @@ const sendPremiumConfirmationEmailFlow = ai.defineFlow(
   async input => {
     const {text} = await prompt(input);
 
-    // In a real application, you would integrate with an email sending service like SendGrid or Resend.
+    // In a real application, you would integrate with an email sending service like SendGrid or Resend,
+    // using credentials configured in the admin dashboard.
     // For this simulation, we will just log the email content to the console.
+    
+    // This address would be retrieved from the admin SMTP settings.
+    const fromAddress = 'support@mediminder.com';
+
     console.log("--- Sending Premium Confirmation Email ---");
+    console.log(`From: The MediMinder Team <${fromAddress}>`);
     console.log(`To: ${input.email}`);
     console.log(text);
     console.log("------------------------------------------");
