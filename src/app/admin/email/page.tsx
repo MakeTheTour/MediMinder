@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 
 export default function AdminEmailPage() {
@@ -13,7 +14,7 @@ export default function AdminEmailPage() {
   const handleSaveChanges = () => {
     toast({
       title: "Settings Saved",
-      description: "SMTP email settings have been updated.",
+      description: "Email settings have been updated.",
     });
   };
 
@@ -21,14 +22,38 @@ export default function AdminEmailPage() {
     <div className="container mx-auto p-4">
       <header className="mb-6">
         <h1 className="text-3xl font-bold">Email Configuration</h1>
-        <p className="text-muted-foreground">Set up your SMTP provider for sending application emails.</p>
+        <p className="text-muted-foreground">Set up your email providers for sending application emails.</p>
       </header>
 
       <Card>
         <CardHeader>
-          <CardTitle>SMTP Settings</CardTitle>
+          <CardTitle>Email Settings</CardTitle>
           <CardDescription>
-            These settings will be used for sending emails like premium confirmations and notifications. This does not affect Firebase Auth emails (e.g., password resets).
+            Control which email service is used for different types of emails.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="flex items-center justify-between rounded-lg border p-4">
+            <Label htmlFor="firebase-email-enabled" className="flex flex-col space-y-1">
+              <span>Firebase Auth Emails</span>
+              <span className="font-normal leading-snug text-muted-foreground">
+                Use the default Firebase provider for password resets, email verification, etc.
+              </span>
+            </Label>
+            <Switch
+              id="firebase-email-enabled"
+              defaultChecked
+              aria-label="Toggle Firebase Auth emails"
+            />
+          </div>
+        </CardContent>
+      </Card>
+      
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>Custom SMTP Settings</CardTitle>
+          <CardDescription>
+            Configure a custom SMTP provider for sending non-auth emails like premium confirmations and notifications. This is disabled if Firebase Auth Emails are turned off.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -54,7 +79,7 @@ export default function AdminEmailPage() {
               <Input id="smtp-pass" type="password" placeholder="Your SMTP password" />
             </div>
           </div>
-          <Button onClick={handleSaveChanges}>Save Changes</Button>
+          <Button onClick={handleSaveChanges}>Save SMTP Changes</Button>
         </CardContent>
       </Card>
     </div>
