@@ -38,8 +38,9 @@ const findUserByEmailFlow = ai.defineFlow(
   },
   async (input) => {
     try {
+      const usersRef = collection(db, 'users');
       const q = query(
-        collection(db, 'users'),
+        usersRef,
         where('email', '==', input.email),
         limit(1)
       );
@@ -57,7 +58,7 @@ const findUserByEmailFlow = ai.defineFlow(
       return {
         found: true,
         uid: userDoc.id,
-        name: userData.name,
+        name: userData.name || '',
         photoURL: userData.photoURL || undefined,
       };
 
