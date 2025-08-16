@@ -1,34 +1,27 @@
+
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Allow users to read their own data, and create their own subcollections
+    
+    // Users can read and write to their own data.
     match /users/{userId} {
-      allow read, update, delete: if request.auth.uid == userId;
-      allow create: if request.auth.uid != null;
+      allow read, write: if request.auth.uid == userId;
 
-      // Allow authenticated users to read subcollections of other users
-      // (e.g., for fetching data of a linked family member)
-      match /{document=**} {
-        allow read: if request.auth.uid != null;
+      // Users can read/write their own subcollections.
+      match /{subcollection}/{docId} {
+        allow read, write: if request.auth.uid == userId;
       }
     }
 
-    // Allow authenticated users to query the users collection by email,
-    // which is needed for the "Add Parent" feature.
-    // This is secure because we have an index on 'email' and only allow
-    // querying on that specific field.
-    match /users/{userId} {
-      allow list: if request.auth.uid != null && request.query.keys().hasAny(['email']);
-    }
-    
-    // Invitations can be read by the inviter or the invitee (via email)
-    // They can be created by any authenticated user.
-    // They can be updated or deleted by the inviter or invitee.
+    // Invitations:
+    // - Authenticated users can create invitations.
+    // - Users can read invitations where their email is the invitee's email.
+    // - The inviter or invitee can update/delete the invitation.
     match /invitations/{invitationId} {
-      allow read, update, delete: if request.auth.uid == resource.data.inviterId || request.auth.token.email == resource.data.inviteeEmail;
-      allow create: if request.auth.uid != null;
+      allow create: if request.auth != null;
+      allow read: if request.auth != null && request.auth.token.email == resource.data.inviteeEmail;
+      allow update, delete: if request.auth != null && (request.auth.uid == resource.data.inviterId || request.auth.uid == resource.data.inviteeId);
     }
-
   }
 }
