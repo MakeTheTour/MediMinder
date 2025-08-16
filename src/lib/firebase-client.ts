@@ -1,3 +1,4 @@
+
 // src/lib/firebase-client.ts - CLIENT-SIDE USE ONLY
 import { initializeApp, getApps, getApp, App } from 'firebase/app';
 import { getAuth, Auth, initializeAuth, browserLocalPersistence, indexedDBLocalPersistence, browserSessionPersistence } from 'firebase/auth';
@@ -17,7 +18,7 @@ const firebaseConfig = {
 const app: App = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
 const auth: Auth = initializeAuth(app, {
-  persistence: [browserLocalPersistence, indexedDBLocalPersistence, browserSessionPersistence]
+  persistence: browserLocalPersistence
 });
 const db: Firestore = getFirestore(app);
 
