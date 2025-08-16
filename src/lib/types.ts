@@ -53,6 +53,8 @@ export const UserProfileSchema = z.object({
   state: z.string().optional(),
   postcode: z.string().optional(),
   city: z.string().optional(),
+  isPremium: z.boolean().optional(),
+  premiumCycle: z.string().optional(),
 });
 export type UserProfile = z.infer<typeof UserProfileSchema>;
 
