@@ -4,41 +4,30 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper function to check if the user is authenticated
-    function isAuthenticated() {
-      return request.auth != null;
-    }
-
-    // Rules for the 'users' collection
     match /users/{userId} {
-      // A user can only read or write to their own document
-      allow read, write: if isAuthenticated() && request.auth.uid == userId;
+      allow read, write: if request.auth != null && request.auth.uid == userId;
 
-      // Rules for subcollections within a user document
-      match /{subcollection}/{docId} {
-        // A user can only manage documents within their own subcollections
-        allow read, write, delete: if isAuthenticated() && request.auth.uid == userId;
+      // Allow admin to read/write all user documents
+      allow read, write: if request.auth != null && request.auth.token.email == 'admin@mediminder.com';
+
+      match /{allPaths=**} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+        // Allow admin full access to subcollections
+        allow read, write: if request.auth != null && request.auth.token.email == 'admin@mediminder.com';
       }
     }
-
-    // Rules for the 'invitations' collection
+    
     match /invitations/{invitationId} {
-      // Allow creation if the user is the inviter
-      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.inviterId;
-
-      // Allow reading an invitation if the user is either the inviter or the invitee
-      allow get: if isAuthenticated() && 
-                    (request.auth.uid == resource.data.inviterId || request.auth.token.email == resource.data.inviteeEmail);
-
-      // Allow updating or deleting an invitation if the user is either the inviter or the invitee
-      allow update, delete: if isAuthenticated() &&
-                               (request.auth.uid == resource.data.inviterId || request.auth.token.email == resource.data.inviteeEmail);
+      allow create: if request.auth != null;
+      allow read: if request.auth != null && 
+                  (request.auth.uid == resource.data.inviterId || request.auth.token.email == resource.data.inviteeEmail);
+      allow update, delete: if request.auth != null && 
+                         (request.auth.uid == resource.data.inviterId || request.auth.uid == resource.data.inviteeId);
       
-      // Allow LIST (query) operations under specific conditions to avoid permission errors
-      // A user can query for invitations they sent OR invitations they received.
-      allow list: if isAuthenticated() && 
-                     (request.query.get('inviterId') == request.auth.uid || 
-                      request.query.get('inviteeEmail') == request.auth.token.email);
+      // Allow list queries for user's sent and received invitations
+      allow list: if request.auth != null && 
+                   (request.query.where.get('inviterId') == request.auth.uid || 
+                    request.query.where.get('inviteeEmail') == request.auth.token.email);
     }
   }
 }
