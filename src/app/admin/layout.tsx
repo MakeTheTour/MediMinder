@@ -15,7 +15,7 @@ import {
   SidebarFooter,
 } from '@/components/ui/sidebar';
 import { usePathname, useRouter } from 'next/navigation';
-import { Users, LayoutDashboard, DollarSign, Megaphone, CreditCard, User, LogOut } from 'lucide-react';
+import { Users, LayoutDashboard, DollarSign, Megaphone, CreditCard, User, LogOut, Mail } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/context/auth-context';
 import { Loader2 } from 'lucide-react';
@@ -28,6 +28,7 @@ const adminNavItems = [
   { href: '/admin/ads', label: 'Custom Ads', icon: Megaphone },
   { href: '/admin/premium', label: 'Premium Plan', icon: DollarSign },
   { href: '/admin/payments', label: 'Payments', icon: CreditCard },
+  { href: '/admin/email', label: 'Email Settings', icon: Mail },
   { href: '/admin/profile', label: 'Profile', icon: User },
 ];
 
