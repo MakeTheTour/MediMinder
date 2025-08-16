@@ -218,10 +218,10 @@ export default function HomePage() {
       
       // Check if the scheduled time is in the past today
       if (scheduledTime < now) {
-        // Check if it's more than 30 minutes past due
         const minutesSinceScheduled = differenceInMinutes(now, scheduledTime);
   
-        if (minutesSinceScheduled > 30) {
+        // Only trigger the missed alert in a 5-minute window after the 30-minute grace period
+        if (minutesSinceScheduled > 30 && minutesSinceScheduled <= 35) {
           // Check if this dose has already been handled today (taken, skipped, etc.)
           const wasHandled = adherenceLogs.some(log =>
             log.medicationId === medication.id &&
@@ -233,13 +233,13 @@ export default function HomePage() {
             const logEntry: Omit<AdherenceLog, 'id'> = {
               medicationId: medication.id,
               medicationName: medication.name,
-              takenAt: scheduledTime.toISOString(),
+              takenAt: new Date().toISOString(), // Log when it was marked as missed
               status: 'missed',
               userId: user?.uid || 'guest',
               scheduledTime: time,
             };
   
-            // To avoid duplicate notifications, we check if it was already logged as missed specifically.
+            // Check if it was already logged as missed to avoid duplicates
             const alreadyLoggedAsMissed = adherenceLogs.some(log =>
               log.medicationId === medication.id &&
               log.scheduledTime === time &&
@@ -256,7 +256,7 @@ export default function HomePage() {
   
               toast({
                 title: `Missed Alert: ${medication.name}`,
-                description: `Your ${format(scheduledTime, 'h:mm a')} dose was missed over 30 minutes ago.`,
+                description: `Your ${format(scheduledTime, 'h:mm a')} dose was missed.`,
                 variant: 'destructive',
               });
             }
