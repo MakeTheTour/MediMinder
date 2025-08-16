@@ -115,7 +115,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           </SidebarFooter>
         </Sidebar>
         <SidebarInset>
-             <main className="flex-1 p-4">{children}</main>
+             <main className="flex-1 p-4 overflow-auto">{children}</main>
         </SidebarInset>
       </div>
     </SidebarProvider>
