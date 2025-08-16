@@ -10,7 +10,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import { collection, addDoc, query, where, getDocs } from 'firebase/firestore';
+import { collection, addDoc, writeBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 const CreateParentInvitationInputSchema = z.object({
@@ -42,27 +42,33 @@ const createParentInvitationFlow = ai.defineFlow(
   },
   async (input) => {
     try {
+      const batch = writeBatch(db);
+
       // 1. Create the main invitation document
       const invitationData = {
         inviterId: input.inviterId,
         inviterName: input.inviterName,
         inviterPhotoUrl: input.inviterPhotoUrl,
         inviteeEmail: input.inviteeEmail,
-        relation: input.relation,
+        relation: input.relation, // e.g., 'Mother' (Child's relation to Parent)
         status: 'pending',
       };
-      const invitationRef = await addDoc(collection(db, 'invitations'), invitationData);
+      const invitationRef = doc(collection(db, 'invitations'));
+      batch.set(invitationRef, invitationData);
 
-      // 2. Add a record to the inviter's familyMembers subcollection
+      // 2. Add a corresponding record to the inviter's (child's) familyMembers subcollection
       const familyMemberData = {
         name: input.inviteeName,
         relation: input.relation,
         email: input.inviteeEmail,
-        status: 'pending',
+        status: 'pending', // This will be updated to 'accepted' when the parent accepts
       };
-      await addDoc(collection(db, 'users', input.inviterId, 'familyMembers'), familyMemberData);
+      const familyMemberRef = doc(collection(db, 'users', input.inviterId, 'familyMembers'));
+      batch.set(familyMemberRef, familyMemberData);
 
-      // In a real app, you would also send an email to the invitee.
+      // In a real app, you would also trigger an email to the invitee.
+      
+      await batch.commit();
 
       return {
         success: true,
