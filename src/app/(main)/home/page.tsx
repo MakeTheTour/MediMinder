@@ -206,7 +206,7 @@ export default function HomePage() {
         }
       }
     }
-  }, [adherenceLogs, activeMedications, reminder, sentNotifications, setSentNotifications, snoozedUntil]);
+  }, [adherenceLogs, activeMedications, reminder, sentNotifications, setSentNotifications, snoozedUntil, handleReminderAction, handleFamilyAlert, toast]);
 
   const checkMissedDoses = useCallback(async () => {
     const now = new Date();
@@ -333,7 +333,7 @@ export default function HomePage() {
   }, [checkReminders, checkMissedDoses, checkAppointmentReminders]);
 
 
-  const handleReminderAction = (medication: Medication, scheduledTime: string, status: 'taken' | 'skipped' | 'stock_out' | 'muted' | 'missed') => {
+  const handleReminderAction = useCallback((medication: Medication, scheduledTime: string, status: 'taken' | 'skipped' | 'stock_out' | 'muted' | 'missed') => {
     if (escalationTimerRef.current) {
         clearTimeout(escalationTimerRef.current);
         escalationTimerRef.current = null;
@@ -361,7 +361,7 @@ export default function HomePage() {
         handleFamilyAlert(medication, 'is out of stock');
     }
     setReminder(null);
-  };
+  }, [user, isGuest, localAdherence, setLocalAdherence, handleFamilyAlert]);
   
     const handleSnooze = async (medication: Medication, time: string) => {
         if (escalationTimerRef.current) {
@@ -420,13 +420,13 @@ export default function HomePage() {
 
   const todaysAppointments = useMemo(() => {
     return activeAppointments
-      .filter(app => isToday(new Date(app.date)))
+      .filter(app => isToday(new Date(`${app.date}T00:00:00`)))
       .sort((a,b) => a.time.localeCompare(b.time));
   }, [activeAppointments]);
 
   const nextAppointment = useMemo(() => {
     const futureAppointments = activeAppointments.filter(app => {
-        const appDate = new Date(app.date);
+        const appDate = new Date(`${app.date}T00:00:00`);
         return isFuture(appDate) || isToday(appDate);
     });
     return futureAppointments[0] || null;
@@ -559,5 +559,7 @@ export default function HomePage() {
     </>
   );
 }
+
+    
 
     
