@@ -209,12 +209,6 @@ export default function HomePage() {
       const alreadyNotified = sentNotifications.includes(notificationId);
 
       if (!anyMedicationHandled && !alreadyNotified) {
-        if (Notification.permission === "granted") {
-          new Notification("Medication Reminder", {
-            body: `It's time for your ${time} medications.`,
-            icon: '/icon.png' 
-          });
-        }
         
         setReminder({ medications, time });
         
@@ -291,9 +285,6 @@ export default function HomePage() {
         const reminderId = `${appt.id}-${reminderType}`;
         if (!sentAppointmentReminders.includes(reminderId)) {
           const reminderTime = reminderType === '24h' ? 24 : 3;
-          
-          const sound = new Audio('/notification.mp3');
-          sound.play().catch(e => console.error("Failed to play notification sound:", e));
           
           const result = await generateAppointmentReminder({
               patientName: user.displayName || 'User',
