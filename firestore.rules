@@ -4,28 +4,35 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /users/{userId} {
-      // Users can only read/write their own documents
+      // Users can only read and write to their own profile.
+      // Additionally, authenticated users can list other users (for searching by email)
       allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow list: if request.auth != null;
 
-      // Allow users to read/write their own subcollections
-      match /{subcollection}/{docId} {
+      // Security for subcollections
+      match /medications/{medId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+      match /appointments/{appId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+      match /healthMetrics/{metricId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+      match /adherenceLogs/{logId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+      match /familyMembers/{memberId} {
         allow read, write: if request.auth != null && request.auth.uid == userId;
       }
     }
 
-    // Allow authenticated users to list documents in the 'users' collection.
-    // This is required for the email search functionality to work.
-    // It is secure because the 'read' rule above still prevents reading the full document content of other users.
-    match /users/{userId} {
-      allow list: if request.auth != null;
-    }
-
     match /invitations/{invitationId} {
-      // Inviter and invitee can read the invitation
+      // The inviter and the invitee (identified by email) can read the invitation.
       allow read: if request.auth != null && (resource.data.inviterId == request.auth.uid || resource.data.inviteeEmail == request.auth.token.email);
-      // Only the inviter can create an invitation
+      // Only the inviter can create an invitation.
       allow create: if request.auth != null && request.resource.data.inviterId == request.auth.uid;
-      // Inviter and invitee can update or delete the invitation
+      // The inviter (to cancel) and the invitee (to accept/decline) can update or delete.
       allow update, delete: if request.auth != null && (resource.data.inviterId == request.auth.uid || resource.data.inviteeEmail == request.auth.token.email);
     }
   }

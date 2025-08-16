@@ -3,14 +3,14 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Pill, Settings, HeartPulse } from 'lucide-react';
+import { Home, Pill, Settings, HeartPulse, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useAuth } from '@/context/auth-context';
 
 const navItems = [
   { href: '/home', label: 'Home', icon: Home },
   { href: '/medicine', label: 'Medicine', icon: Pill },
   { href: '/health', label: 'Health', icon: HeartPulse },
+  { href: '/family', label: 'Family', icon: Users },
   { href: '/settings', label: 'Settings', icon: Settings },
 ];
 

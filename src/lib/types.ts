@@ -68,3 +68,22 @@ export interface AdherenceLog {
     scheduledTime?: string;
     snoozeDuration?: number;
 }
+
+export interface FamilyMember {
+  id: string;
+  name: string;
+  relation: string;
+  email: string;
+  status: 'pending' | 'accepted';
+  photoURL?: string;
+}
+
+export interface Invitation {
+  id: string;
+  inviterId: string;
+  inviterName: string;
+  inviterPhotoUrl?: string | null;
+  inviteeEmail: string;
+  relation: string;
+  status: 'pending' | 'accepted' | 'declined';
+}
