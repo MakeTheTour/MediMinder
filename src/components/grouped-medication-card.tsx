@@ -10,9 +10,10 @@ import { MedicationCard } from './medication-card';
 interface GroupedMedicationCardProps {
   time: string;
   medications: Medication[];
+  highlight?: boolean;
 }
 
-export function GroupedMedicationCard({ time, medications }: GroupedMedicationCardProps) {
+export function GroupedMedicationCard({ time, medications, highlight = false }: GroupedMedicationCardProps) {
   
   const formatTime = (time24h: string) => {
     try {
@@ -32,11 +33,9 @@ export function GroupedMedicationCard({ time, medications }: GroupedMedicationCa
         </CardHeader>
       <CardContent className="p-4 space-y-3">
         {medications.map(med => (
-            <MedicationCard key={med.id} medication={med} hideTime={true} />
+            <MedicationCard key={med.id} medication={med} hideTime={true} highlight={highlight} />
         ))}
       </CardContent>
     </Card>
   );
 }
-
-    

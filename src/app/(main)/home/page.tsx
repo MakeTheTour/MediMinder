@@ -467,7 +467,7 @@ export default function HomePage() {
                 </CardTitle>
             </CardHeader>
             <CardContent>
-                <GroupedMedicationCard time={nextMedication.time} medications={nextMedication.medications} />
+                <GroupedMedicationCard time={nextMedication.time} medications={nextMedication.medications} highlight />
             </CardContent>
         </Card>
       )}

@@ -13,6 +13,7 @@ import {
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu"
 import { Button } from './ui/button';
+import { cn } from '@/lib/utils';
 
 interface MedicationCardProps {
   medication: Medication;
@@ -21,9 +22,10 @@ interface MedicationCardProps {
   onEdit?: (id: string) => void;
   specificTime?: string;
   hideTime?: boolean;
+  highlight?: boolean;
 }
 
-export function MedicationCard({ medication, onDelete, onFamilyAlert, specificTime, onEdit, hideTime = false }: MedicationCardProps) {
+export function MedicationCard({ medication, onDelete, onFamilyAlert, specificTime, onEdit, hideTime = false, highlight = false }: MedicationCardProps) {
 
   const formatTime = (time24h: string) => {
     try {
@@ -75,7 +77,7 @@ export function MedicationCard({ medication, onDelete, onFamilyAlert, specificTi
 
 
   return (
-    <Card className="w-full overflow-hidden transition-all hover:shadow-md border">
+    <Card className={cn("w-full overflow-hidden transition-all hover:shadow-md border", highlight && "bg-primary/10")}>
       <CardContent className="p-4">
         <div className="flex items-start justify-between">
           <div className="flex items-start gap-4">
@@ -139,5 +141,3 @@ export function MedicationCard({ medication, onDelete, onFamilyAlert, specificTi
     </Card>
   );
 }
-
-    
