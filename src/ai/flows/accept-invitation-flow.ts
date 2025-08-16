@@ -10,7 +10,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import { collection, doc, updateDoc, writeBatch, query, where, getDocs } from 'firebase/firestore';
+import { collection, doc, updateDoc, writeBatch, query, where, getDocs, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 const AcceptInvitationInputSchema = z.object({
