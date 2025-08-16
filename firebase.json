@@ -1,6 +1,7 @@
 
 {
   "firestore": {
-    "rules": "firestore.rules"
+    "rules": "firestore.rules",
+    "indexes": "[\n  {\n    \"collectionGroup\": \"users\",\n    \"queryScope\": \"COLLECTION\",\n    \"fields\": [\n      {\n        \"fieldPath\": \"email\",\n        \"order\": \"ASCENDING\"\n      }\n    ]\n  }\n]"
   }
 }
