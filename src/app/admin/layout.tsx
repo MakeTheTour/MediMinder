@@ -1,4 +1,3 @@
-
 'use client';
 
 import { ReactNode, useEffect, useState } from 'react';
@@ -114,8 +113,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             </Button>
           </SidebarFooter>
         </Sidebar>
-        <SidebarInset>
-             <main className="flex-1 p-4 overflow-auto">{children}</main>
+        <SidebarInset className="overflow-auto">
+             <main className="flex-1 p-4">{children}</main>
         </SidebarInset>
       </div>
     </SidebarProvider>
