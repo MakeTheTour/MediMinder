@@ -113,29 +113,29 @@ export default function MedicinePage() {
 
   return (
     <div className="container mx-auto max-w-2xl p-4">
-      <header className="mb-6">
-        <h1 className="text-3xl font-bold">My Schedule</h1>
-        <p className="text-muted-foreground">Manage all your medications and appointments in one place.</p>
+      <header className="mb-6 flex items-center justify-between">
+        <div>
+            <h1 className="text-3xl font-bold">My Schedule</h1>
+            <p className="text-muted-foreground">Manage all your medications and appointments in one place.</p>
+        </div>
+         <Button asChild size="sm">
+            <Link href={"/medicine/add"}>
+                <Plus className="mr-2 h-4 w-4" /> Add New
+            </Link>
+        </Button>
       </header>
 
       <Tabs defaultValue="medications" className="w-full">
-        <div className="flex items-center justify-between mb-4">
-          <TabsList>
+        <TabsList className="mb-4">
             <TabsTrigger value="medications">
-              <Pill className="mr-2 h-4 w-4" />
-              Medications
+                <Pill className="mr-2 h-4 w-4" />
+                Medications
             </TabsTrigger>
             <TabsTrigger value="appointments">
-              <Stethoscope className="mr-2 h-4 w-4" />
-              Appointments
+                <Stethoscope className="mr-2 h-4 w-4" />
+                Appointments
             </TabsTrigger>
-          </TabsList>
-           <Button asChild size="sm" variant="outline">
-                <Link href={"/medicine/add"}>
-                  <Plus className="mr-2 h-4 w-4" /> Add New
-                </Link>
-            </Button>
-        </div>
+        </TabsList>
         <TabsContent value="medications">
           <Card>
             <CardContent className="p-4">
