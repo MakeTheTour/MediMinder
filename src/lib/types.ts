@@ -58,16 +58,6 @@ export const UserProfileSchema = z.object({
 });
 export type UserProfile = z.infer<typeof UserProfileSchema>;
 
-
-export interface FamilyMember {
-  id: string;
-  name: string;
-  relation: string;
-  email: string;
-  status: 'pending' | 'accepted';
-  photoURL?: string;
-}
-
 export interface AdherenceLog {
     id?: string;
     medicationId: string;
@@ -78,14 +68,3 @@ export interface AdherenceLog {
     scheduledTime?: string;
     snoozeDuration?: number;
 }
-
-export interface Invitation {
-    id: string;
-    inviterId: string;
-    inviterName: string;
-    inviterPhotoUrl?: string | null;
-    inviteeEmail: string;
-    relation: string;
-    status: 'pending' | 'accepted';
-}
-    

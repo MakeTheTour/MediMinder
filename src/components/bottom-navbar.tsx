@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Pill, Users2, Settings, HeartPulse } from 'lucide-react';
+import { Home, Pill, Settings, HeartPulse } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/auth-context';
 
@@ -11,20 +11,17 @@ const navItems = [
   { href: '/home', label: 'Home', icon: Home },
   { href: '/medicine', label: 'Medicine', icon: Pill },
   { href: '/health', label: 'Health', icon: HeartPulse },
-  { href: '/family', label: 'Family', icon: Users2 },
   { href: '/settings', label: 'Settings', icon: Settings },
 ];
 
 export function BottomNavbar() {
   const pathname = usePathname();
-  const { pendingInvitationCount } = useAuth();
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background/95 backdrop-blur-sm shadow-[0_-1px_3px_rgba(0,0,0,0.05)]">
       <div className="mx-auto flex h-16 max-w-md items-center justify-around">
         {navItems.map((item) => {
           const isActive = pathname.startsWith(item.href);
-          const isFamilyItem = item.label === 'Family';
           return (
             <Link
               key={item.href}
@@ -36,12 +33,6 @@ export function BottomNavbar() {
             >
               <item.icon className="h-6 w-6" />
               <span className="text-xs font-medium">{item.label}</span>
-              {isFamilyItem && pendingInvitationCount > 0 && (
-                <span className="absolute top-1 right-1 flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-destructive"></span>
-                </span>
-              )}
             </Link>
           );
         })}
