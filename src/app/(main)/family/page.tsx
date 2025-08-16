@@ -21,6 +21,7 @@ export default function FamilyPage() {
     const { user, isGuest } = useAuth();
     const { toast } = useToast();
     const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
+    const [sentInvitations, setSentInvitations] = useState<Invitation[]>([]);
     const [receivedInvitations, setReceivedInvitations] = useState<Invitation[]>([]);
     const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
     const [loading, setLoading] = useState(true);
@@ -30,6 +31,7 @@ export default function FamilyPage() {
     useEffect(() => {
       if (!user || isGuest) {
         setFamilyMembers([]);
+        setSentInvitations([]);
         setReceivedInvitations([]);
         setUserProfile(null);
         setLoading(false);
@@ -48,11 +50,18 @@ export default function FamilyPage() {
       
       fetchUserProfile();
 
-      // Listen for family members added by this user
+      // Listen for family members (accepted parents)
       const membersUnsub = onSnapshot(collection(db, 'users', user.uid, 'familyMembers'), (snapshot) => {
           setFamilyMembers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as FamilyMember)));
           setLoading(false);
       });
+
+      // Listen for invitations sent BY this user that are still pending
+      const sentQuery = query(collection(db, 'invitations'), where('inviterId', '==', user.uid), where('status', '==', 'pending'));
+      const sentUnsub = onSnapshot(sentQuery, (snapshot) => {
+         setSentInvitations(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Invitation)));
+      });
+
 
       // Listen for invitations sent TO this user's email
       if (user.email) {
@@ -62,31 +71,19 @@ export default function FamilyPage() {
           });
            return () => {
                 membersUnsub();
+                sentUnsub();
                 receivedUnsub();
             };
       }
 
       return () => {
         membersUnsub();
+        sentUnsub();
       };
     }, [user, isGuest]);
 
-    const handleCancelSentInvitation = async (memberId: string, memberEmail: string) => {
-        if (!user) return;
-        const batch = writeBatch(db);
-
-        // 1. Delete from the user's familyMembers subcollection
-        const memberRef = doc(db, 'users', user.uid, 'familyMembers', memberId);
-        batch.delete(memberRef);
-
-        // 2. Find and delete the root invitation doc
-        const q = query(collection(db, 'invitations'), where('inviterId', '==', user.uid), where('inviteeEmail', '==', memberEmail));
-        const invitationSnap = await getDocs(q);
-        invitationSnap.forEach((invitationDoc) => {
-           batch.delete(doc(db, 'invitations', invitationDoc.id));
-        });
-
-        await batch.commit();
+    const handleCancelSentInvitation = async (invitationId: string) => {
+        await deleteDoc(doc(db, 'invitations', invitationId));
         toast({ title: 'Invitation Cancelled' });
     };
     
@@ -138,6 +135,17 @@ export default function FamilyPage() {
             setIsAddParentDialogOpen(true);
         }
     }
+
+    const allLinkedAccounts = [
+        ...familyMembers,
+        ...sentInvitations.map(inv => ({
+            id: inv.id,
+            name: inv.inviteeName,
+            email: inv.inviteeEmail,
+            relation: inv.relation,
+            status: 'pending' as const
+        }))
+    ];
 
   return (
     <>
@@ -198,7 +206,7 @@ export default function FamilyPage() {
             </CardHeader>
             <CardContent>
             <div className="space-y-4">
-                {(!isGuest && familyMembers.length > 0) ? familyMembers.map(member => (
+                {(!isGuest && allLinkedAccounts.length > 0) ? allLinkedAccounts.map(member => (
                 <div key={member.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50">
                     <div className="flex items-center gap-4">
                     <Avatar>
@@ -216,7 +224,7 @@ export default function FamilyPage() {
                         ) : (
                             <Badge variant="default">Linked</Badge>
                         )}
-                        <Button variant="ghost" size="sm" onClick={() => member.status === 'pending' ? handleCancelSentInvitation(member.id, member.email) : handleRemoveLinkedMember(member.id)}>
+                        <Button variant="ghost" size="sm" onClick={() => member.status === 'pending' ? handleCancelSentInvitation(member.id) : handleRemoveLinkedMember(member.id)}>
                             {member.status === 'pending' ? 'Cancel' : 'Remove'}
                         </Button>
                     </div>

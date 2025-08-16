@@ -44,43 +44,35 @@ const acceptInvitationFlow = ai.defineFlow(
 
       // 1. Update the invitation status to 'accepted'
       const invitationRef = doc(db, 'invitations', input.invitationId);
-      batch.update(invitationRef, { status: 'accepted', inviteeId: input.inviteeId });
-      
-      // 2. Update the inviter's familyMembers record
-      const inviterFamilyQuery = query(
-        collection(db, 'users', input.inviterId, 'familyMembers'),
-        where('email', '==', input.inviteeEmail)
-      );
-      const inviterFamilySnap = await getDocs(inviterFamilyQuery);
-      if (!inviterFamilySnap.empty) {
-        const docToUpdate = inviterFamilySnap.docs[0];
-        batch.update(docToUpdate.ref, { status: 'accepted' });
-      } else {
-        throw new Error("Could not find family member record for inviter.");
-      }
-
-      // 3. Add a family member record to the invitee's list
-      // First get the inviter's data to get their email and name
-      const inviterRef = doc(db, 'users', input.inviterId);
-      const inviterSnap = await getDoc(inviterRef);
-      const inviterData = inviterSnap.data();
-
-      // Then get the invitation data to get the relation
       const invitationSnap = await getDoc(invitationRef);
       const invitationData = invitationSnap.data();
 
-      if (invitationData && inviterData) {
-        const inviteeFamilyRef = doc(collection(db, 'users', input.inviteeId, 'familyMembers'));
-        batch.set(inviteeFamilyRef, {
-            name: invitationData.inviterName,
-            email: inviterData.email, // Use the fetched email of the inviter
-            relation: "Child", // When a parent accepts, the inviter becomes their "Child"
-            status: 'accepted',
-            photoURL: invitationData.inviterPhotoUrl || null,
-        });
-      } else {
-         throw new Error("Could not find inviter or invitation data.");
+      if (!invitationData) {
+        throw new Error("Invitation not found.");
       }
+      
+      batch.update(invitationRef, { status: 'accepted', inviteeId: input.inviteeId });
+      
+      // 2. Add the parent to the child's (inviter's) familyMembers subcollection
+      const childFamilyMemberRef = doc(collection(db, 'users', input.inviterId, 'familyMembers'));
+      batch.set(childFamilyMemberRef, {
+          name: input.inviteeName,
+          email: input.inviteeEmail,
+          relation: invitationData.relation,
+          status: 'accepted',
+          // In a real app, you might fetch the invitee's photoURL here
+          photoURL: null, 
+      });
+
+      // 3. Add the child to the parent's (invitee's) familyMembers subcollection
+      const parentFamilyMemberRef = doc(collection(db, 'users', input.inviteeId, 'familyMembers'));
+      batch.set(parentFamilyMemberRef, {
+          name: invitationData.inviterName,
+          email: (await getDoc(doc(db, 'users', input.inviterId))).data()?.email, // Fetch child's email
+          relation: 'Child', // The inviter is the child of the parent accepting
+          status: 'accepted',
+          photoURL: invitationData.inviterPhotoUrl || null,
+      });
       
       await batch.commit();
 
@@ -91,9 +83,10 @@ const acceptInvitationFlow = ai.defineFlow(
 
     } catch (error) {
         console.error("Error accepting invitation: ", error);
+        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
         return {
             success: false,
-            message: 'Failed to accept invitation.',
+            message: `Failed to accept invitation: ${errorMessage}`,
         }
     }
   }
