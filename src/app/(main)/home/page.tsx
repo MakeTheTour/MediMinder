@@ -459,7 +459,7 @@ export default function HomePage() {
       </header>
       
       {nextMedication && (
-        <Card>
+        <Card className="bg-primary/10">
             <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-primary">
                     <PillIcon/>
