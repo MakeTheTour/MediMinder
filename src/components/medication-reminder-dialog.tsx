@@ -30,31 +30,8 @@ export function MedicationReminderDialog({
   onTake,
   onStockOut,
 }: MedicationReminderDialogProps) {
-  const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  useEffect(() => {
-    if (isOpen) {
-      audioRef.current = new Audio('/notification.mp3');
-      audioRef.current.loop = true;
-      audioRef.current.play().catch(e => console.error("Failed to play notification sound:", e));
-    } else if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.currentTime = 0;
-        audioRef.current = null;
-    }
-    
-    return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-      }
-    }
-  }, [isOpen]);
-  
   const handleAction = (action: () => void) => {
-    if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.currentTime = 0;
-    }
     action();
   }
 
