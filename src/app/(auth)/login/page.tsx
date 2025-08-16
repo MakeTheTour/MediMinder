@@ -54,10 +54,12 @@ export default function LoginPage() {
     const userSnap = await getDoc(userRef);
 
     if (!userSnap.exists()) {
+      // If the user doesn't exist in Firestore (e.g., first social sign-in), create them.
       await setDoc(userRef, {
         uid: user.uid,
         name: user.displayName,
         email: user.email,
+        photoURL: user.photoURL,
         createdAt: new Date().toISOString(),
       });
     }
@@ -65,7 +67,8 @@ export default function LoginPage() {
 
   const handleEmailSignIn = async (values: z.infer<typeof loginSchema>) => {
     try {
-      await signInWithEmailAndPassword(auth, values.email, values.password);
+      const result = await signInWithEmailAndPassword(auth, values.email, values.password);
+      await handleUserInFirestore(result.user);
       router.push('/home');
     } catch (error: any) {
       toast({
