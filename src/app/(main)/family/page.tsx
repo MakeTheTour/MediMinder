@@ -7,11 +7,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { FamilyMember, UserProfile } from '@/lib/types';
-import { useToast } from '@/hooks/use-toast';
+import { FamilyMember } from '@/lib/types';
 import { useAuth } from '@/context/auth-context';
 import { useState, useEffect } from 'react';
-import { collection, onSnapshot, doc, updateDoc, deleteDoc, getDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase-client';
 import { useRouter } from 'next/navigation';
 
@@ -19,8 +18,6 @@ import { useRouter } from 'next/navigation';
 export default function FamilyPage() {
     const { user, isGuest } = useAuth();
     const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
-    const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-    const { toast } = useToast();
     const router = useRouter();
 
     useEffect(() => {
@@ -32,42 +29,8 @@ export default function FamilyPage() {
           setFamilyMembers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as FamilyMember)));
       });
 
-      const fetchUserProfile = async () => {
-        const userRef = doc(db, 'users', user.uid);
-        const userSnap = await getDoc(userRef);
-        if (userSnap.exists()) {
-            setUserProfile(userSnap.data() as UserProfile);
-        }
-      }
-      fetchUserProfile();
-
       return () => unsub();
     }, [user, isGuest]);
-
-    const handleAcceptInvitation = async (id: string) => {
-        if (!user) return;
-        
-        if (!userProfile?.isPremium) {
-            toast({
-                title: 'Upgrade Required',
-                description: 'Please upgrade to Premium to accept family invitations.',
-                action: (
-                    <Button onClick={() => router.push('/settings/premium')}>Upgrade Now</Button>
-                )
-            });
-            return;
-        }
-
-        const member = familyMembers.find(m => m.id === id);
-        if (member) {
-            const memberRef = doc(db, 'users', user.uid, 'familyMembers', id);
-            await updateDoc(memberRef, { status: 'accepted' });
-            toast({
-                title: 'Invitation Accepted',
-                description: `${member.name} is now linked to your family circle.`,
-            });
-        }
-    };
 
     const handleDeleteMember = async (id: string) => {
         if (!user) return;
@@ -112,10 +75,7 @@ export default function FamilyPage() {
                 </div>
                 <div className="flex items-center gap-2">
                     {member.status === 'pending' ? (
-                        <>
-                            <Badge variant="secondary">Pending</Badge>
-                            <Button variant="outline" size="sm" onClick={() => handleAcceptInvitation(member.id)}>Accept</Button>
-                        </>
+                        <Badge variant="secondary">Pending</Badge>
                     ) : (
                          <Badge variant="default">Linked</Badge>
                     )}
