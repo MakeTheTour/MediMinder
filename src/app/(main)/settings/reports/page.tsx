@@ -9,7 +9,7 @@ import { useLocalStorage } from '@/hooks/use-local-storage';
 import { collection, onSnapshot, query, where, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase-client';
 import { AdherenceLog } from '@/lib/types';
-import { subDays, format, isSameDay, startOfHour, getHours } from 'date-fns';
+import { subDays, format, isSameDay, getHours } from 'date-fns';
 import { Loader2, TrendingUp } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -31,15 +31,9 @@ export default function ReportsPage() {
     }
 
     if (user) {
-      let daysToSubtract = 7;
-      if (period === 'daily') daysToSubtract = 1;
-      if (period === 'monthly') daysToSubtract = 30;
-
-      const sinceDate = Timestamp.fromDate(subDays(new Date(), daysToSubtract)).toDate().toISOString();
-      const q = query(
-        collection(db, 'users', user.uid, 'adherenceLogs'),
-        where('takenAt', '>=', sinceDate)
-      );
+      // Listen to all adherence logs for real-time updates
+      const q = query(collection(db, 'users', user.uid, 'adherenceLogs'));
+      
       const unsub = onSnapshot(q, (snapshot) => {
         setFirestoreAdherence(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AdherenceLog)));
         setLoading(false);
@@ -51,12 +45,13 @@ export default function ReportsPage() {
     } else {
         setLoading(false);
     }
-  }, [user, isGuest, period]);
+  }, [user, isGuest]);
 
   const adherenceData = useMemo(() => {
     const logs = isGuest ? localAdherence : firestoreAdherence;
 
     if (period === 'daily') {
+        // Filter for today's logs
         const todayLogs = logs.filter(log => isSameDay(new Date(log.takenAt), new Date()));
         const hours = Array.from({ length: 24 }, (_, i) => ({
             name: `${i}:00`,
@@ -68,14 +63,16 @@ export default function ReportsPage() {
             const hour = getHours(new Date(log.takenAt));
             if (log.status === 'taken') {
                 hours[hour].taken += 1;
-            } else {
+            } else if (['missed', 'skipped', 'muted', 'stock_out'].includes(log.status)) {
                 hours[hour].missed += 1;
             }
         });
-        return hours.map(h => ({ ...h, date: h.name}));
+        // We only show hours with data for a cleaner chart
+        return hours.filter(h => h.taken > 0 || h.missed > 0).map(h => ({ ...h, date: h.name}));
     }
 
     const daysToCover = period === 'weekly' ? 7 : 30;
+    const sinceDate = subDays(new Date(), daysToCover);
     const lastXDays = Array.from({ length: daysToCover }, (_, i) => subDays(new Date(), i)).reverse();
 
     return lastXDays.map(day => {
