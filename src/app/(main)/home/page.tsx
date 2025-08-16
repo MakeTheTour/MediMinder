@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Medication, Appointment, AdherenceLog, FamilyMember } from '@/lib/types';
 import { MedicationCard } from '@/components/medication-card';
 import { AppointmentCard } from '@/components/appointment-card';
-import { format, parse, isToday, isFuture, addMinutes, differenceInHours, differenceInMinutes } from 'date-fns';
+import { format, parse, isToday, isFuture, addMinutes, differenceInHours, differenceInMinutes, startOfDay } from 'date-fns';
 import { useAuth } from '@/context/auth-context';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase-client';
@@ -216,52 +216,65 @@ export default function HomePage() {
 
   const checkMissedDoses = useCallback(async () => {
     const now = new Date();
-    const medsForToday = activeMedications.filter(med => {
-        const today = new Date();
-        const dayOfWeek = today.getDay();
-        if (med.frequency === 'Daily') return true;
-        if (med.frequency === 'Weekly') return med.daysOfWeek?.includes(dayOfWeek);
-        if (med.frequency === 'Monthly') return med.dayOfMonth === today.getDate();
-        return false;
-    });
+    const todayStart = startOfDay(now);
+  
+    const todaysMeds = todaysMedicationsByTime.flatMap(group => 
+      group.medications.map(med => ({ time: group.time, medication: med }))
+    );
 
-    for (const med of medsForToday) {
-        for (const time of med.times) {
-            const scheduledTime = parse(time, 'HH:mm', new Date());
-            const minutesSinceScheduled = differenceInMinutes(now, scheduledTime);
+    for (const { time, medication } of todaysMeds) {
+      const scheduledTime = parse(time, 'HH:mm', new Date());
+      
+      // Check if the scheduled time is in the past today
+      if (scheduledTime < now) {
+        const minutesSinceScheduled = differenceInMinutes(now, scheduledTime);
 
-            if (minutesSinceScheduled > 30) {
-                const wasHandled = adherenceLogs.some(log => 
-                    log.medicationId === med.id &&
-                    format(new Date(log.takenAt), 'yyyy-MM-dd') === format(now, 'yyyy-MM-dd') &&
-                    log.scheduledTime === time
-                );
-                
-                if (!wasHandled) {
-                    toast({
-                        title: `Dose Missed: ${med.name}`,
-                        description: `You missed your ${time} dose.`,
-                        variant: 'destructive',
-                    });
+        // Check if it's more than 30 minutes past due
+        if (minutesSinceScheduled > 30) {
+          // Check if this dose has already been handled today
+          const wasHandled = adherenceLogs.some(log =>
+            log.medicationId === medication.id &&
+            isToday(new Date(log.takenAt)) &&
+            log.scheduledTime === time
+          );
 
-                    const logEntry: Omit<AdherenceLog, 'id'> = {
-                        medicationId: med.id,
-                        medicationName: med.name,
-                        takenAt: new Date().toISOString(),
-                        status: 'missed',
-                        userId: user?.uid || 'guest',
-                        scheduledTime: time,
-                    };
-                    if (isGuest || !user) {
-                        setLocalAdherence(prev => [...prev, { ...logEntry, id: new Date().toISOString() }]);
-                    } else {
-                        await trackAdherence({ ...logEntry, userId: user.uid });
-                    }
+          // If not handled, log it as missed
+          if (!wasHandled) {
+             const logEntry: Omit<AdherenceLog, 'id'> = {
+              medicationId: medication.id,
+              medicationName: medication.name,
+              takenAt: scheduledTime.toISOString(), // Log it as missed at its scheduled time
+              status: 'missed',
+              userId: user?.uid || 'guest',
+              scheduledTime: time,
+            };
+
+            // Avoid sending duplicate toasts by checking if a missed log already exists
+            const alreadyLoggedAsMissed = adherenceLogs.some(log => 
+                log.medicationId === medication.id && 
+                log.scheduledTime === time && 
+                log.status === 'missed' &&
+                isToday(new Date(log.takenAt))
+            );
+
+            if (!alreadyLoggedAsMissed) {
+                if (isGuest || !user) {
+                    setLocalAdherence(prev => [...prev, { ...logEntry, id: new Date().toISOString() }]);
+                } else {
+                    await trackAdherence({ ...logEntry, userId: user.uid });
                 }
+
+                toast({
+                    title: `Dose Missed: ${medication.name}`,
+                    description: `You missed your ${format(scheduledTime, 'h:mm a')} dose more than 30 minutes ago.`,
+                    variant: 'destructive',
+                });
             }
+          }
         }
+      }
     }
-  }, [activeMedications, adherenceLogs, user, isGuest, setLocalAdherence, toast]);
+  }, [todaysMedicationsByTime, adherenceLogs, user, isGuest, setLocalAdherence, toast]);
 
 
   const checkAppointmentReminders = useCallback(async () => {
