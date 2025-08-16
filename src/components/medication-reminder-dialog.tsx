@@ -12,7 +12,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Medication } from '@/lib/types';
 import { Pill, BellRing, Hourglass } from 'lucide-react';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { format, parse } from 'date-fns';
 
 interface MedicationReminderDialogProps {
@@ -34,22 +34,35 @@ export function MedicationReminderDialog({
   onStockOut,
   onSnooze,
 }: MedicationReminderDialogProps) {
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
   useEffect(() => {
-    let sound: HTMLAudioElement | null = null;
     if (isOpen) {
       // Play a sound when the dialog opens
-      sound = new Audio('/notification.mp3'); // Assuming you have a sound file in /public
-      sound.play().catch(e => console.error("Failed to play notification sound:", e));
+      audioRef.current = new Audio('/notification.mp3'); // Assuming you have a sound file in /public
+      audioRef.current.loop = true;
+      audioRef.current.play().catch(e => console.error("Failed to play notification sound:", e));
+    } else if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+        audioRef.current = null;
     }
     
-    // Cleanup on component unmount or when dialog closes
+    // Cleanup on component unmount
     return () => {
-      if (sound) {
-        sound.pause();
-        sound.currentTime = 0;
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
       }
     }
   }, [isOpen]);
+  
+  const handleAction = (action: () => void) => {
+    if (audioRef.current) {
+        audioRef.current.pause();
+    }
+    action();
+  }
 
   const formatTime = (time24h: string) => {
     try {
@@ -62,11 +75,11 @@ export function MedicationReminderDialog({
   if (!isOpen) return null;
 
   return (
-    <AlertDialog open={isOpen} onOpenChange={(open) => !open && onSkip()}>
+    <AlertDialog open={isOpen} onOpenChange={(open) => !open && handleAction(onSkip)}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary">
-            <BellRing className="h-10 w-10" />
+            <BellRing className="h-10 w-10 animate-pulse" />
           </div>
           <AlertDialogTitle className="text-center text-2xl">
             Time for your medication!
@@ -84,16 +97,16 @@ export function MedicationReminderDialog({
              </div>
         </div>
         <AlertDialogFooter className="grid grid-cols-2 gap-4">
-          <Button variant="outline" onClick={onSnooze}>
+          <Button variant="outline" onClick={() => handleAction(onSnooze)}>
             <Hourglass className="mr-2 h-4 w-4" />
             Snooze
           </Button>
-          <Button onClick={onTake}>Complete</Button>
+          <Button onClick={() => handleAction(onTake)}>Complete</Button>
         </AlertDialogFooter>
-         <Button variant="ghost" className="w-full" onClick={onSkip}>
+         <Button variant="ghost" className="w-full" onClick={() => handleAction(onSkip)}>
             Skip Dose
         </Button>
-         <Button variant="destructive" className="w-full" onClick={onStockOut}>
+         <Button variant="destructive" className="w-full" onClick={() => handleAction(onStockOut)}>
             Out of Stock
         </Button>
       </AlertDialogContent>

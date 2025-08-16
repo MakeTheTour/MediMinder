@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Plus, ShieldAlert, Stethoscope, Pill as PillIcon, CalendarDays } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -43,6 +43,8 @@ export default function HomePage() {
 
   const [greeting, setGreeting] = useState('');
   const [reminder, setReminder] = useState<{ medication: Medication; time: string } | null>(null);
+  
+  const escalationTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (user && !isGuest) {
@@ -185,6 +187,18 @@ export default function HomePage() {
           
           if (!reminder) {
             setReminder({ medication: med, time });
+             // Start the 2-minute escalation timer
+            if (escalationTimerRef.current) clearTimeout(escalationTimerRef.current);
+            escalationTimerRef.current = setTimeout(() => {
+                handleReminderAction(med, time, 'missed');
+                handleFamilyAlert(med, 'missed dose');
+                setReminder(null); // Close the dialog
+                toast({
+                    title: `Dose Missed: ${med.name}`,
+                    description: `You missed your ${time} dose. Notifying family.`,
+                    variant: 'destructive',
+                });
+            }, 2 * 60 * 1000); // 2 minutes
           }
 
           setSentNotifications(prev => [...prev, notificationId]);
@@ -319,7 +333,12 @@ export default function HomePage() {
   }, [checkReminders, checkMissedDoses, checkAppointmentReminders]);
 
 
-  const handleReminderAction = async (medication: Medication, scheduledTime: string, status: 'taken' | 'skipped' | 'stock_out' | 'muted') => {
+  const handleReminderAction = (medication: Medication, scheduledTime: string, status: 'taken' | 'skipped' | 'stock_out' | 'muted' | 'missed') => {
+    if (escalationTimerRef.current) {
+        clearTimeout(escalationTimerRef.current);
+        escalationTimerRef.current = null;
+    }
+
     const logEntry: Omit<AdherenceLog, 'id'> = {
       medicationId: medication.id,
       medicationName: medication.name,
@@ -332,19 +351,24 @@ export default function HomePage() {
     if (isGuest || !user) {
       setLocalAdherence([...localAdherence, { ...logEntry, id: new Date().toISOString() }]);
     } else {
-      await trackAdherence({
+      trackAdherence({
           ...logEntry,
           userId: user.uid,
       });
     }
 
     if (status === 'stock_out') {
-        await handleFamilyAlert(medication, 'is out of stock');
+        handleFamilyAlert(medication, 'is out of stock');
     }
     setReminder(null);
   };
   
     const handleSnooze = async (medication: Medication, time: string) => {
+        if (escalationTimerRef.current) {
+            clearTimeout(escalationTimerRef.current);
+            escalationTimerRef.current = null;
+        }
+
         setReminder(null);
         try {
             const pastSnoozes = adherenceLogs
