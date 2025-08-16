@@ -4,24 +4,24 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Users can read and write to their own user document and subcollections
-    match /users/{userId}/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+    // Users can read/write their own user document and subcollections.
+    // Any authenticated user can read other user's documents (to find them by email).
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
+
+      match /{allPaths=**} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
     }
 
-    // Rules for the 'invitations' collection
+    // Invitations can be read by the inviter or invitee.
+    // They can be created by any authenticated user.
+    // They can be updated or deleted by the inviter or invitee.
     match /invitations/{invitationId} {
-      // Allow authenticated users to create an invitation
+      allow read: if request.auth != null && (resource.data.inviterId == request.auth.uid || resource.data.inviteeEmail == request.auth.token.email);
       allow create: if request.auth != null;
-
-      // Allow the inviter or the invitee to read the invitation
-      allow read: if request.auth != null && (request.auth.uid == resource.data.inviterId || request.auth.token.email == resource.data.inviteeEmail);
-
-      // Allow the inviter or the invitee to update the invitation (e.g., to change status)
-      allow update: if request.auth != null && (request.auth.uid == resource.data.inviterId || request.auth.uid == resource.data.inviteeId);
-      
-      // Allow the inviter or invitee to delete the invitation
-      allow delete: if request.auth != null && (request.auth.uid == resource.data.inviterId || request.auth.token.email == resource.data.inviteeEmail);
+      allow update, delete: if request.auth != null && (resource.data.inviterId == request.auth.uid || resource.data.inviteeId == request.auth.uid);
     }
   }
 }
