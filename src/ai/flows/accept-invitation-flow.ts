@@ -10,7 +10,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import { collection, doc, updateDoc, writeBatch, query, where, getDocs, getDoc } from 'firebase/firestore';
+import { collection, doc, updateDoc, writeBatch, query, where, getDocs, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 const AcceptInvitationInputSchema = z.object({
@@ -52,12 +52,15 @@ const acceptInvitationFlow = ai.defineFlow(
         where('email', '==', input.inviteeEmail)
       );
       const inviterFamilySnap = await getDocs(inviterFamilyQuery);
-      inviterFamilySnap.forEach(doc => {
-        batch.update(doc.ref, { status: 'accepted' });
-      });
+      if (!inviterFamilySnap.empty) {
+        const docToUpdate = inviterFamilySnap.docs[0];
+        batch.update(docToUpdate.ref, { status: 'accepted' });
+      } else {
+        throw new Error("Could not find family member record for inviter.");
+      }
 
       // 3. Add a family member record to the invitee's list
-      // First get the inviter's data to get their email
+      // First get the inviter's data to get their email and name
       const inviterRef = doc(db, 'users', input.inviterId);
       const inviterSnap = await getDoc(inviterRef);
       const inviterData = inviterSnap.data();
@@ -75,6 +78,8 @@ const acceptInvitationFlow = ai.defineFlow(
             status: 'accepted',
             photoURL: invitationData.inviterPhotoUrl || null,
         });
+      } else {
+         throw new Error("Could not find inviter or invitation data.");
       }
       
       await batch.commit();
