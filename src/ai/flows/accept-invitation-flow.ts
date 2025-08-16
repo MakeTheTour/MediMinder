@@ -57,17 +57,23 @@ const acceptInvitationFlow = ai.defineFlow(
       });
 
       // 3. Add a family member record to the invitee's list
-      // First get the inviter's data to get their relation to the invitee
+      // First get the inviter's data to get their email
+      const inviterRef = doc(db, 'users', input.inviterId);
+      const inviterSnap = await getDoc(inviterRef);
+      const inviterData = inviterSnap.data();
+
+      // Then get the invitation data to get the relation
       const invitationSnap = await getDoc(invitationRef);
       const invitationData = invitationSnap.data();
 
-      if (invitationData) {
+      if (invitationData && inviterData) {
         const inviteeFamilyRef = doc(collection(db, 'users', input.inviteeId, 'familyMembers'));
         batch.set(inviteeFamilyRef, {
             name: invitationData.inviterName,
-            email: invitationData.inviterEmail, // Assuming inviter has an email, this should be looked up really
+            email: inviterData.email, // Use the fetched email of the inviter
             relation: `My ${invitationData.relation}`, // Simplified relation
             status: 'accepted',
+            photoURL: invitationData.inviterPhotoUrl || null,
         });
       }
       
