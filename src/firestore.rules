@@ -1,0 +1,45 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default user-specific rules
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+      match /medications/{medId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+      match /appointments/{appId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+      match /healthMetrics/{metricId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+      match /adherenceLogs/{logId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+      match /familyMembers/{memberId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+    
+    // Rule to allow authenticated users to query the 'users' collection.
+    // This is necessary for the 'findUserByEmail' feature to work.
+    // The `list` permission allows for queries, while `read` on the path above
+    // still restricts direct document access by ID to the owner.
+    match /users/{userId} {
+        allow list: if request.auth != null;
+    }
+
+    // Rules for the top-level invitations collection
+    match /invitations/{invitationId} {
+      // The inviter and the person being invited can read the invitation
+      allow read: if request.auth != null && (resource.data.inviterId == request.auth.uid || resource.data.inviteeEmail == request.auth.token.email);
+      // Only the inviter can create an invitation for themselves
+      allow create: if request.auth != null && request.resource.data.inviterId == request.auth.uid;
+      // The inviter and invitee can update or delete the invitation (e.g., to accept/decline/cancel)
+      allow update, delete: if request.auth != null && (resource.data.inviterId == request.auth.uid || resource.data.inviteeEmail == request.auth.token.email);
+    }
+  }
+}

@@ -39,6 +39,7 @@ const findUserByEmailFlow = ai.defineFlow(
   async (input) => {
     try {
       const usersRef = collection(db, 'users');
+      // This query requires a Firestore index on the 'email' field.
       const q = query(usersRef, where('email', '==', input.email), limit(1));
       const querySnapshot = await getDocs(q);
       
