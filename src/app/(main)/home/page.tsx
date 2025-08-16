@@ -459,7 +459,7 @@ export default function HomePage() {
       </header>
       
       {nextMedication && (
-        <Card className="bg-primary/10 border-primary/20">
+        <Card>
             <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-primary">
                     <PillIcon/>
@@ -473,7 +473,7 @@ export default function HomePage() {
       )}
       
       {nextAppointment && (
-        <Card className="bg-primary/10 border-primary/20">
+        <Card>
             <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-primary">
                     <Stethoscope/>
@@ -558,11 +558,3 @@ export default function HomePage() {
     </>
   );
 }
-
-    
-
-    
-
-    
-
-    
