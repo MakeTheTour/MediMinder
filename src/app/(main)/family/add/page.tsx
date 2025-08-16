@@ -1,14 +1,14 @@
 
-import { AddFamilyMemberForm } from '@/components/add-family-member-form';
+import { AddParentForm } from '@/components/add-parent-form';
 
-export default function AddFamilyMemberPage() {
+export default function AddParentPage() {
   return (
     <div className="container mx-auto max-w-2xl p-4">
       <header className="mb-6">
-        <h1 className="text-2xl font-bold">Add Family Member</h1>
-        <p className="text-muted-foreground">Add a new person to your family circle.</p>
+        <h1 className="text-2xl font-bold">Add Parent</h1>
+        <p className="text-muted-foreground">Invite a parent to your circle.</p>
       </header>
-      <AddFamilyMemberForm />
+      <AddParentForm />
     </div>
   );
 }

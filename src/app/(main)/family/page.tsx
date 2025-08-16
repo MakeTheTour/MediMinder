@@ -15,7 +15,7 @@ import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { acceptInvitation } from '@/ai/flows/accept-invitation-flow';
 import { declineInvitation } from '@/ai/flows/decline-invitation-flow';
-import { AddFamilyMemberDialog } from '@/components/add-family-member-dialog';
+import { AddParentDialog } from '@/components/add-parent-dialog';
 
 export default function FamilyPage() {
     const { user, isGuest } = useAuth();
@@ -24,7 +24,7 @@ export default function FamilyPage() {
     const [receivedInvitations, setReceivedInvitations] = useState<Invitation[]>([]);
     const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
     const [loading, setLoading] = useState(true);
-    const [isAddMemberDialogOpen, setIsAddMemberDialogOpen] = useState(false);
+    const [isAddParentDialogOpen, setIsAddParentDialogOpen] = useState(false);
     const router = useRouter();
 
     useEffect(() => {
@@ -95,7 +95,7 @@ export default function FamilyPage() {
         // This is complex because it should update both users' records.
         // A more robust solution would use a Cloud Function to handle denormalization.
         await deleteDoc(doc(db, 'users', user.uid, 'familyMembers', memberId));
-        toast({ title: 'Member Removed' });
+        toast({ title: 'Parent Removed' });
     }
 
     const handleAccept = async (invitation: Invitation) => {
@@ -103,7 +103,7 @@ export default function FamilyPage() {
       if (!userProfile?.isPremium) {
         toast({
           title: 'Premium Required',
-          description: 'Please upgrade to Premium to accept family invitations.',
+          description: 'Please upgrade to Premium to accept invitations from your child.',
           action: <Button onClick={() => router.push('/settings/premium')}>Upgrade</Button>,
         });
         return;
@@ -113,7 +113,7 @@ export default function FamilyPage() {
           invitationId: invitation.id,
           inviterId: invitation.inviterId,
           inviteeId: user.uid,
-          inviteeName: user.displayName || 'New Member',
+          inviteeName: user.displayName || 'New Parent',
           inviteeEmail: user.email!,
         });
         toast({ title: 'Invitation Accepted!', description: `You are now linked with ${invitation.inviterName}.`});
@@ -131,26 +131,26 @@ export default function FamilyPage() {
       }
     };
     
-    const handleAddMemberClick = () => {
+    const handleAddParentClick = () => {
         if (isGuest || !user) {
             router.push('/login');
         } else {
-            setIsAddMemberDialogOpen(true);
+            setIsAddParentDialogOpen(true);
         }
     }
 
   return (
     <>
-      <AddFamilyMemberDialog
-        open={isAddMemberDialogOpen}
-        onOpenChange={setIsAddMemberDialogOpen}
-        onInvitationSent={() => setIsAddMemberDialogOpen(false)}
+      <AddParentDialog
+        open={isAddParentDialogOpen}
+        onOpenChange={setIsAddParentDialogOpen}
+        onInvitationSent={() => setIsAddParentDialogOpen(false)}
       />
       <div className="container mx-auto max-w-2xl p-4 space-y-6">
         <header className="mb-6 flex items-center justify-between">
-            <h1 className="text-2xl font-bold">Family Circle</h1>
-            <Button onClick={handleAddMemberClick} size="sm">
-                <Plus className="mr-2 h-4 w-4" /> Add Member
+            <h1 className="text-2xl font-bold">My Parents</h1>
+            <Button onClick={handleAddParentClick} size="sm">
+                <Plus className="mr-2 h-4 w-4" /> Add Parent
             </Button>
         </header>
         
@@ -158,7 +158,7 @@ export default function FamilyPage() {
             <Card>
                 <CardHeader>
                     <CardTitle>Pending Invitations</CardTitle>
-                    <CardDescription>You have been invited to join a family circle.</CardDescription>
+                    <CardDescription>You have been invited to be a parent.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-4">
@@ -193,8 +193,8 @@ export default function FamilyPage() {
 
         <Card>
             <CardHeader>
-            <CardTitle>My Family Members</CardTitle>
-            <CardDescription>Members you have added to your circle.</CardDescription>
+            <CardTitle>My Linked Accounts</CardTitle>
+            <CardDescription>Accounts you are linked with.</CardDescription>
             </CardHeader>
             <CardContent>
             <div className="space-y-4">
@@ -224,10 +224,10 @@ export default function FamilyPage() {
                 )) : (
                     <div className="text-center py-10">
                         <Users2 className="mx-auto h-12 w-12 text-muted-foreground" />
-                        <h3 className="mt-4 text-lg font-semibold">{isGuest ? "Sign in to manage your family" : "Your family circle is empty"}</h3>
-                        <p className="mt-1 text-sm text-muted-foreground">{isGuest ? "Create an account or sign in to add family and share progress." : "Add family members to share your progress."}</p>
-                        <Button onClick={handleAddMemberClick} size="sm" className="mt-4">
-                            <Plus className="mr-2 h-4 w-4" /> {isGuest ? 'Sign In' : 'Add Member'}
+                        <h3 className="mt-4 text-lg font-semibold">{isGuest ? "Sign in to manage your parents" : "No parents added"}</h3>
+                        <p className="mt-1 text-sm text-muted-foreground">{isGuest ? "Create an account or sign in to add parents and share progress." : "Add a parent to share your progress."}</p>
+                        <Button onClick={handleAddParentClick} size="sm" className="mt-4">
+                            <Plus className="mr-2 h-4 w-4" /> {isGuest ? 'Sign In' : 'Add Parent'}
                         </Button>
                     </div>
                 )}

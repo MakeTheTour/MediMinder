@@ -24,7 +24,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/context/auth-context';
-import { createFamilyInvitation } from '@/ai/flows/create-family-invitation-flow';
+import { createParentInvitation } from '@/ai/flows/create-family-invitation-flow';
 import { findUserByEmail, FindUserByEmailOutput } from '@/ai/flows/find-user-by-email-flow';
 import { Loader2, Search } from 'lucide-react';
 import { Card, CardContent } from './ui/card';
@@ -39,13 +39,13 @@ const inviteSchema = z.object({
   relation: z.string().min(1, 'Relation is required.'),
 });
 
-interface AddFamilyMemberDialogProps {
+interface AddParentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onInvitationSent: () => void;
 }
 
-export function AddFamilyMemberDialog({ open, onOpenChange, onInvitationSent }: AddFamilyMemberDialogProps) {
+export function AddParentDialog({ open, onOpenChange, onInvitationSent }: AddParentDialogProps) {
   const { toast } = useToast();
   const { user } = useAuth();
   
@@ -66,7 +66,7 @@ export function AddFamilyMemberDialog({ open, onOpenChange, onInvitationSent }: 
 
   async function handleSearch({ email }: z.infer<typeof searchSchema>) {
     if(!user || !user.email) {
-        toast({ title: 'Error', description: 'You must be logged in to add a family member', variant: 'destructive'});
+        toast({ title: 'Error', description: 'You must be logged in to add a parent', variant: 'destructive'});
         return;
     }
     
@@ -101,7 +101,7 @@ export function AddFamilyMemberDialog({ open, onOpenChange, onInvitationSent }: 
 
     setIsInviting(true);
     try {
-        await createFamilyInvitation({
+        await createParentInvitation({
           inviterId: user.uid,
           inviterName: user.displayName || 'A user',
           inviterPhotoUrl: user.photoURL,
@@ -118,8 +118,8 @@ export function AddFamilyMemberDialog({ open, onOpenChange, onInvitationSent }: 
         inviteForm.reset();
         setSearchResult(null);
     } catch (error: any) {
-        console.error("Error adding family member:", error);
-        toast({ title: 'Error', description: error.message || 'Could not add family member. Please try again.', variant: 'destructive'});
+        console.error("Error adding parent:", error);
+        toast({ title: 'Error', description: error.message || 'Could not add parent. Please try again.', variant: 'destructive'});
     } finally {
         setIsInviting(false);
     }
@@ -129,9 +129,9 @@ export function AddFamilyMemberDialog({ open, onOpenChange, onInvitationSent }: 
     <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent>
             <DialogHeader>
-                <DialogTitle>Add Family Member</DialogTitle>
+                <DialogTitle>Add Parent</DialogTitle>
                 <DialogDescription>
-                    Search for a family member by their email to send an invitation.
+                    Search for a parent by their email to send an invitation.
                 </DialogDescription>
             </DialogHeader>
             <div className="space-y-6 pt-4">
@@ -184,7 +184,7 @@ export function AddFamilyMemberDialog({ open, onOpenChange, onInvitationSent }: 
                                         <FormItem>
                                         <FormLabel>Your Relation to {searchResult.name}</FormLabel>
                                         <FormControl>
-                                            <Input placeholder="e.g., Mother, Son, Friend" {...field} />
+                                            <Input placeholder="e.g., Mother, Father" {...field} />
                                         </FormControl>
                                         <FormMessage />
                                         </FormItem>

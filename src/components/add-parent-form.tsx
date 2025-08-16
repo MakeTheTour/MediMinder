@@ -18,7 +18,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/context/auth-context';
-import { createFamilyInvitation } from '@/ai/flows/create-family-invitation-flow';
+import { createParentInvitation } from '@/ai/flows/create-family-invitation-flow';
 import { findUserByEmail, FindUserByEmailOutput } from '@/ai/flows/find-user-by-email-flow';
 import { Loader2, Search } from 'lucide-react';
 import { Card, CardContent } from './ui/card';
@@ -34,7 +34,7 @@ const inviteSchema = z.object({
 });
 
 
-export function AddFamilyMemberForm() {
+export function AddParentForm() {
   const router = useRouter();
   const { toast } = useToast();
   const { user } = useAuth();
@@ -60,7 +60,7 @@ export function AddFamilyMemberForm() {
 
   async function handleSearch({ email }: z.infer<typeof searchSchema>) {
     if(!user || !user.email) {
-        toast({ title: 'Error', description: 'You must be logged in to add a family member', variant: 'destructive'});
+        toast({ title: 'Error', description: 'You must be logged in to add a parent', variant: 'destructive'});
         return;
     }
     
@@ -95,7 +95,7 @@ export function AddFamilyMemberForm() {
 
     setIsInviting(true);
     try {
-        await createFamilyInvitation({
+        await createParentInvitation({
           inviterId: user.uid,
           inviterName: user.displayName || 'A user',
           inviterPhotoUrl: user.photoURL,
@@ -109,8 +109,8 @@ export function AddFamilyMemberForm() {
         });
         router.push('/family');
     } catch (error: any) {
-        console.error("Error adding family member:", error);
-        toast({ title: 'Error', description: error.message || 'Could not add family member. Please try again.', variant: 'destructive'});
+        console.error("Error adding parent:", error);
+        toast({ title: 'Error', description: error.message || 'Could not add parent. Please try again.', variant: 'destructive'});
     } finally {
         setIsInviting(false);
     }
@@ -167,7 +167,7 @@ export function AddFamilyMemberForm() {
                                 <FormItem>
                                 <FormLabel>Your Relation to {searchResult.name}</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="e.g., Mother, Son, Friend" {...field} />
+                                    <Input placeholder="e.g., Mother, Father" {...field} />
                                 </FormControl>
                                 <FormMessage />
                                 </FormItem>

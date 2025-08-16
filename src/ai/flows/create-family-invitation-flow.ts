@@ -1,11 +1,11 @@
 
 'use server';
 /**
- * @fileOverview Creates a family invitation.
+ * @fileOverview Creates a parent invitation.
  *
- * - createFamilyInvitation - A function that creates the invitation.
- * - CreateFamilyInvitationInput - The input type for the function.
- * - CreateFamilyInvitationOutput - The return type for the function.
+ * - createParentInvitation - A function that creates the invitation.
+ * - CreateParentInvitationInput - The input type for the function.
+ * - CreateParentInvitationOutput - The return type for the function.
  */
 
 import {ai} from '@/ai/genkit';
@@ -13,7 +13,7 @@ import {z} from 'genkit';
 import { collection, addDoc, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
-const CreateFamilyInvitationInputSchema = z.object({
+const CreateParentInvitationInputSchema = z.object({
   inviterId: z.string(),
   inviterName: z.string(),
   inviterPhotoUrl: z.string().nullable().optional(),
@@ -21,24 +21,24 @@ const CreateFamilyInvitationInputSchema = z.object({
   inviteeName: z.string(),
   relation: z.string(),
 });
-export type CreateFamilyInvitationInput = z.infer<typeof CreateFamilyInvitationInputSchema>;
+export type CreateParentInvitationInput = z.infer<typeof CreateParentInvitationInputSchema>;
 
-const CreateFamilyInvitationOutputSchema = z.object({
+const CreateParentInvitationOutputSchema = z.object({
   success: z.boolean(),
   message: z.string(),
   invitationId: z.string().optional(),
 });
-export type CreateFamilyInvitationOutput = z.infer<typeof CreateFamilyInvitationOutputSchema>;
+export type CreateParentInvitationOutput = z.infer<typeof CreateParentInvitationOutputSchema>;
 
-export async function createFamilyInvitation(input: CreateFamilyInvitationInput): Promise<CreateFamilyInvitationOutput> {
-  return createFamilyInvitationFlow(input);
+export async function createParentInvitation(input: CreateParentInvitationInput): Promise<CreateParentInvitationOutput> {
+  return createParentInvitationFlow(input);
 }
 
-const createFamilyInvitationFlow = ai.defineFlow(
+const createParentInvitationFlow = ai.defineFlow(
   {
-    name: 'createFamilyInvitationFlow',
-    inputSchema: CreateFamilyInvitationInputSchema,
-    outputSchema: CreateFamilyInvitationOutputSchema,
+    name: 'createParentInvitationFlow',
+    inputSchema: CreateParentInvitationInputSchema,
+    outputSchema: CreateParentInvitationOutputSchema,
   },
   async (input) => {
     try {
@@ -52,7 +52,7 @@ const createFamilyInvitationFlow = ai.defineFlow(
       if (!existingInvitation.empty) {
         return {
           success: false,
-          message: 'An invitation already exists for this email address.',
+          message: 'An invitation has already been sent to this email address.',
         };
       }
       
