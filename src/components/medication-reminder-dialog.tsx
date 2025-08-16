@@ -30,8 +30,30 @@ export function MedicationReminderDialog({
   onTake,
   onStockOut,
 }: MedicationReminderDialogProps) {
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      if (!audioRef.current) {
+        audioRef.current = new Audio('/notification.mp3');
+        audioRef.current.loop = true;
+      }
+      audioRef.current.play().catch(e => console.error("Audio play failed:", e));
+    }
+
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
+    };
+  }, [isOpen]);
 
   const handleAction = (action: () => void) => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
     action();
   }
 
