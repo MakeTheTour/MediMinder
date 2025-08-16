@@ -2,7 +2,6 @@
 'use client';
 
 import { Users2, Plus, Check, X } from 'lucide-react';
-import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -16,6 +15,7 @@ import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { acceptInvitation } from '@/ai/flows/accept-invitation-flow';
 import { declineInvitation } from '@/ai/flows/decline-invitation-flow';
+import { AddFamilyMemberDialog } from '@/components/add-family-member-dialog';
 
 export default function FamilyPage() {
     const { user, isGuest } = useAuth();
@@ -24,6 +24,7 @@ export default function FamilyPage() {
     const [receivedInvitations, setReceivedInvitations] = useState<Invitation[]>([]);
     const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
     const [loading, setLoading] = useState(true);
+    const [isAddMemberDialogOpen, setIsAddMemberDialogOpen] = useState(false);
     const router = useRouter();
 
     useEffect(() => {
@@ -134,99 +135,106 @@ export default function FamilyPage() {
         if (isGuest || !user) {
             router.push('/login');
         } else {
-            router.push('/family/add');
+            setIsAddMemberDialogOpen(true);
         }
     }
 
   return (
-    <div className="container mx-auto max-w-2xl p-4 space-y-6">
-      <header className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Family Circle</h1>
-        <Button onClick={handleAddMemberClick} size="sm">
-            <Plus className="mr-2 h-4 w-4" /> Add Member
-        </Button>
-      </header>
-      
-      {receivedInvitations.filter(inv => inv.status === 'pending').length > 0 && (
-         <Card>
-            <CardHeader>
-                <CardTitle>Pending Invitations</CardTitle>
-                <CardDescription>You have been invited to join a family circle.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <div className="space-y-4">
-                    {receivedInvitations.filter(inv => inv.status === 'pending').map(inv => (
-                        <div key={inv.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50">
-                            <div className="flex items-center gap-4">
-                                <Avatar>
-                                    <AvatarImage src={inv.inviterPhotoUrl || `https://placehold.co/40x40.png`} alt={inv.inviterName} />
-                                    <AvatarFallback>{inv.inviterName.charAt(0)}</AvatarFallback>
-                                </Avatar>
-                                <div>
-                                    <p className="font-semibold">{inv.inviterName}</p>
-                                    <p className="text-sm text-muted-foreground">Wants to add you as their {inv.relation}</p>
+    <>
+      <AddFamilyMemberDialog
+        open={isAddMemberDialogOpen}
+        onOpenChange={setIsAddMemberDialogOpen}
+        onInvitationSent={() => setIsAddMemberDialogOpen(false)}
+      />
+      <div className="container mx-auto max-w-2xl p-4 space-y-6">
+        <header className="mb-6 flex items-center justify-between">
+            <h1 className="text-2xl font-bold">Family Circle</h1>
+            <Button onClick={handleAddMemberClick} size="sm">
+                <Plus className="mr-2 h-4 w-4" /> Add Member
+            </Button>
+        </header>
+        
+        {receivedInvitations.filter(inv => inv.status === 'pending').length > 0 && (
+            <Card>
+                <CardHeader>
+                    <CardTitle>Pending Invitations</CardTitle>
+                    <CardDescription>You have been invited to join a family circle.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="space-y-4">
+                        {receivedInvitations.filter(inv => inv.status === 'pending').map(inv => (
+                            <div key={inv.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50">
+                                <div className="flex items-center gap-4">
+                                    <Avatar>
+                                        <AvatarImage src={inv.inviterPhotoUrl || `https://placehold.co/40x40.png`} alt={inv.inviterName} />
+                                        <AvatarFallback>{inv.inviterName.charAt(0)}</AvatarFallback>
+                                    </Avatar>
+                                    <div>
+                                        <p className="font-semibold">{inv.inviterName}</p>
+                                        <p className="text-sm text-muted-foreground">Wants to add you as their {inv.relation}</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                <Button variant="outline" size="sm" onClick={() => handleDecline(inv.id)}>
+                                        <X className="h-4 w-4 mr-1" />
+                                        Decline
+                                    </Button>
+                                <Button size="sm" onClick={() => handleAccept(inv)}>
+                                        <Check className="h-4 w-4 mr-1"/>
+                                        Accept
+                                    </Button>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                               <Button variant="outline" size="sm" onClick={() => handleDecline(inv.id)}>
-                                    <X className="h-4 w-4 mr-1" />
-                                    Decline
-                                </Button>
-                               <Button size="sm" onClick={() => handleAccept(inv)}>
-                                    <Check className="h-4 w-4 mr-1"/>
-                                    Accept
-                                </Button>
-                            </div>
-                        </div>
-                    ))}
+                        ))}
+                    </div>
+                </CardContent>
+            </Card>
+        )}
+
+        <Card>
+            <CardHeader>
+            <CardTitle>My Family Members</CardTitle>
+            <CardDescription>Members you have added to your circle.</CardDescription>
+            </CardHeader>
+            <CardContent>
+            <div className="space-y-4">
+                {(!isGuest && familyMembers.length > 0) ? familyMembers.map(member => (
+                <div key={member.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50">
+                    <div className="flex items-center gap-4">
+                    <Avatar>
+                        <AvatarImage src={member.photoURL || `https://placehold.co/40x40.png`} alt={member.name} />
+                        <AvatarFallback>{member.name.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                        <p className="font-semibold">{member.name}</p>
+                        <p className="text-sm text-muted-foreground">{member.relation}</p>
+                    </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        {member.status === 'pending' ? (
+                            <Badge variant="secondary">Pending</Badge>
+                        ) : (
+                            <Badge variant="default">Linked</Badge>
+                        )}
+                        <Button variant="ghost" size="sm" onClick={() => member.status === 'pending' ? handleCancelSentInvitation(member.id, member.email) : handleRemoveLinkedMember(member.id)}>
+                            {member.status === 'pending' ? 'Cancel' : 'Remove'}
+                        </Button>
+                    </div>
                 </div>
+                )) : (
+                    <div className="text-center py-10">
+                        <Users2 className="mx-auto h-12 w-12 text-muted-foreground" />
+                        <h3 className="mt-4 text-lg font-semibold">{isGuest ? "Sign in to manage your family" : "Your family circle is empty"}</h3>
+                        <p className="mt-1 text-sm text-muted-foreground">{isGuest ? "Create an account or sign in to add family and share progress." : "Add family members to share your progress."}</p>
+                        <Button onClick={handleAddMemberClick} size="sm" className="mt-4">
+                            <Plus className="mr-2 h-4 w-4" /> {isGuest ? 'Sign In' : 'Add Member'}
+                        </Button>
+                    </div>
+                )}
+            </div>
             </CardContent>
         </Card>
-      )}
-
-      <Card>
-        <CardHeader>
-          <CardTitle>My Family Members</CardTitle>
-           <CardDescription>Members you have added to your circle.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {(!isGuest && familyMembers.length > 0) ? familyMembers.map(member => (
-              <div key={member.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50">
-                <div className="flex items-center gap-4">
-                   <Avatar>
-                    <AvatarImage src={member.photoURL || `https://placehold.co/40x40.png`} alt={member.name} />
-                    <AvatarFallback>{member.name.charAt(0)}</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="font-semibold">{member.name}</p>
-                    <p className="text-sm text-muted-foreground">{member.relation}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                    {member.status === 'pending' ? (
-                        <Badge variant="secondary">Pending</Badge>
-                    ) : (
-                         <Badge variant="default">Linked</Badge>
-                    )}
-                    <Button variant="ghost" size="sm" onClick={() => member.status === 'pending' ? handleCancelSentInvitation(member.id, member.email) : handleRemoveLinkedMember(member.id)}>
-                        {member.status === 'pending' ? 'Cancel' : 'Remove'}
-                    </Button>
-                </div>
-              </div>
-            )) : (
-                <div className="text-center py-10">
-                    <Users2 className="mx-auto h-12 w-12 text-muted-foreground" />
-                    <h3 className="mt-4 text-lg font-semibold">{isGuest ? "Sign in to manage your family" : "Your family circle is empty"}</h3>
-                    <p className="mt-1 text-sm text-muted-foreground">{isGuest ? "Create an account or sign in to add family and share progress." : "Add family members to share your progress."}</p>
-                     <Button onClick={handleAddMemberClick} size="sm" className="mt-4">
-                        <Plus className="mr-2 h-4 w-4" /> {isGuest ? 'Sign In' : 'Add Member'}
-                    </Button>
-                </div>
-             )}
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+      </div>
+    </>
   );
 }
