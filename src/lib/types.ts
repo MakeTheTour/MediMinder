@@ -55,6 +55,7 @@ export const UserProfileSchema = z.object({
   city: z.string().optional(),
   isPremium: z.boolean().optional(),
   premiumCycle: z.string().optional(),
+  status: z.enum(['active', 'suspended', 'deactivated']).optional(),
 });
 export type UserProfile = z.infer<typeof UserProfileSchema>;
 
@@ -87,4 +88,14 @@ export interface Invitation {
   relation: string;
   status: 'pending' | 'accepted' | 'declined';
   inviteeId?: string;
+}
+
+export interface User {
+  uid: string;
+  name: string;
+  email: string;
+  createdAt: string;
+  photoURL?: string;
+  isPremium?: boolean;
+  status?: 'active' | 'suspended' | 'deactivated';
 }

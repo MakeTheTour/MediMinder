@@ -4,49 +4,24 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function isAppAdmin() {
+    function isAdmin() {
       return request.auth.token.email == 'admin@mediminder.com';
-    }
-    
-    function isSignedIn() {
-      return request.auth != null;
     }
 
     match /users/{userId} {
-      // Admin can read/write any user document.
-      // A regular user can only read/write their own document.
-      allow read, update, delete: if request.auth.uid == userId || isAppAdmin();
-      allow create: if isSignedIn() || isAppAdmin();
+      allow read, update, delete: if request.auth.uid == userId || isAdmin();
+      allow create: if request.auth.uid != null;
+      allow list: if isAdmin();
       
-      // Admin can list all users.
-      allow list: if isAppAdmin();
-
-      match /medications/{medicationId} {
-        allow read, write: if request.auth.uid == userId;
-      }
-      match /appointments/{appointmentId} {
-        allow read, write: if request.auth.uid == userId;
-      }
-      match /healthMetrics/{metricId} {
-        allow read, write: if request.auth.uid == userId;
-      }
-      match /adherenceLogs/{logId} {
-        allow read, write: if request.auth.uid == userId;
-      }
-      match /familyMembers/{memberId} {
-        allow read, write: if request.auth.uid == userId;
+      match /{allPaths=**} {
+        allow read, write: if request.auth.uid == userId || isAdmin();
       }
     }
-    
-    match /invitations/{invitationId} {
-       // Allow create/delete/update for any signed-in user (flows handle logic)
-       allow write: if isSignedIn();
-       
-       // Allow reading an invitation if you are the sender or the receiver.
-       allow get: if isSignedIn() && (request.auth.uid == resource.data.inviterId || request.auth.token.email == resource.data.inviteeEmail);
 
-       // Allow querying invitations if filtering by inviterId or inviteeEmail
-       allow list: if isSignedIn() && (request.query.where.get('inviterId', '') == request.auth.uid || request.query.where.get('inviteeEmail', '') == request.auth.token.email);
+    match /invitations/{invitationId} {
+      allow read, update: if request.auth.uid != null && (request.auth.uid == resource.data.inviterId || request.auth.token.email == resource.data.inviteeEmail);
+      allow create, delete: if request.auth.uid != null;
+      allow list: if request.auth.uid != null && (request.query.where.inviterId == request.auth.uid || request.query.where.inviteeEmail == request.auth.token.email);
     }
   }
 }

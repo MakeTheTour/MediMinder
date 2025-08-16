@@ -2,43 +2,74 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, onSnapshot, doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase-client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
+import { MoreVertical, UserCheck, UserX, CircleSlash, Star, ShieldOff } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { useToast } from '@/hooks/use-toast';
+import type { User } from '@/lib/types';
 
-interface User {
-  uid: string;
-  name: string;
-  email: string;
-  createdAt: string;
-  photoURL?: string;
-  isPremium?: boolean;
-}
 
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
   useEffect(() => {
-    const fetchUsers = async () => {
-      setLoading(true);
-      try {
-        const usersCollection = collection(db, 'users');
-        const userSnapshot = await getDocs(usersCollection);
-        const usersList = userSnapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as User));
-        setUsers(usersList);
-      } catch (error) {
-        console.error("Error fetching users: ", error);
-      }
+    setLoading(true);
+    const usersCollection = collection(db, 'users');
+    const unsub = onSnapshot(usersCollection, (userSnapshot) => {
+      const usersList = userSnapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as User));
+      setUsers(usersList);
       setLoading(false);
-    };
+    }, (error) => {
+        console.error("Error fetching users: ", error);
+        toast({ title: "Error", description: "Could not fetch users.", variant: "destructive"});
+        setLoading(false);
+    });
 
-    fetchUsers();
-  }, []);
+    return () => unsub();
+  }, [toast]);
+
+  const updateUser = async (uid: string, data: Partial<User>) => {
+    try {
+        const userRef = doc(db, 'users', uid);
+        await updateDoc(userRef, data);
+        toast({
+            title: "User Updated",
+            description: "The user's information has been successfully updated."
+        });
+    } catch (error) {
+        console.error("Error updating user: ", error);
+        toast({ title: "Error", description: "Could not update user.", variant: "destructive"});
+    }
+  }
+
+  const getStatusVariant = (status?: string): 'default' | 'secondary' | 'destructive' | 'outline' => {
+    switch (status) {
+      case 'active':
+        return 'default';
+      case 'suspended':
+        return 'secondary';
+      case 'deactivated':
+        return 'destructive';
+      default:
+        return 'outline';
+    }
+  };
 
   return (
      <div className="container mx-auto p-4">
@@ -62,12 +93,13 @@ export default function AdminUsersPage() {
                 <TableHead>Joined At</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Plan</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="h-24 text-center">
+                  <TableCell colSpan={6} className="h-24 text-center">
                     Loading users...
                   </TableCell>
                 </TableRow>
@@ -88,18 +120,56 @@ export default function AdminUsersPage() {
                       {user.createdAt ? format(new Date(user.createdAt), 'dd/MM/yy') : 'N/A'}
                     </TableCell>
                     <TableCell>
-                       <Badge variant="secondary">Active</Badge>
+                       <Badge variant={getStatusVariant(user.status)} className="capitalize">
+                         {user.status || 'Active'}
+                        </Badge>
                     </TableCell>
                      <TableCell>
                        <Badge variant={user.isPremium ? 'default' : 'outline'}>
                          {user.isPremium ? 'Premium' : 'Free'}
                         </Badge>
                     </TableCell>
+                    <TableCell className="text-right">
+                        {user.email !== 'admin@mediminder.com' && (
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon">
+                                        <MoreVertical className="h-4 w-4" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuLabel>Manage User</DropdownMenuLabel>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem onClick={() => updateUser(user.uid, { status: 'active' })}>
+                                        <UserCheck className="mr-2 h-4 w-4" />
+                                        <span>Set Active</span>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => updateUser(user.uid, { status: 'suspended' })}>
+                                        <UserX className="mr-2 h-4 w-4" />
+                                        <span>Set Suspended</span>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => updateUser(user.uid, { status: 'deactivated' })} className="text-destructive">
+                                        <CircleSlash className="mr-2 h-4 w-4" />
+                                        <span>Set Deactivated</span>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem onClick={() => updateUser(user.uid, { isPremium: true })}>
+                                        <Star className="mr-2 h-4 w-4" />
+                                        <span>Upgrade to Premium</span>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => updateUser(user.uid, { isPremium: false })}>
+                                        <ShieldOff className="mr-2 h-4 w-4" />
+                                        <span>Downgrade to Free</span>
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        )}
+                    </TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={5} className="h-24 text-center">
+                  <TableCell colSpan={6} className="h-24 text-center">
                     No users found.
                   </TableCell>
                 </TableRow>
