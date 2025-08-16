@@ -208,7 +208,7 @@ export default function HomePage() {
       const notificationId = `${medications[0].id}-${time}-${format(now, 'yyyy-MM-dd')}`;
       const alreadyNotified = sentNotifications.includes(notificationId);
 
-      if (!anyMedicationHandled && !alreadyNotified) {
+      if (!anyMedicationHandled && !alreadyNotified && !reminder) {
         
         setReminder({ medications, time });
         
