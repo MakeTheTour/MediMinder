@@ -21,6 +21,7 @@ import { useToast } from '@/hooks/use-toast';
 import { generateFamilyAlert } from '@/ai/flows/family-alert-flow';
 import { generateAppointmentReminder } from '@/ai/flows/appointment-reminder-flow';
 import { intelligentSnooze } from '@/ai/flows/intelligent-snooze';
+import { GroupedMedicationCard } from '@/components/grouped-medication-card';
 
 export default function HomePage() {
   const { user, isGuest } = useAuth();
@@ -85,20 +86,39 @@ export default function HomePage() {
   const activeAppointments = isGuest ? localAppointments : firestoreAppointments;
   const adherenceLogs = isGuest ? localAdherence : firestoreAdherence;
 
-  const todaysMedications = useMemo(() => {
+  const todaysMedicationsByTime = useMemo(() => {
     const today = new Date();
     const dayOfWeek = today.getDay(); // Sunday - 0, Monday - 1
-    const unsortedMeds = activeMedications.filter(med => {
+    const todaysMeds = activeMedications.filter(med => {
         if (med.frequency === 'Daily') return true;
         if (med.frequency === 'Weekly') return med.daysOfWeek?.includes(dayOfWeek);
         if (med.frequency === 'Monthly') return med.dayOfMonth === today.getDate();
         return false;
     });
 
-    return unsortedMeds.flatMap(med => med.times.map(time => ({ time, data: med })))
-                       .sort((a, b) => a.time.localeCompare(b.time));
+    const groupedByTime = todaysMeds.reduce((acc, med) => {
+        med.times.forEach(time => {
+            if (!acc[time]) {
+                acc[time] = [];
+            }
+            acc[time].push(med);
+        });
+        return acc;
+    }, {} as Record<string, Medication[]>);
+
+    return Object.entries(groupedByTime)
+        .sort(([timeA], [timeB]) => timeA.localeCompare(timeB))
+        .map(([time, medications]) => ({ time, medications }));
 
   }, [activeMedications]);
+
+  const nextMedication = useMemo(() => {
+    const now = new Date();
+    // Find the first medication time in the sorted list that is in the future
+    return todaysMedicationsByTime
+      .find(item => parse(item.time, 'HH:mm', new Date()) > now) || null;
+  }, [todaysMedicationsByTime]);
+
 
     const handleFamilyAlert = useCallback(async (medication: Medication, reason: string) => {
         if (isGuest || !user) {
@@ -387,12 +407,6 @@ export default function HomePage() {
     });
     return futureAppointments[0] || null;
   }, [activeAppointments]);
-  
-  const nextMedication = useMemo(() => {
-    const now = new Date();
-    // Find the first medication time in the sorted list that is in the future
-    return todaysMedications.find(item => parse(item.time, 'HH:mm', new Date()) > now) || null;
-  }, [todaysMedications]);
 
 
   useEffect(() => {
@@ -430,7 +444,7 @@ export default function HomePage() {
                 </CardTitle>
             </CardHeader>
             <CardContent>
-                <MedicationCard medication={nextMedication.data} specificTime={nextMedication.time} />
+                <GroupedMedicationCard time={nextMedication.time} medications={nextMedication.medications} />
             </CardContent>
         </Card>
       )}
@@ -464,10 +478,10 @@ export default function HomePage() {
           </div>
         </CardHeader>
         <CardContent>
-          {todaysMedications.length > 0 ? (
+          {todaysMedicationsByTime.length > 0 ? (
             <div className="space-y-4">
-              {todaysMedications.map((item, index) => (
-                  <MedicationCard key={`${item.data.id}-${item.time}-${index}`} medication={item.data} specificTime={item.time} />
+              {todaysMedicationsByTime.map((group) => (
+                  <GroupedMedicationCard key={group.time} time={group.time} medications={group.medications} />
               ))}
             </div>
           ) : (
@@ -521,3 +535,5 @@ export default function HomePage() {
     </>
   );
 }
+
+    

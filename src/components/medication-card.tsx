@@ -20,9 +20,10 @@ interface MedicationCardProps {
   onFamilyAlert?: (medication: Medication) => void;
   onEdit?: (id: string) => void;
   specificTime?: string;
+  hideTime?: boolean;
 }
 
-export function MedicationCard({ medication, onDelete, onFamilyAlert, specificTime, onEdit }: MedicationCardProps) {
+export function MedicationCard({ medication, onDelete, onFamilyAlert, specificTime, onEdit, hideTime = false }: MedicationCardProps) {
 
   const formatTime = (time24h: string) => {
     try {
@@ -119,10 +120,12 @@ export function MedicationCard({ medication, onDelete, onFamilyAlert, specificTi
           )}
         </div>
         <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-y-2 gap-x-4 text-sm text-muted-foreground">
-          <div className="flex items-center gap-2">
-            <Clock className="h-4 w-4 shrink-0" />
-            <span>{formattedTimes}</span>
-          </div>
+          {!hideTime && (
+             <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4 shrink-0" />
+                <span>{formattedTimes}</span>
+             </div>
+          )}
            <div className="flex items-center gap-2">
             <Utensils className="h-4 w-4 shrink-0" />
             <span>{getFoodInfo()}</span>
@@ -136,3 +139,5 @@ export function MedicationCard({ medication, onDelete, onFamilyAlert, specificTi
     </Card>
   );
 }
+
+    
