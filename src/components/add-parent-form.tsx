@@ -19,17 +19,12 @@ import { Input } from '@/components/ui/input';
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/context/auth-context';
 import { createParentInvitation } from '@/ai/flows/create-family-invitation-flow';
-import { findUserByEmail, FindUserByEmailOutput } from '@/ai/flows/find-user-by-email-flow';
-import { Loader2, Search } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { Card, CardContent } from './ui/card';
-import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
-import { Separator } from './ui/separator';
-
-const searchSchema = z.object({
-  email: z.string().email('A valid email is required to search.'),
-});
 
 const inviteSchema = z.object({
+  email: z.string().email('A valid email is required.'),
+  name: z.string().min(1, "Parent's name is required."),
   relation: z.string().min(1, 'Relation is required.'),
 });
 
@@ -39,57 +34,20 @@ export function AddParentForm() {
   const { toast } = useToast();
   const { user } = useAuth();
   
-  const [searchResult, setSearchResult] = useState<FindUserByEmailOutput | null>(null);
-  const [isSearching, setIsSearching] = useState(false);
   const [isInviting, setIsInviting] = useState(false);
-  const [searchError, setSearchError] = useState<string | null>(null);
   
-  const searchForm = useForm<z.infer<typeof searchSchema>>({
-    resolver: zodResolver(searchSchema),
-    defaultValues: {
-      email: '',
-    },
-  });
-
-  const inviteForm = useForm<z.infer<typeof inviteSchema>>({
+  const form = useForm<z.infer<typeof inviteSchema>>({
     resolver: zodResolver(inviteSchema),
     defaultValues: {
+      email: '',
+      name: '',
       relation: '',
     },
   });
 
-  async function handleSearch({ email }: z.infer<typeof searchSchema>) {
-    if(!user || !user.email) {
+  async function handleInvite(values: z.infer<typeof inviteSchema>) {
+    if(!user) {
         toast({ title: 'Error', description: 'You must be logged in to add a parent', variant: 'destructive'});
-        return;
-    }
-    
-    if(email === user.email) {
-        setSearchError('You cannot invite yourself.');
-        setSearchResult(null);
-        return;
-    }
-    
-    setIsSearching(true);
-    setSearchError(null);
-    setSearchResult(null);
-    try {
-        const result = await findUserByEmail({ email });
-        if (result.found) {
-            setSearchResult(result);
-        } else {
-            setSearchError('No user found with this email address.');
-        }
-    } catch (error) {
-        setSearchError('An error occurred while searching. Please try again.');
-    } finally {
-        setIsSearching(false);
-    }
-  }
-
-  async function handleInvite({ relation }: z.infer<typeof inviteSchema>) {
-    if(!user || !searchResult || !searchResult.name) {
-        toast({ title: 'Error', description: 'Cannot send invitation. User or relation data is missing.', variant: 'destructive'});
         return;
     }
 
@@ -99,15 +57,15 @@ export function AddParentForm() {
           inviterId: user.uid,
           inviterName: user.displayName || 'A user',
           inviterPhotoUrl: user.photoURL,
-          inviteeEmail: searchForm.getValues('email'),
-          inviteeName: searchResult.name,
-          relation: relation,
+          inviteeEmail: values.email,
+          inviteeName: values.name,
+          relation: values.relation,
         });
 
         if (result.success) {
           toast({
               title: "Invitation Sent",
-              description: `An invitation has been sent to ${searchResult.name}.`,
+              description: `An invitation has been sent to ${values.name}.`,
           });
           router.push('/family');
         } else {
@@ -123,75 +81,60 @@ export function AddParentForm() {
   }
 
   return (
-    <div className="space-y-6">
-        <Form {...searchForm}>
-            <form onSubmit={searchForm.handleSubmit(handleSearch)} className="space-y-4">
+    <Card>
+      <CardContent className="p-6">
+        <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleInvite)} className="space-y-4">
                 <FormField
-                control={searchForm.control}
-                name="email"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Search by Email</FormLabel>
-                    <div className="flex gap-2">
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Parent's Name</FormLabel>
+                        <FormControl>
+                            <Input placeholder="e.g., Jane Doe" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Parent's Email</FormLabel>
                         <FormControl>
                             <Input type="email" placeholder="e.g., jane.doe@example.com" {...field} />
                         </FormControl>
-                        <Button type="submit" disabled={isSearching} className="shrink-0">
-                            {isSearching ? <Loader2 className="h-4 w-4 animate-spin"/> : <Search className="h-4 w-4"/>}
-                            <span className="sr-only">Search</span>
-                        </Button>
-                    </div>
-                    <FormMessage />
-                    </FormItem>
-                )}
+                        <FormMessage />
+                        </FormItem>
+                    )}
                 />
+                <FormField
+                    control={form.control}
+                    name="relation"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Your Relation to Them</FormLabel>
+                        <FormControl>
+                            <Input placeholder="e.g., Mother, Father" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                <Button type="submit" className="w-full" disabled={isInviting}>
+                    {isInviting ? (
+                        <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin"/>
+                            Sending Invitation...
+                        </>
+                    ) : 'Send Invitation'}
+                </Button>
             </form>
         </Form>
-        
-        {searchError && <p className="text-sm font-medium text-destructive">{searchError}</p>}
-
-        {searchResult && (
-            <Card>
-                <CardContent className="p-4">
-                    <div className="flex items-center gap-4">
-                        <Avatar className="h-16 w-16">
-                            <AvatarImage src={searchResult.photoURL} alt={searchResult.name} />
-                            <AvatarFallback>{searchResult.name?.charAt(0).toUpperCase()}</AvatarFallback>
-                        </Avatar>
-                        <div>
-                            <p className="font-bold text-lg">{searchResult.name}</p>
-                            <p className="text-sm text-muted-foreground">{searchForm.getValues('email')}</p>
-                        </div>
-                    </div>
-                    <Separator className="my-4"/>
-                    <Form {...inviteForm}>
-                        <form onSubmit={inviteForm.handleSubmit(handleInvite)} className="space-y-4">
-                            <FormField
-                            control={inviteForm.control}
-                            name="relation"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Your Relation to {searchResult.name}</FormLabel>
-                                <FormControl>
-                                    <Input placeholder="e.g., Mother, Father" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                            />
-                            <Button type="submit" className="w-full" disabled={isInviting}>
-                                {isInviting ? (
-                                    <>
-                                        <Loader2 className="mr-2 h-4 w-4 animate-spin"/>
-                                        Sending Invitation...
-                                    </>
-                                ) : 'Send Invitation'}
-                            </Button>
-                        </form>
-                    </Form>
-                </CardContent>
-            </Card>
-        )}
-    </div>
+      </CardContent>
+    </Card>
   );
 }

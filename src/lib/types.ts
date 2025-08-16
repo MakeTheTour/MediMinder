@@ -86,4 +86,5 @@ export interface Invitation {
   inviteeEmail: string;
   relation: string;
   status: 'pending' | 'accepted' | 'declined';
+  inviteeId?: string;
 }
