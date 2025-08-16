@@ -13,7 +13,6 @@ import {z} from 'genkit';
 
 const AppointmentReminderInputSchema = z.object({
   patientName: z.string().describe("The name of the person with the appointment."),
-  familyName: z.string().describe("The name of the family member to be notified."),
   doctorName: z.string().describe("The name of the doctor for the appointment."),
   specialty: z.string().describe("The specialty of the doctor."),
   appointmentDate: z.string().describe("The date of the appointment (e.g., 2024-12-25)."),
@@ -23,7 +22,7 @@ const AppointmentReminderInputSchema = z.object({
 export type AppointmentReminderInput = z.infer<typeof AppointmentReminderInputSchema>;
 
 const AppointmentReminderOutputSchema = z.object({
-  reminderMessage: z.string().describe("The notification message to be sent to the family member."),
+  reminderMessage: z.string().describe("The notification message to be sent to the user."),
 });
 export type AppointmentReminderOutput = z.infer<typeof AppointmentReminderOutputSchema>;
 
@@ -35,18 +34,15 @@ const prompt = ai.definePrompt({
   name: 'appointmentReminderPrompt',
   input: {schema: AppointmentReminderInputSchema},
   output: {schema: AppointmentReminderOutputSchema},
-  prompt: `You are an AI assistant for a health app called MediMinder. Your task is to generate a concise and clear reminder for an upcoming doctor's appointment.
+  prompt: `You are an AI assistant for a health app called MediMinder. Your task is to generate a concise and clear reminder for an upcoming doctor's appointment for the user.
 
-This message will be sent to {{{familyName}}} to remind them about {{{patientName}}}'s appointment.
-
-Details:
-- Patient: {{{patientName}}}
+Details for user {{{patientName}}}:
 - Doctor: Dr. {{{doctorName}}} ({{{specialty}}})
 - When: {{{appointmentDate}}} at {{{appointmentTime}}}
 
 This is a {{{reminderTime}}} reminder.
 
-Generate a friendly and helpful message to {{{familyName}}}.
+Generate a friendly and helpful message.
 `,
 });
 

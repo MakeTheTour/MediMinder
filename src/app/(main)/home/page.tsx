@@ -18,7 +18,6 @@ import { useLocalStorage } from '@/hooks/use-local-storage';
 import { MedicationReminderDialog } from '@/components/medication-reminder-dialog';
 import { trackAdherence } from '@/ai/flows/track-adherence-flow';
 import { useToast } from '@/hooks/use-toast';
-import { generateFamilyAlert } from '@/ai/flows/family-alert-flow';
 import { generateAppointmentReminder } from '@/ai/flows/appointment-reminder-flow';
 import { intelligentSnooze } from '@/ai/flows/intelligent-snooze';
 import { GroupedMedicationCard } from '@/components/grouped-medication-card';
@@ -122,32 +121,6 @@ export default function HomePage() {
   }, [todaysMedicationsByTime]);
 
 
-  const handleFamilyAlert = useCallback(async (medication: Medication, reason: string) => {
-      if (isGuest || !user) {
-          toast({ title: 'Sign In Required', description: 'Please sign in to alert family members.', variant: 'destructive'});
-          return;
-      }
-      const acceptedFamilyMember = familyMembers.find(m => m.status === 'accepted');
-      if (!acceptedFamilyMember) {
-          toast({ title: 'No Linked Family Member', description: 'Please add and link a family member in the Family tab first.', variant: 'destructive'});
-          return;
-      }
-      
-      try {
-          toast({ title: 'Sending Alert...', description: `Notifying ${acceptedFamilyMember.name}.` });
-          const result = await generateFamilyAlert({
-              patientName: user.displayName || 'A family member',
-              medicationName: `${medication.name} (${reason})`,
-              familyName: acceptedFamilyMember.name,
-          });
-          // Here you would typically send the alert via SMS/email
-          console.log("Family Alert Message:", result.alertMessage);
-          toast({ title: 'Alert Sent!', description: `${acceptedFamilyMember.name} has been notified.` });
-      } catch (error) {
-          toast({ title: 'Error', description: 'Could not send alert. Please try again.', variant: 'destructive'});
-      }
-  }, [isGuest, user, familyMembers, toast]);
-
   const handleReminderAction = useCallback((medication: Medication, scheduledTime: string, status: 'taken' | 'skipped' | 'stock_out' | 'muted' | 'missed') => {
     if (escalationTimerRef.current) {
         clearTimeout(escalationTimerRef.current);
@@ -172,11 +145,15 @@ export default function HomePage() {
       });
     }
 
-    if (status === 'stock_out') {
-        handleFamilyAlert(medication, 'is out of stock');
+    if (status === 'missed' || status === 'stock_out') {
+      toast({
+        title: status === 'missed' ? 'Dose Missed' : 'Out of Stock',
+        description: `You have logged ${medication.name} as ${status}.`,
+        variant: 'destructive',
+      })
     }
     setReminder(null);
-  }, [user, isGuest, localAdherence, setLocalAdherence, handleFamilyAlert]);
+  }, [user, isGuest, localAdherence, setLocalAdherence, toast]);
 
 
   const checkReminders = useCallback(() => {
@@ -221,11 +198,10 @@ export default function HomePage() {
             if (escalationTimerRef.current) clearTimeout(escalationTimerRef.current);
             escalationTimerRef.current = setTimeout(() => {
                 handleReminderAction(med, time, 'missed');
-                handleFamilyAlert(med, 'missed dose');
                 setReminder(null); // Close the dialog
                 toast({
                     title: `Dose Missed: ${med.name}`,
-                    description: `You missed your ${time} dose. Notifying family.`,
+                    description: `You missed your ${time} dose.`,
                     variant: 'destructive',
                 });
             }, 2 * 60 * 1000); // 2 minutes
@@ -236,7 +212,7 @@ export default function HomePage() {
         }
       }
     }
-  }, [adherenceLogs, activeMedications, reminder, sentNotifications, setSentNotifications, snoozedUntil, handleReminderAction, handleFamilyAlert, toast]);
+  }, [adherenceLogs, activeMedications, reminder, sentNotifications, setSentNotifications, snoozedUntil, handleReminderAction, toast]);
 
   const checkMissedDoses = useCallback(async () => {
     const now = new Date();
@@ -264,11 +240,9 @@ export default function HomePage() {
                 if (!wasHandled) {
                     toast({
                         title: `Dose Missed: ${med.name}`,
-                        description: `You missed your ${time} dose. Notifying family.`,
+                        description: `You missed your ${time} dose.`,
                         variant: 'destructive',
                     });
-
-                    await handleFamilyAlert(med, 'dose missed');
 
                     const logEntry: Omit<AdherenceLog, 'id'> = {
                         medicationId: med.id,
@@ -287,15 +261,14 @@ export default function HomePage() {
             }
         }
     }
-  }, [activeMedications, adherenceLogs, user, isGuest, handleFamilyAlert, setLocalAdherence, toast]);
+  }, [activeMedications, adherenceLogs, user, isGuest, setLocalAdherence, toast]);
 
 
   const checkAppointmentReminders = useCallback(async () => {
     if (isGuest || !user) return;
 
     const now = new Date();
-    const acceptedFamilyMember = familyMembers.find(m => m.status === 'accepted');
-
+    
     for (const appt of activeAppointments) {
       const apptDateTime = parse(`${appt.date} ${appt.time}`, 'yyyy-MM-dd HH:mm', new Date());
       const hoursUntil = differenceInHours(apptDateTime, now);
@@ -308,28 +281,19 @@ export default function HomePage() {
           const sound = new Audio('/notification.mp3');
           sound.play().catch(e => console.error("Failed to play notification sound:", e));
           
-          toast({
-            title: `Appointment Reminder (${reminderTime}h)`,
-            description: `Your appointment with Dr. ${appt.doctorName} is coming up.`,
-          });
-
-          if (acceptedFamilyMember) {
-            const result = await generateAppointmentReminder({
-              patientName: user.displayName || 'A family member',
-              familyName: acceptedFamilyMember.name,
+          const result = await generateAppointmentReminder({
+              patientName: user.displayName || 'User',
               doctorName: appt.doctorName,
               specialty: appt.specialty,
               appointmentDate: appt.date,
               appointmentTime: appt.time,
               reminderTime: `${reminderTime} hour(s)`
-            });
-            console.log("Appointment Reminder for Family:", result.reminderMessage);
-             toast({
-                title: 'Family Notified',
-                description: `${acceptedFamilyMember.name} was reminded about the appointment.`,
-                variant: 'default',
-            });
-          }
+          });
+          
+          toast({
+            title: `Appointment Reminder (${reminderTime}h)`,
+            description: result.reminderMessage,
+          });
           
           setSentAppointmentReminders(prev => [...prev, reminderId]);
         }
@@ -343,7 +307,7 @@ export default function HomePage() {
         await checkAndSend('1h');
       }
     }
-  }, [isGuest, user, activeAppointments, sentAppointmentReminders, setSentAppointmentReminders, familyMembers, toast]);
+  }, [isGuest, user, activeAppointments, sentAppointmentReminders, setSentAppointmentReminders, toast]);
 
 
   useEffect(() => {
