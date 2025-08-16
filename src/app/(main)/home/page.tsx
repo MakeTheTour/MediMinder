@@ -193,8 +193,7 @@ export default function HomePage() {
       const scheduledTime = parse(time, 'HH:mm', new Date());
 
       // Check if it's time for the medication
-      const isTimeToShow = isAfter(now, scheduledTime);
-      if (!isTimeToShow) continue;
+      if (now < scheduledTime) continue;
 
       // Check if this dose has already been handled today
       const anyMedicationHandled = medications.some(med => 
