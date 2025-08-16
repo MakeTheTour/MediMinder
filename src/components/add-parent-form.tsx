@@ -95,7 +95,7 @@ export function AddParentForm() {
 
     setIsInviting(true);
     try {
-        await createParentInvitation({
+        const result = await createParentInvitation({
           inviterId: user.uid,
           inviterName: user.displayName || 'A user',
           inviterPhotoUrl: user.photoURL,
@@ -103,11 +103,17 @@ export function AddParentForm() {
           inviteeName: searchResult.name,
           relation: relation,
         });
-        toast({
-            title: "Invitation Sent",
-            description: `An invitation has been sent to ${searchResult.name}.`,
-        });
-        router.push('/family');
+
+        if (result.success) {
+          toast({
+              title: "Invitation Sent",
+              description: `An invitation has been sent to ${searchResult.name}.`,
+          });
+          router.push('/family');
+        } else {
+          toast({ title: 'Error', description: result.message || 'Could not add parent. Please try again.', variant: 'destructive'});
+        }
+
     } catch (error: any) {
         console.error("Error adding parent:", error);
         toast({ title: 'Error', description: error.message || 'Could not add parent. Please try again.', variant: 'destructive'});
