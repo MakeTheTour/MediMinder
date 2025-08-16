@@ -57,7 +57,7 @@ export default function FamilyPage() {
       });
 
       // Listen for invitations sent BY this user that are still pending
-      const sentQuery = query(collection(db, 'invitations'), where('inviterId', '==', user.uid), where('status', '==', 'pending'));
+      const sentQuery = query(collection(db, 'invitations'), where('inviterId', '==', user.uid));
       const sentUnsub = onSnapshot(sentQuery, (snapshot) => {
          setSentInvitations(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Invitation)));
       });
@@ -138,7 +138,7 @@ export default function FamilyPage() {
 
     const allLinkedAccounts = [
         ...familyMembers,
-        ...sentInvitations.map(inv => ({
+        ...sentInvitations.filter(inv => inv.status === 'pending').map(inv => ({
             id: inv.id,
             name: inv.inviteeName,
             email: inv.inviteeEmail,

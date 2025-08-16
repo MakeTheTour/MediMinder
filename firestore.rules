@@ -1,27 +1,31 @@
 
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Users can read their own profile and other basic user info, but cannot list all users.
+    // Users can read and write their own data.
     match /users/{userId} {
-      allow read, update, write: if request.auth != null && request.auth.uid == userId;
-      
-      // Allow reading/writing to subcollections for the owner
-      match /{allPaths=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+      // Subcollections also inherit the rule.
+      match /{allSubcollections=**} {
         allow read, write: if request.auth != null && request.auth.uid == userId;
       }
     }
     
-    // Invitations can be created by any authenticated user.
-    // They can only be read by the inviter or the invitee.
-    // They can be updated (accepted/declined) only by the invitee.
-    // They can be deleted only by the inviter.
+    // Invitations
     match /invitations/{invitationId} {
+      // Allow users to create invitations.
       allow create: if request.auth != null;
-      allow read: if request.auth != null && (request.auth.uid == resource.data.inviterId || request.auth.token.email == resource.data.inviteeEmail);
-      allow update, delete: if request.auth != null && (request.auth.uid == resource.data.inviterId || request.auth.uid == resource.data.inviteeId);
+
+      // Allow users to read, update, or delete invitations they sent or received.
+      allow read, update, delete: if request.auth != null && 
+        (request.auth.uid == resource.data.inviterId || (resource.data.inviteeId != null && request.auth.uid == resource.data.inviteeId) || request.auth.token.email == resource.data.inviteeEmail);
+
+      // Allow listing of invitations sent by the current user.
+      allow list: if request.auth != null && request.query.where[0][0] == "inviterId" && request.query.where[0][2] == request.auth.uid;
+      
+      // Allow listing of invitations received by the current user (by email).
+      allow list: if request.auth != null && request.query.where[0][0] == "inviteeEmail" && request.query.where[0][2] == request.auth.token.email;
     }
   }
 }
