@@ -69,7 +69,7 @@ export function MedicationReminderDialog({
   if (!isOpen) return null;
 
   return (
-    <AlertDialog open={isOpen} onOpenChange={(open) => !open && handleAction(onTake)}>
+    <AlertDialog open={isOpen}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary">
@@ -94,7 +94,7 @@ export function MedicationReminderDialog({
             ))}
         </div>
         <AlertDialogFooter className="grid grid-cols-2 gap-4">
-          <Button variant="destructive" onClick={() => handleAction(onStockOut)}>
+          <Button variant="outline" onClick={() => handleAction(onStockOut)}>
             <PackageX className="mr-2 h-4 w-4" />
             Stock Out
           </Button>

@@ -11,7 +11,7 @@ import { MedicationCard } from '@/components/medication-card';
 import { AppointmentCard } from '@/components/appointment-card';
 import { format, parse, isToday, isFuture, addMinutes, differenceInHours, differenceInMinutes, startOfDay } from 'date-fns';
 import { useAuth } from '@/context/auth-context';
-import { collection, onSnapshot, query, orderBy, getDocs, doc } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, getDocs, doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase-client';
 import { useRouter } from 'next/navigation';
 import { useLocalStorage } from '@/hooks/use-local-storage';
@@ -37,8 +37,8 @@ export default function HomePage() {
   const [firestoreAppointments, setFirestoreAppointments] = useState<Appointment[]>([]);
   const [firestoreAdherence, setFirestoreAdherence] = useState<AdherenceLog[]>([]);
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
 
-  const [greeting, setGreeting] = useState('');
   const [reminder, setReminder] = useState<{ medications: Medication[]; time: string } | null>(null);
   
   const escalationTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -65,18 +65,26 @@ export default function HomePage() {
       const familyUnsub = onSnapshot(collection(db, 'users', user.uid, 'familyMembers'), (snapshot) => {
           setFamilyMembers(snapshot.docs.map(doc => doc.data() as FamilyMember));
       });
+      
+      const userProfileUnsub = onSnapshot(doc(db, 'users', user.uid), (doc) => {
+        if (doc.exists()) {
+            setUserProfile(doc.data() as UserProfile);
+        }
+      });
 
       return () => {
         medUnsub();
         apptUnsub();
         adherenceUnsub();
         familyUnsub();
+        userProfileUnsub();
       };
     } else {
       setFirestoreMedications([]);
       setFirestoreAppointments([]);
       setFirestoreAdherence([]);
       setFamilyMembers([]);
+      setUserProfile(null);
     }
   }, [user, isGuest, setLocalAdherence, setLocalAppointments, setLocalMedications]);
 
@@ -143,26 +151,20 @@ export default function HomePage() {
           });
         }
         
-        if (status === 'stock_out' && familyMembers.length > 0) {
-            // Check for family members with premium before sending alert
+        // Family alert logic for Stock Out
+        if (status === 'stock_out' && familyMembers.length > 0 && userProfile?.isPremium) {
             for (const member of familyMembers) {
                 if (member.status === 'accepted') {
-                     // In a real app, you'd check the member's subscription status here
-                    const isFamilyMemberPremium = true; // Placeholder
-                    
-                    if (isFamilyMemberPremium) {
-                        const alert = await generateFamilyAlert({
-                            patientName: user?.displayName || 'A user',
-                            medicationName: medication.name,
-                            familyName: member.name,
-                        });
-                        // In a real app, this would send a push notification/email to the family member
-                        console.log(`Sending alert to ${member.name}: ${alert.alertMessage}`);
-                        toast({
-                            title: 'Family Alert Sent',
-                            description: `Notified ${member.name} about ${medication.name} stock out.`,
-                        });
-                    }
+                    const alert = await generateFamilyAlert({
+                        patientName: user?.displayName || 'A user',
+                        medicationName: medication.name,
+                        familyName: member.name,
+                    });
+                    console.log(`Sending alert to ${member.name}: ${alert.alertMessage}`);
+                    toast({
+                        title: 'Family Alert Sent',
+                        description: `Notified ${member.name} about ${medication.name} stock out.`,
+                    });
                 }
             }
         }
@@ -176,7 +178,7 @@ export default function HomePage() {
       })
     }
     setReminder(null);
-  }, [user, isGuest, localAdherence, setLocalAdherence, toast, familyMembers]);
+  }, [user, isGuest, setLocalAdherence, toast, familyMembers, userProfile]);
 
 
   const checkReminders = useCallback(() => {
@@ -212,9 +214,10 @@ export default function HomePage() {
           setReminder({ medications, time });
           
           if (escalationTimerRef.current) clearTimeout(escalationTimerRef.current);
+          // Auto-miss after 2 minutes
           escalationTimerRef.current = setTimeout(() => {
               handleReminderAction(medications, time, 'missed');
-          }, 2 * 60 * 1000); // 2 minutes
+          }, 2 * 60 * 1000);
         }
         
         setSentNotifications(prev => [...prev, notificationId]);
@@ -230,50 +233,47 @@ export default function HomePage() {
     for (const { time, medications } of todaysMedicationsByTime) {
       const scheduledTime = parse(time, 'HH:mm', new Date());
       
-      if (scheduledTime < now) {
-        const minutesSinceScheduled = differenceInMinutes(now, scheduledTime);
+      // Check for doses missed by 30-31 minutes to send alert
+      if (now > addMinutes(scheduledTime, 30) && now <= addMinutes(scheduledTime, 31)) {
+        const anyMedHandled = medications.some(med =>
+          adherenceLogs.some(log =>
+            log.medicationId === med.id &&
+            isToday(new Date(log.takenAt)) &&
+            log.scheduledTime === time
+          )
+        );
   
-        if (minutesSinceScheduled > 30 && minutesSinceScheduled <= 31) {
-          const anyMedHandled = medications.some(med =>
-            adherenceLogs.some(log =>
-              log.medicationId === med.id &&
-              isToday(new Date(log.takenAt)) &&
-              log.scheduledTime === time
-            )
-          );
-  
-          if (!anyMedHandled) {
-            toast({
-              title: `Dose already Missed`,
-              description: `Your ${format(scheduledTime, 'h:mm a')} dose was missed. You can still log it if needed.`,
-              variant: 'destructive',
-              duration: 10000,
-            });
-            
-            // Send family alert for missed dose
-            if (!isGuest && user && familyMembers.length > 0) {
-                 for (const member of familyMembers) {
-                    if (member.status === 'accepted') {
-                        for(const medication of medications) {
-                            const alert = await generateFamilyAlert({
-                                patientName: user.displayName || 'A user',
-                                medicationName: medication.name,
-                                familyName: member.name,
-                            });
-                             console.log(`Sending alert to ${member.name}: ${alert.alertMessage}`);
-                             toast({
-                                title: 'Family Alert Sent',
-                                description: `Notified ${member.name} about missed dose of ${medication.name}.`,
-                            });
-                        }
-                    }
-                }
-            }
+        if (!anyMedHandled) {
+          toast({
+            title: `Dose already Missed`,
+            description: `Your ${format(scheduledTime, 'h:mm a')} dose was missed. You can still log it if needed.`,
+            variant: 'destructive',
+            duration: 10000,
+          });
+          
+          // Send family alert for missed dose
+          if (!isGuest && user && familyMembers.length > 0 && userProfile?.isPremium) {
+               for (const member of familyMembers) {
+                  if (member.status === 'accepted') {
+                      for(const medication of medications) {
+                          const alert = await generateFamilyAlert({
+                              patientName: user.displayName || 'A user',
+                              medicationName: medication.name,
+                              familyName: member.name,
+                          });
+                           console.log(`Sending alert to ${member.name}: ${alert.alertMessage}`);
+                           toast({
+                              title: 'Family Alert Sent',
+                              description: `Notified ${member.name} about missed dose of ${medication.name}.`,
+                          });
+                      }
+                  }
+              }
           }
         }
       }
     }
-  }, [todaysMedicationsByTime, adherenceLogs, user, isGuest, familyMembers, toast]);
+  }, [todaysMedicationsByTime, adherenceLogs, user, isGuest, familyMembers, toast, userProfile]);
 
 
   const checkAppointmentReminders = useCallback(async () => {
@@ -307,6 +307,20 @@ export default function HomePage() {
             description: result.reminderMessage,
           });
           
+          // Also notify family members for appointments
+          if (familyMembers.length > 0 && userProfile?.isPremium) {
+            for (const member of familyMembers) {
+              if(member.status === 'accepted') {
+                console.log(`Notifying family member ${member.name} about appointment.`);
+                // In a real app, you would generate a specific alert for the family member
+                toast({
+                  title: `Family Alert Sent`,
+                  description: `Notified ${member.name} about ${user.displayName}'s upcoming appointment.`
+                })
+              }
+            }
+          }
+
           setSentAppointmentReminders(prev => [...prev, reminderId]);
         }
       };
@@ -319,7 +333,7 @@ export default function HomePage() {
         await checkAndSend('3h');
       }
     }
-  }, [isGuest, user, activeAppointments, sentAppointmentReminders, setSentAppointmentReminders, toast]);
+  }, [isGuest, user, activeAppointments, sentAppointmentReminders, setSentAppointmentReminders, toast, familyMembers, userProfile]);
 
 
   useEffect(() => {
