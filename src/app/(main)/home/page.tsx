@@ -122,31 +122,61 @@ export default function HomePage() {
   }, [todaysMedicationsByTime]);
 
 
-    const handleFamilyAlert = useCallback(async (medication: Medication, reason: string) => {
-        if (isGuest || !user) {
-            toast({ title: 'Sign In Required', description: 'Please sign in to alert family members.', variant: 'destructive'});
-            return;
-        }
-        const acceptedFamilyMember = familyMembers.find(m => m.status === 'accepted');
-        if (!acceptedFamilyMember) {
-            toast({ title: 'No Linked Family Member', description: 'Please add and link a family member in the Family tab first.', variant: 'destructive'});
-            return;
-        }
-        
-        try {
-            toast({ title: 'Sending Alert...', description: `Notifying ${acceptedFamilyMember.name}.` });
-            const result = await generateFamilyAlert({
-                patientName: user.displayName || 'A family member',
-                medicationName: `${medication.name} (${reason})`,
-                familyName: acceptedFamilyMember.name,
-            });
-            // Here you would typically send the alert via SMS/email
-            console.log("Family Alert Message:", result.alertMessage);
-            toast({ title: 'Alert Sent!', description: `${acceptedFamilyMember.name} has been notified.` });
-        } catch (error) {
-            toast({ title: 'Error', description: 'Could not send alert. Please try again.', variant: 'destructive'});
-        }
-    }, [isGuest, user, familyMembers, toast]);
+  const handleFamilyAlert = useCallback(async (medication: Medication, reason: string) => {
+      if (isGuest || !user) {
+          toast({ title: 'Sign In Required', description: 'Please sign in to alert family members.', variant: 'destructive'});
+          return;
+      }
+      const acceptedFamilyMember = familyMembers.find(m => m.status === 'accepted');
+      if (!acceptedFamilyMember) {
+          toast({ title: 'No Linked Family Member', description: 'Please add and link a family member in the Family tab first.', variant: 'destructive'});
+          return;
+      }
+      
+      try {
+          toast({ title: 'Sending Alert...', description: `Notifying ${acceptedFamilyMember.name}.` });
+          const result = await generateFamilyAlert({
+              patientName: user.displayName || 'A family member',
+              medicationName: `${medication.name} (${reason})`,
+              familyName: acceptedFamilyMember.name,
+          });
+          // Here you would typically send the alert via SMS/email
+          console.log("Family Alert Message:", result.alertMessage);
+          toast({ title: 'Alert Sent!', description: `${acceptedFamilyMember.name} has been notified.` });
+      } catch (error) {
+          toast({ title: 'Error', description: 'Could not send alert. Please try again.', variant: 'destructive'});
+      }
+  }, [isGuest, user, familyMembers, toast]);
+
+  const handleReminderAction = useCallback((medication: Medication, scheduledTime: string, status: 'taken' | 'skipped' | 'stock_out' | 'muted' | 'missed') => {
+    if (escalationTimerRef.current) {
+        clearTimeout(escalationTimerRef.current);
+        escalationTimerRef.current = null;
+    }
+
+    const logEntry: Omit<AdherenceLog, 'id'> = {
+      medicationId: medication.id,
+      medicationName: medication.name,
+      takenAt: new Date().toISOString(),
+      status: status,
+      userId: user?.uid || 'guest',
+      scheduledTime: scheduledTime,
+    };
+
+    if (isGuest || !user) {
+      setLocalAdherence([...localAdherence, { ...logEntry, id: new Date().toISOString() }]);
+    } else {
+      trackAdherence({
+          ...logEntry,
+          userId: user.uid,
+      });
+    }
+
+    if (status === 'stock_out') {
+        handleFamilyAlert(medication, 'is out of stock');
+    }
+    setReminder(null);
+  }, [user, isGuest, localAdherence, setLocalAdherence, handleFamilyAlert]);
 
 
   const checkReminders = useCallback(() => {
@@ -331,37 +361,6 @@ export default function HomePage() {
       clearInterval(appointmentReminderInterval);
     };
   }, [checkReminders, checkMissedDoses, checkAppointmentReminders]);
-
-
-  const handleReminderAction = useCallback((medication: Medication, scheduledTime: string, status: 'taken' | 'skipped' | 'stock_out' | 'muted' | 'missed') => {
-    if (escalationTimerRef.current) {
-        clearTimeout(escalationTimerRef.current);
-        escalationTimerRef.current = null;
-    }
-
-    const logEntry: Omit<AdherenceLog, 'id'> = {
-      medicationId: medication.id,
-      medicationName: medication.name,
-      takenAt: new Date().toISOString(),
-      status: status,
-      userId: user?.uid || 'guest',
-      scheduledTime: scheduledTime,
-    };
-
-    if (isGuest || !user) {
-      setLocalAdherence([...localAdherence, { ...logEntry, id: new Date().toISOString() }]);
-    } else {
-      trackAdherence({
-          ...logEntry,
-          userId: user.uid,
-      });
-    }
-
-    if (status === 'stock_out') {
-        handleFamilyAlert(medication, 'is out of stock');
-    }
-    setReminder(null);
-  }, [user, isGuest, localAdherence, setLocalAdherence, handleFamilyAlert]);
   
     const handleSnooze = async (medication: Medication, time: string) => {
         if (escalationTimerRef.current) {
@@ -559,6 +558,8 @@ export default function HomePage() {
     </>
   );
 }
+
+    
 
     
 
