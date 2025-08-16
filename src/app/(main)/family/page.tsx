@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { FamilyMember, Invitation, UserProfile } from '@/lib/types';
 import { useAuth } from '@/context/auth-context';
 import { useState, useEffect } from 'react';
-import { collection, onSnapshot, doc, deleteDoc, query, where, getDoc, getDocs, updateDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, deleteDoc, query, where, getDoc, getDocs, writeBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase-client';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
@@ -20,7 +20,7 @@ import { declineInvitation } from '@/ai/flows/decline-invitation-flow';
 export default function FamilyPage() {
     const { user, isGuest } = useAuth();
     const { toast } = useToast();
-    const [sentInvitations, setSentInvitations] = useState<FamilyMember[]>([]);
+    const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
     const [receivedInvitations, setReceivedInvitations] = useState<Invitation[]>([]);
     const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
     const [loading, setLoading] = useState(true);
@@ -28,7 +28,7 @@ export default function FamilyPage() {
 
     useEffect(() => {
       if (!user || isGuest) {
-        setSentInvitations([]);
+        setFamilyMembers([]);
         setReceivedInvitations([]);
         setUserProfile(null);
         setLoading(false);
@@ -47,9 +47,9 @@ export default function FamilyPage() {
       
       fetchUserProfile();
 
-      // Listen for invitations sent BY this user
-      const sentUnsub = onSnapshot(collection(db, 'users', user.uid, 'familyMembers'), (snapshot) => {
-          setSentInvitations(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as FamilyMember)));
+      // Listen for family members added by this user
+      const membersUnsub = onSnapshot(collection(db, 'users', user.uid, 'familyMembers'), (snapshot) => {
+          setFamilyMembers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as FamilyMember)));
           setLoading(false);
       });
 
@@ -60,32 +60,35 @@ export default function FamilyPage() {
       });
 
       return () => {
-        sentUnsub();
+        membersUnsub();
         receivedUnsub();
       };
     }, [user, isGuest]);
 
-    const handleCancelSentInvitation = async (memberId: string) => {
+    const handleCancelSentInvitation = async (memberId: string, memberEmail: string) => {
         if (!user) return;
-        // This should ideally be a cloud function for atomicity, but for now we delete from client
-        // Find the invitation doc to get the invitee email to delete the root invitation doc
+        const batch = writeBatch(db);
+
+        // 1. Delete from the user's familyMembers subcollection
         const memberRef = doc(db, 'users', user.uid, 'familyMembers', memberId);
-        const memberSnap = await getDoc(memberRef);
-        if (memberSnap.exists()) {
-          const q = query(collection(db, 'invitations'), where('inviterId', '==', user.uid), where('inviteeEmail', '==', memberSnap.data().email));
-          const invitations = await getDocs(q);
-          invitations.forEach(async (invitationDoc) => {
-            await deleteDoc(doc(db, 'invitations', invitationDoc.id));
-          });
-          await deleteDoc(memberRef);
-          toast({ title: 'Invitation Cancelled' });
-        }
+        batch.delete(memberRef);
+
+        // 2. Find and delete the root invitation doc
+        const q = query(collection(db, 'invitations'), where('inviterId', '==', user.uid), where('inviteeEmail', '==', memberEmail));
+        const invitations = await getDocs(q);
+        invitations.forEach((invitationDoc) => {
+           batch.delete(doc(db, 'invitations', invitationDoc.id));
+        });
+
+        await batch.commit();
+        toast({ title: 'Invitation Cancelled' });
     };
     
     const handleRemoveLinkedMember = async (memberId: string) => {
         if (!user) return;
         // This is complex because it should update both users' records.
         // For now, we just remove from the current user's list.
+        // A more robust solution would use a Cloud Function to handle denormalization.
         await deleteDoc(doc(db, 'users', user.uid, 'familyMembers', memberId));
         toast({ title: 'Member Removed' });
     }
@@ -184,7 +187,7 @@ export default function FamilyPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {(!isGuest && sentInvitations.length > 0) ? sentInvitations.map(member => (
+            {(!isGuest && familyMembers.length > 0) ? familyMembers.map(member => (
               <div key={member.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50">
                 <div className="flex items-center gap-4">
                    <Avatar>
@@ -202,7 +205,7 @@ export default function FamilyPage() {
                     ) : (
                          <Badge variant="default">Linked</Badge>
                     )}
-                    <Button variant="ghost" size="sm" onClick={() => member.status === 'pending' ? handleCancelSentInvitation(member.id) : handleRemoveLinkedMember(member.id)}>
+                    <Button variant="ghost" size="sm" onClick={() => member.status === 'pending' ? handleCancelSentInvitation(member.id, member.email) : handleRemoveLinkedMember(member.id)}>
                         {member.status === 'pending' ? 'Cancel' : 'Remove'}
                     </Button>
                 </div>
