@@ -75,7 +75,7 @@ export function MedicationCard({ medication, onDelete, onFamilyAlert, specificTi
 
 
   return (
-    <Card className="w-full overflow-hidden transition-all hover:shadow-md bg-muted/20 border">
+    <Card className="w-full overflow-hidden transition-all hover:shadow-md border">
       <CardContent className="p-4">
         <div className="flex items-start justify-between">
           <div className="flex items-start gap-4">

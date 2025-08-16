@@ -23,7 +23,7 @@ export function GroupedMedicationCard({ time, medications }: GroupedMedicationCa
   }
 
   return (
-    <Card className="w-full overflow-hidden bg-muted/20 border">
+    <Card className="w-full overflow-hidden border">
         <CardHeader className="p-4 pb-0">
             <div className="flex items-center gap-2 text-foreground font-semibold">
                 <Clock className="h-5 w-5 text-primary" />

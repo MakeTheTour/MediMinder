@@ -37,7 +37,7 @@ export function AppointmentCard({ appointment, onDelete, onEdit }: AppointmentCa
 
   return (
      <Collapsible asChild>
-        <Card className="w-full overflow-hidden transition-all hover:shadow-md bg-muted/20 border">
+        <Card className="w-full overflow-hidden transition-all hover:shadow-md border">
             <div className="flex items-start justify-between p-4">
                 <div className="flex items-start gap-4">
                     <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-accent/20">
