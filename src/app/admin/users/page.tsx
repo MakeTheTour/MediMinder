@@ -72,19 +72,19 @@ export default function AdminUsersPage() {
   };
 
   return (
-     <div className="container mx-auto p-4">
-      <header className="mb-6">
+     <div className="container mx-auto p-4 flex flex-col h-full">
+      <header className="mb-6 flex-shrink-0">
         <h1 className="text-3xl font-bold">Live Users</h1>
         <p className="text-muted-foreground">A list of all registered users in the system.</p>
       </header>
-      <Card>
-        <CardHeader>
+      <Card className="flex-grow flex flex-col">
+        <CardHeader className="flex-shrink-0">
           <CardTitle>All Users</CardTitle>
           <CardDescription>
             {loading ? 'Loading...' : `Found ${users.length} users.`}
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex-grow overflow-auto">
           <Table>
             <TableHeader>
               <TableRow>
