@@ -11,7 +11,7 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import { collection, query, where, getDocs, limit } from 'firebase/firestore';
-import { db } from '@/lib/firebase'; 
+import { db } from '@/lib/firebase'; // CORRECT: Use server-side firebase instance
 
 const FindUserByEmailInputSchema = z.object({
   email: z.string().email(),
@@ -39,7 +39,7 @@ const findUserByEmailFlow = ai.defineFlow(
   async (input) => {
     try {
       const usersRef = collection(db, 'users');
-      // This query requires a Firestore index on the 'email' field.
+      // This query requires a Firestore index on the 'email' field and appropriate security rules.
       const q = query(usersRef, where('email', '==', input.email), limit(1));
       const querySnapshot = await getDocs(q);
       
@@ -61,8 +61,7 @@ const findUserByEmailFlow = ai.defineFlow(
 
     } catch (error) {
         console.error("Error finding user by email: ", error);
-        // For security reasons, don't expose the specific error.
-        // But in a real app, you might want more detailed logging.
+        // Do not expose detailed errors to the client.
         return {
             found: false,
         }
