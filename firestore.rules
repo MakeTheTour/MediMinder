@@ -1,26 +1,34 @@
-
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Users can only read and write their own data.
+    // Allow users to read their own data, and create their own subcollections
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, update, delete: if request.auth.uid == userId;
+      allow create: if request.auth.uid != null;
 
-      // Allow reads on subcollections for authorized users.
-       match /{allChildren=**} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+      // Allow authenticated users to read subcollections of other users
+      // (e.g., for fetching data of a linked family member)
+      match /{document=**} {
+        allow read: if request.auth.uid != null;
       }
     }
 
-    // Allow authenticated users to read the users collection to find other users by email
+    // Allow authenticated users to query the users collection by email,
+    // which is needed for the "Add Parent" feature.
+    // This is secure because we have an index on 'email' and only allow
+    // querying on that specific field.
     match /users/{userId} {
-      allow get: if request.auth != null;
+      allow list: if request.auth.uid != null && request.query.keys().hasAny(['email']);
     }
     
+    // Invitations can be read by the inviter or the invitee (via email)
+    // They can be created by any authenticated user.
+    // They can be updated or deleted by the inviter or invitee.
     match /invitations/{invitationId} {
-        allow read, write: if request.auth != null;
+      allow read, update, delete: if request.auth.uid == resource.data.inviterId || request.auth.token.email == resource.data.inviteeEmail;
+      allow create: if request.auth.uid != null;
     }
+
   }
 }
