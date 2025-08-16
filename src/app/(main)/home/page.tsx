@@ -152,8 +152,8 @@ export default function HomePage() {
           });
         }
         
-        // Family alert logic for Stock Out
-        if (status === 'stock_out' && familyMembers.length > 0 && userProfile?.isPremium) {
+        // Family alert logic for Stock Out or Missed
+        if ((status === 'stock_out' || status === 'missed') && familyMembers.length > 0 && userProfile?.isPremium) {
             for (const member of familyMembers) {
                 if (member.status === 'accepted') {
                     const alert = await generateFamilyAlert({
@@ -235,7 +235,9 @@ export default function HomePage() {
       const scheduledTime = parse(time, 'HH:mm', new Date());
       
       // Check for doses missed by 30-31 minutes to send alert
-      if (now > addMinutes(scheduledTime, 30) && now <= addMinutes(scheduledTime, 35)) {
+      const timeSinceScheduled = differenceInMinutes(now, scheduledTime);
+      if (timeSinceScheduled >= 30 && timeSinceScheduled < 35) {
+
         const anyMedHandled = medications.some(med =>
           adherenceLogs.some(log =>
             log.medicationId === med.id &&
@@ -243,30 +245,25 @@ export default function HomePage() {
             log.scheduledTime === time
           )
         );
+        
+        const missedNotificationId = `missed-${medications[0].id}-${time}-${format(now, 'yyyy-MM-dd')}`;
+        const alreadyNotified = sentNotifications.includes(missedNotificationId);
   
-        if (!anyMedHandled) {
+        if (!anyMedHandled && !alreadyNotified) {
           toast({
-            title: `Dose already Missed`,
+            title: `Your Dose already Missed`,
             description: `Your ${format(scheduledTime, 'h:mm a')} dose was missed. You can still log it if needed.`,
             variant: 'destructive',
             duration: 10000,
           });
+          setSentNotifications(prev => [...prev, missedNotificationId]);
           
           // Send family alert for missed dose
           if (!isGuest && user && familyMembers.length > 0 && userProfile?.isPremium) {
                for (const member of familyMembers) {
                   if (member.status === 'accepted') {
                       for(const medication of medications) {
-                          const alert = await generateFamilyAlert({
-                              patientName: user.displayName || 'A user',
-                              medicationName: medication.name,
-                              familyName: member.name,
-                          });
-                           console.log(`Sending alert to ${member.name}: ${alert.alertMessage}`);
-                           toast({
-                              title: 'Family Alert Sent',
-                              description: `Notified ${member.name} about missed dose of ${medication.name}.`,
-                          });
+                          await handleReminderAction([medication], time, 'missed');
                       }
                   }
               }
@@ -274,7 +271,7 @@ export default function HomePage() {
         }
       }
     }
-  }, [todaysMedicationsByTime, adherenceLogs, user, isGuest, familyMembers, toast, userProfile]);
+  }, [todaysMedicationsByTime, adherenceLogs, user, isGuest, familyMembers, toast, userProfile, handleReminderAction, sentNotifications, setSentNotifications]);
 
 
   const checkAppointmentReminders = useCallback(async () => {
