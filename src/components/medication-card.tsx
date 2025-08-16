@@ -22,10 +22,9 @@ interface MedicationCardProps {
   onEdit?: (id: string) => void;
   specificTime?: string;
   hideTime?: boolean;
-  highlight?: boolean;
 }
 
-export function MedicationCard({ medication, onDelete, onFamilyAlert, specificTime, onEdit, hideTime = false, highlight = false }: MedicationCardProps) {
+export function MedicationCard({ medication, onDelete, onFamilyAlert, specificTime, onEdit, hideTime = false }: MedicationCardProps) {
 
   const formatTime = (time24h: string) => {
     try {
@@ -77,7 +76,7 @@ export function MedicationCard({ medication, onDelete, onFamilyAlert, specificTi
 
 
   return (
-    <Card className={cn("w-full overflow-hidden transition-all hover:shadow-md border", highlight && "bg-primary/10")}>
+    <Card className="w-full overflow-hidden transition-all hover:shadow-md border">
       <CardContent className="p-4">
         <div className="flex items-start justify-between">
           <div className="flex items-start gap-4">
