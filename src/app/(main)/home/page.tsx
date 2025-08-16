@@ -6,12 +6,12 @@ import { Plus, ShieldAlert, Stethoscope, Pill as PillIcon, CalendarDays } from '
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Medication, Appointment, AdherenceLog } from '@/lib/types';
+import { Medication, Appointment, AdherenceLog, FamilyMember, UserProfile } from '@/lib/types';
 import { MedicationCard } from '@/components/medication-card';
 import { AppointmentCard } from '@/components/appointment-card';
 import { format, parse, isToday, isFuture, addMinutes, differenceInHours, differenceInMinutes, startOfDay } from 'date-fns';
 import { useAuth } from '@/context/auth-context';
-import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, getDocs, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase-client';
 import { useRouter } from 'next/navigation';
 import { useLocalStorage } from '@/hooks/use-local-storage';
@@ -19,7 +19,7 @@ import { MedicationReminderDialog } from '@/components/medication-reminder-dialo
 import { trackAdherence } from '@/ai/flows/track-adherence-flow';
 import { useToast } from '@/hooks/use-toast';
 import { generateAppointmentReminder } from '@/ai/flows/appointment-reminder-flow';
-import { intelligentSnooze } from '@/ai/flows/intelligent-snooze';
+import { generateFamilyAlert } from '@/ai/flows/family-alert-flow';
 import { GroupedMedicationCard } from '@/components/grouped-medication-card';
 
 export default function HomePage() {
@@ -32,15 +32,14 @@ export default function HomePage() {
   const [localAdherence, setLocalAdherence] = useLocalStorage<AdherenceLog[]>('guest-adherence', []);
   const [sentAppointmentReminders, setSentAppointmentReminders] = useLocalStorage<string[]>('sent-appointment-reminders', []);
   const [sentNotifications, setSentNotifications] = useLocalStorage<string[]>('sent-notifications', []);
-  const [snoozedUntil, setSnoozedUntil] = useLocalStorage<Record<string, string>>('snoozed-until', {});
-
 
   const [firestoreMedications, setFirestoreMedications] = useState<Medication[]>([]);
   const [firestoreAppointments, setFirestoreAppointments] = useState<Appointment[]>([]);
   const [firestoreAdherence, setFirestoreAdherence] = useState<AdherenceLog[]>([]);
+  const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
 
   const [greeting, setGreeting] = useState('');
-  const [reminder, setReminder] = useState<{ medication: Medication; time: string } | null>(null);
+  const [reminder, setReminder] = useState<{ medications: Medication[]; time: string } | null>(null);
   
   const escalationTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -62,16 +61,22 @@ export default function HomePage() {
       const adherenceUnsub = onSnapshot(collection(db, 'users', user.uid, 'adherenceLogs'), (snapshot) => {
         setFirestoreAdherence(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AdherenceLog)));
       });
+      
+      const familyUnsub = onSnapshot(collection(db, 'users', user.uid, 'familyMembers'), (snapshot) => {
+          setFamilyMembers(snapshot.docs.map(doc => doc.data() as FamilyMember));
+      });
 
       return () => {
         medUnsub();
         apptUnsub();
         adherenceUnsub();
+        familyUnsub();
       };
     } else {
       setFirestoreMedications([]);
       setFirestoreAppointments([]);
       setFirestoreAdherence([]);
+      setFamilyMembers([]);
     }
   }, [user, isGuest, setLocalAdherence, setLocalAppointments, setLocalMedications]);
 
@@ -112,159 +117,163 @@ export default function HomePage() {
       .find(item => parse(item.time, 'HH:mm', new Date()) > now) || null;
   }, [todaysMedicationsByTime]);
 
-
-  const handleReminderAction = useCallback((medication: Medication, scheduledTime: string, status: 'taken' | 'skipped' | 'stock_out' | 'muted' | 'missed') => {
+  const handleReminderAction = useCallback(async (medications: Medication[], scheduledTime: string, status: 'taken' | 'stock_out' | 'missed') => {
     if (escalationTimerRef.current) {
         clearTimeout(escalationTimerRef.current);
         escalationTimerRef.current = null;
     }
+    
+    // Log for all medications in the group
+    for (const medication of medications) {
+        const logEntry: Omit<AdherenceLog, 'id'> = {
+          medicationId: medication.id,
+          medicationName: medication.name,
+          takenAt: new Date().toISOString(),
+          status: status,
+          userId: user?.uid || 'guest',
+          scheduledTime: scheduledTime,
+        };
 
-    const logEntry: Omit<AdherenceLog, 'id'> = {
-      medicationId: medication.id,
-      medicationName: medication.name,
-      takenAt: new Date().toISOString(),
-      status: status,
-      userId: user?.uid || 'guest',
-      scheduledTime: scheduledTime,
-    };
-
-    if (isGuest || !user) {
-      setLocalAdherence([...localAdherence, { ...logEntry, id: new Date().toISOString() }]);
-    } else {
-      trackAdherence({
-          ...logEntry,
-          userId: user.uid,
-      });
+        if (isGuest || !user) {
+          setLocalAdherence(prev => [...prev, { ...logEntry, id: new Date().toISOString() }]);
+        } else {
+          await trackAdherence({
+              ...logEntry,
+              userId: user.uid,
+          });
+        }
+        
+        if (status === 'stock_out' && familyMembers.length > 0) {
+            // Check for family members with premium before sending alert
+            for (const member of familyMembers) {
+                if (member.status === 'accepted') {
+                     // In a real app, you'd check the member's subscription status here
+                    const isFamilyMemberPremium = true; // Placeholder
+                    
+                    if (isFamilyMemberPremium) {
+                        const alert = await generateFamilyAlert({
+                            patientName: user?.displayName || 'A user',
+                            medicationName: medication.name,
+                            familyName: member.name,
+                        });
+                        // In a real app, this would send a push notification/email to the family member
+                        console.log(`Sending alert to ${member.name}: ${alert.alertMessage}`);
+                        toast({
+                            title: 'Family Alert Sent',
+                            description: `Notified ${member.name} about ${medication.name} stock out.`,
+                        });
+                    }
+                }
+            }
+        }
     }
-
-    if (status === 'missed' || status === 'stock_out') {
+    
+    if (status === 'missed') {
       toast({
-        title: status === 'missed' ? 'Dose Missed' : 'Out of Stock',
-        description: `You have logged ${medication.name} as ${status}.`,
+        title: `Dose Missed`,
+        description: `You missed your ${scheduledTime} dose.`,
         variant: 'destructive',
       })
     }
     setReminder(null);
-  }, [user, isGuest, localAdherence, setLocalAdherence, toast]);
+  }, [user, isGuest, localAdherence, setLocalAdherence, toast, familyMembers]);
 
 
   const checkReminders = useCallback(() => {
     const now = new Date();
     
-    const medsForToday = activeMedications.filter(med => {
-        const today = new Date();
-        const dayOfWeek = today.getDay();
-        if (med.frequency === 'Daily') return true;
-        if (med.frequency === 'Weekly') return med.daysOfWeek?.includes(dayOfWeek);
-        if (med.frequency === 'Monthly') return med.dayOfMonth === today.getDate();
-        return false;
-    });
-    
-    for (const med of medsForToday) {
-      for (const time of med.times) {
-        const scheduledTime = parse(time, 'HH:mm', new Date());
-        
-        const alreadyHandled = adherenceLogs.some(
-          log => log.medicationId === med.id && 
-                 format(new Date(log.takenAt), 'yyyy-MM-dd') === format(now, 'yyyy-MM-dd') &&
-                 log.scheduledTime === time
-        );
-        
-        const notificationId = `${med.id}-${time}-${format(now, 'yyyy-MM-dd')}`;
-        const alreadyNotified = sentNotifications.includes(notificationId);
+    for (const group of todaysMedicationsByTime) {
+      const { time, medications } = group;
+      const scheduledTime = parse(time, 'HH:mm', new Date());
 
-        const isSnoozed = snoozedUntil[notificationId] && new Date(snoozedUntil[notificationId]) > now;
+      const isTimeToShow = now >= scheduledTime && now < addMinutes(scheduledTime, 1);
+      if (!isTimeToShow) continue;
 
-        if (now >= scheduledTime && now < addMinutes(scheduledTime, 1) && !alreadyHandled && !alreadyNotified && !isSnoozed) {
-          
-          if (Notification.permission === "granted") {
-            new Notification("Medication Reminder", {
-              body: `It's time to take your ${med.name}.`,
-              icon: '/icon.png' 
-            });
-          }
-          
-          if (!reminder) {
-            setReminder({ medication: med, time });
-             // Start the 2-minute escalation timer
-            if (escalationTimerRef.current) clearTimeout(escalationTimerRef.current);
-            escalationTimerRef.current = setTimeout(() => {
-                handleReminderAction(med, time, 'missed');
-                setReminder(null); // Close the dialog
-                toast({
-                    title: `Dose Missed: ${med.name}`,
-                    description: `You missed your ${time} dose.`,
-                    variant: 'destructive',
-                });
-            }, 2 * 60 * 1000); // 2 minutes
-          }
+      const anyMedicationHandled = medications.some(med => 
+        adherenceLogs.some(log => 
+          log.medicationId === med.id &&
+          isToday(new Date(log.takenAt)) &&
+          log.scheduledTime === time
+        )
+      );
 
-          setSentNotifications(prev => [...prev, notificationId]);
-          return; 
+      const notificationId = `${medications[0].id}-${time}-${format(now, 'yyyy-MM-dd')}`;
+      const alreadyNotified = sentNotifications.includes(notificationId);
+
+      if (!anyMedicationHandled && !alreadyNotified) {
+        if (Notification.permission === "granted") {
+          new Notification("Medication Reminder", {
+            body: `It's time for your ${time} medications.`,
+            icon: '/icon.png' 
+          });
         }
+
+        if (!reminder) {
+          setReminder({ medications, time });
+          
+          if (escalationTimerRef.current) clearTimeout(escalationTimerRef.current);
+          escalationTimerRef.current = setTimeout(() => {
+              handleReminderAction(medications, time, 'missed');
+          }, 2 * 60 * 1000); // 2 minutes
+        }
+        
+        setSentNotifications(prev => [...prev, notificationId]);
+        return;
       }
     }
-  }, [adherenceLogs, activeMedications, reminder, sentNotifications, setSentNotifications, snoozedUntil, handleReminderAction, toast]);
+  }, [todaysMedicationsByTime, adherenceLogs, reminder, sentNotifications, setSentNotifications, handleReminderAction]);
+
 
   const checkMissedDoses = useCallback(async () => {
     const now = new Date();
   
-    const todaysMeds = todaysMedicationsByTime.flatMap(group => 
-      group.medications.map(med => ({ time: group.time, medication: med }))
-    );
-  
-    for (const { time, medication } of todaysMeds) {
+    for (const { time, medications } of todaysMedicationsByTime) {
       const scheduledTime = parse(time, 'HH:mm', new Date());
       
-      // Check if the scheduled time is in the past today
       if (scheduledTime < now) {
         const minutesSinceScheduled = differenceInMinutes(now, scheduledTime);
   
-        // Only trigger the missed alert in a 5-minute window after the 30-minute grace period
-        if (minutesSinceScheduled > 30 && minutesSinceScheduled <= 35) {
-          // Check if this dose has already been handled today (taken, skipped, etc.)
-          const wasHandled = adherenceLogs.some(log =>
-            log.medicationId === medication.id &&
-            isToday(new Date(log.takenAt)) &&
-            log.scheduledTime === time
+        if (minutesSinceScheduled > 30 && minutesSinceScheduled <= 31) {
+          const anyMedHandled = medications.some(med =>
+            adherenceLogs.some(log =>
+              log.medicationId === med.id &&
+              isToday(new Date(log.takenAt)) &&
+              log.scheduledTime === time
+            )
           );
   
-          if (!wasHandled) {
-            const logEntry: Omit<AdherenceLog, 'id'> = {
-              medicationId: medication.id,
-              medicationName: medication.name,
-              takenAt: new Date().toISOString(), // Log when it was marked as missed
-              status: 'missed',
-              userId: user?.uid || 'guest',
-              scheduledTime: time,
-            };
-  
-            // Check if it was already logged as missed to avoid duplicates
-            const alreadyLoggedAsMissed = adherenceLogs.some(log =>
-              log.medicationId === medication.id &&
-              log.scheduledTime === time &&
-              log.status === 'missed' &&
-              isToday(new Date(log.takenAt))
-            );
-  
-            if (!alreadyLoggedAsMissed) {
-              if (isGuest || !user) {
-                setLocalAdherence(prev => [...prev, { ...logEntry, id: new Date().toISOString() }]);
-              } else {
-                await trackAdherence({ ...logEntry, userId: user.uid });
-              }
-  
-              toast({
-                title: `Missed Alert: ${medication.name}`,
-                description: `Your ${format(scheduledTime, 'h:mm a')} dose was missed.`,
-                variant: 'destructive',
-              });
+          if (!anyMedHandled) {
+            toast({
+              title: `Dose already Missed`,
+              description: `Your ${format(scheduledTime, 'h:mm a')} dose was missed. You can still log it if needed.`,
+              variant: 'destructive',
+              duration: 10000,
+            });
+            
+            // Send family alert for missed dose
+            if (!isGuest && user && familyMembers.length > 0) {
+                 for (const member of familyMembers) {
+                    if (member.status === 'accepted') {
+                        for(const medication of medications) {
+                            const alert = await generateFamilyAlert({
+                                patientName: user.displayName || 'A user',
+                                medicationName: medication.name,
+                                familyName: member.name,
+                            });
+                             console.log(`Sending alert to ${member.name}: ${alert.alertMessage}`);
+                             toast({
+                                title: 'Family Alert Sent',
+                                description: `Notified ${member.name} about missed dose of ${medication.name}.`,
+                            });
+                        }
+                    }
+                }
             }
           }
         }
       }
     }
-  }, [todaysMedicationsByTime, adherenceLogs, user, isGuest, setLocalAdherence, toast]);
+  }, [todaysMedicationsByTime, adherenceLogs, user, isGuest, familyMembers, toast]);
 
 
   const checkAppointmentReminders = useCallback(async () => {
@@ -276,10 +285,10 @@ export default function HomePage() {
       const apptDateTime = parse(`${appt.date} ${appt.time}`, 'yyyy-MM-dd HH:mm', new Date());
       const hoursUntil = differenceInHours(apptDateTime, now);
 
-      const checkAndSend = async (reminderType: '24h' | '1h') => {
+      const checkAndSend = async (reminderType: '24h' | '3h') => {
         const reminderId = `${appt.id}-${reminderType}`;
         if (!sentAppointmentReminders.includes(reminderId)) {
-          const reminderTime = reminderType === '24h' ? 24 : 1;
+          const reminderTime = reminderType === '24h' ? 24 : 3;
           
           const sound = new Audio('/notification.mp3');
           sound.play().catch(e => console.error("Failed to play notification sound:", e));
@@ -306,8 +315,8 @@ export default function HomePage() {
         await checkAndSend('24h');
       }
 
-      if (hoursUntil > 0 && hoursUntil <= 1) {
-        await checkAndSend('1h');
+      if (hoursUntil > 2 && hoursUntil <= 3) {
+        await checkAndSend('3h');
       }
     }
   }, [isGuest, user, activeAppointments, sentAppointmentReminders, setSentAppointmentReminders, toast]);
@@ -315,8 +324,8 @@ export default function HomePage() {
 
   useEffect(() => {
     const reminderInterval = setInterval(checkReminders, 10000); // Check every 10 seconds
-    const missedDoseInterval = setInterval(checkMissedDoses, 60000 * 5); // Check every 5 minutes
-    const appointmentReminderInterval = setInterval(checkAppointmentReminders, 60000 * 10); // Check every 10 minutes
+    const missedDoseInterval = setInterval(checkMissedDoses, 60000); // Check every minute
+    const appointmentReminderInterval = setInterval(checkAppointmentReminders, 60000 * 10);
 
     checkReminders();
     checkMissedDoses();
@@ -328,60 +337,6 @@ export default function HomePage() {
       clearInterval(appointmentReminderInterval);
     };
   }, [checkReminders, checkMissedDoses, checkAppointmentReminders]);
-  
-    const handleSnooze = async (medication: Medication, time: string) => {
-        if (escalationTimerRef.current) {
-            clearTimeout(escalationTimerRef.current);
-            escalationTimerRef.current = null;
-        }
-
-        setReminder(null);
-        try {
-            const pastSnoozes = adherenceLogs
-                .filter(log => log.medicationId === medication.id && log.status === 'snoozed')
-                .map(log => log.snoozeDuration || 5); // Default to 5 mins if no duration
-
-            const { snoozeInterval, reasoning } = await intelligentSnooze({
-                medicationType: medication.dosage,
-                pastSnoozeBehavior: pastSnoozes,
-                userSchedule: "User has a meeting from 10:00 to 11:00 AM.", // Example schedule
-            });
-            
-            toast({
-                title: `Snoozed for ${snoozeInterval} minutes`,
-                description: reasoning,
-            });
-
-            const notificationId = `${medication.id}-${time}-${format(new Date(), 'yyyy-MM-dd')}`;
-            const snoozedTime = addMinutes(new Date(), snoozeInterval);
-            
-            setSnoozedUntil(prev => ({...prev, [notificationId]: snoozedTime.toISOString() }));
-            
-            // Log snooze to adherence
-            const logEntry: Omit<AdherenceLog, 'id'> = {
-                medicationId: medication.id,
-                medicationName: medication.name,
-                takenAt: new Date().toISOString(),
-                status: 'snoozed',
-                userId: user?.uid || 'guest',
-                scheduledTime: time,
-                snoozeDuration: snoozeInterval,
-            };
-
-            if (isGuest || !user) {
-                setLocalAdherence([...localAdherence, { ...logEntry, id: new Date().toISOString() }]);
-            } else {
-                await trackAdherence({ ...logEntry, userId: user.uid });
-            }
-
-        } catch (error) {
-            toast({
-                title: "Could not snooze",
-                description: "Something went wrong. Please try again.",
-                variant: 'destructive'
-            });
-        }
-    };
 
 
   const todaysAppointments = useMemo(() => {
@@ -411,12 +366,10 @@ export default function HomePage() {
     {reminder && (
         <MedicationReminderDialog
             isOpen={!!reminder}
-            medication={reminder.medication}
+            medications={reminder.medications}
             time={reminder.time}
-            onTake={() => handleReminderAction(reminder.medication, reminder.time, 'taken')}
-            onSkip={() => handleReminderAction(reminder.medication, reminder.time, 'muted')}
-            onStockOut={() => handleReminderAction(reminder.medication, reminder.time, 'stock_out')}
-            onSnooze={() => handleSnooze(reminder.medication, reminder.time)}
+            onTake={() => handleReminderAction(reminder.medications, reminder.time, 'taken')}
+            onStockOut={() => handleReminderAction(reminder.medications, reminder.time, 'stock_out')}
         />
     )}
     <div className="container mx-auto max-w-2xl p-4 space-y-6">
