@@ -42,20 +42,6 @@ const createParentInvitationFlow = ai.defineFlow(
   },
   async (input) => {
     try {
-      // Check if an invitation already exists
-      const q = query(
-        collection(db, 'invitations'),
-        where('inviterId', '==', input.inviterId),
-        where('inviteeEmail', '==', input.inviteeEmail)
-      );
-      const existingInvitation = await getDocs(q);
-      if (!existingInvitation.empty) {
-        return {
-          success: false,
-          message: 'An invitation has already been sent to this email address.',
-        };
-      }
-      
       // 1. Create the main invitation document
       const invitationData = {
         inviterId: input.inviterId,
