@@ -1,31 +1,43 @@
 
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Users can read and write their own data.
-    match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
 
-      // Subcollections also inherit the rule.
-      match /{allSubcollections=**} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+    // Users can only read/write their own user document.
+    match /users/{userId} {
+      allow read, update, delete: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null;
+
+      // Users can only manage their own subcollections.
+      match /{subcollection}/{docId} {
+        allow read, write, delete: if request.auth != null && request.auth.uid == userId;
       }
     }
     
-    // Invitations
+    // Rules for the 'invitations' collection
     match /invitations/{invitationId} {
-      // Allow users to create invitations.
+      // Allow a user to create an invitation.
       allow create: if request.auth != null;
 
-      // Allow users to read, update, or delete invitations they sent or received.
-      allow read, update, delete: if request.auth != null && 
-        (request.auth.uid == resource.data.inviterId || (resource.data.inviteeId != null && request.auth.uid == resource.data.inviteeId) || request.auth.token.email == resource.data.inviteeEmail);
-
-      // Allow listing of invitations sent by the current user.
-      allow list: if request.auth != null && request.query.where[0][0] == "inviterId" && request.query.where[0][2] == request.auth.uid;
+      // Allow a user to read an invitation if they are the sender or the receiver.
+      allow read: if request.auth != null && 
+                   (resource.data.inviterId == request.auth.uid || resource.data.inviteeEmail == request.auth.token.email);
+                   
+      // Allow a user to update/delete an invitation (e.g., accept/decline)
+      // if they are the inviter (to cancel) or the intended invitee (to accept/decline).
+      allow update, delete: if request.auth != null &&
+                            (resource.data.inviterId == request.auth.uid || resource.data.inviteeEmail == request.auth.token.email);
+    }
+    
+    // Explicitly allow the queries made by the family page.
+    // This is the key change to fix the permission-denied error.
+    match /invitations/{invitationId} {
+       // Allow querying invitations sent BY the current user.
+      allow list: if request.auth != null && request.query.resource.data.inviterId == request.auth.uid;
       
-      // Allow listing of invitations received by the current user (by email).
-      allow list: if request.auth != null && request.query.where[0][0] == "inviteeEmail" && request.query.where[0][2] == request.auth.token.email;
+      // Allow querying invitations sent TO the current user's email.
+      allow list: if request.auth != null && request.query.resource.data.inviteeEmail == request.auth.token.email;
     }
   }
 }
