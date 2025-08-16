@@ -10,3 +10,6 @@ import '@/ai/flows/track-adherence-flow.ts';
 import '@/ai/flows/health-insights-flow.ts';
 import '@/ai/flows/symptom-checker-flow.ts';
 import '@/ai/flows/appointment-reminder-flow.ts';
+import '@/ai/flows/create-family-invitation-flow.ts';
+import '@/ai/flows/accept-invitation-flow.ts';
+import '@/ai/flows/decline-invitation-flow.ts';

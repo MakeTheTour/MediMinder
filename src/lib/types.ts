@@ -79,4 +79,13 @@ export interface AdherenceLog {
     snoozeDuration?: number;
 }
 
+export interface Invitation {
+    id: string;
+    inviterId: string;
+    inviterName: string;
+    inviterPhotoUrl?: string | null;
+    inviteeEmail: string;
+    relation: string;
+    status: 'pending' | 'accepted';
+}
     
