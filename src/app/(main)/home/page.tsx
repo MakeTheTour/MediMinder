@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Medication, Appointment, AdherenceLog, FamilyMember, UserProfile } from '@/lib/types';
 import { MedicationCard } from '@/components/medication-card';
 import { AppointmentCard } from '@/components/appointment-card';
-import { format, parse, isToday, isFuture, addMinutes, differenceInHours, differenceInMinutes, startOfDay } from 'date-fns';
+import { format, parse, isToday, isFuture, addMinutes, differenceInHours, differenceInMinutes, startOfDay, isAfter } from 'date-fns';
 import { useAuth } from '@/context/auth-context';
 import { collection, onSnapshot, query, orderBy, getDocs, doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase-client';
@@ -164,7 +164,7 @@ export default function HomePage() {
                     console.log(`Sending alert to ${member.name}: ${alert.alertMessage}`);
                     toast({
                         title: 'Family Alert Sent',
-                        description: `Notified ${member.name} about ${medication.name} stock out.`,
+                        description: `Notified ${member.name} about ${medication.name}.`,
                     });
                 }
             }
@@ -185,13 +185,18 @@ export default function HomePage() {
   const checkReminders = useCallback(() => {
     const now = new Date();
     
+    // Do not show new reminders if one is already active
+    if (reminder) return;
+
     for (const group of todaysMedicationsByTime) {
       const { time, medications } = group;
       const scheduledTime = parse(time, 'HH:mm', new Date());
 
-      const isTimeToShow = now >= scheduledTime && now < addMinutes(scheduledTime, 1);
+      // Check if it's time for the medication
+      const isTimeToShow = isAfter(now, scheduledTime);
       if (!isTimeToShow) continue;
 
+      // Check if this dose has already been handled today
       const anyMedicationHandled = medications.some(med => 
         adherenceLogs.some(log => 
           log.medicationId === med.id &&
@@ -199,7 +204,7 @@ export default function HomePage() {
           log.scheduledTime === time
         )
       );
-
+      
       const notificationId = `${medications[0].id}-${time}-${format(now, 'yyyy-MM-dd')}`;
       const alreadyNotified = sentNotifications.includes(notificationId);
 
@@ -210,19 +215,18 @@ export default function HomePage() {
             icon: '/icon.png' 
           });
         }
-
-        if (!reminder) {
-          setReminder({ medications, time });
-          
-          if (escalationTimerRef.current) clearTimeout(escalationTimerRef.current);
-          // Auto-miss after 2 minutes
-          escalationTimerRef.current = setTimeout(() => {
-              handleReminderAction(medications, time, 'missed');
-          }, 2 * 60 * 1000);
-        }
+        
+        setReminder({ medications, time });
+        
+        if (escalationTimerRef.current) clearTimeout(escalationTimerRef.current);
+        
+        // Auto-miss after 2 minutes
+        escalationTimerRef.current = setTimeout(() => {
+            handleReminderAction(medications, time, 'missed');
+        }, 2 * 60 * 1000);
         
         setSentNotifications(prev => [...prev, notificationId]);
-        return;
+        return; // Show one reminder at a time
       }
     }
   }, [todaysMedicationsByTime, adherenceLogs, reminder, sentNotifications, setSentNotifications, handleReminderAction]);
@@ -234,7 +238,7 @@ export default function HomePage() {
     for (const { time, medications } of todaysMedicationsByTime) {
       const scheduledTime = parse(time, 'HH:mm', new Date());
       
-      // Check for doses missed by 30-31 minutes to send alert
+      // Check for doses missed by 30-35 minutes to send alert
       const timeSinceScheduled = differenceInMinutes(now, scheduledTime);
       if (timeSinceScheduled >= 30 && timeSinceScheduled < 35) {
 
