@@ -6,10 +6,10 @@ import { BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend } fro
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useAuth } from '@/context/auth-context';
 import { useLocalStorage } from '@/hooks/use-local-storage';
-import { collection, onSnapshot, query, where, Timestamp } from 'firebase/firestore';
+import { collection, onSnapshot, query } from 'firebase/firestore';
 import { db } from '@/lib/firebase-client';
 import { AdherenceLog } from '@/lib/types';
-import { subDays, format, isSameDay, getHours } from 'date-fns';
+import { subDays, format, isSameDay, getHours, startOfToday, endOfToday, startOfDay, isWithinInterval } from 'date-fns';
 import { Loader2, TrendingUp } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -24,68 +24,65 @@ export default function ReportsPage() {
   const [period, setPeriod] = useState<Period>('weekly');
 
   useEffect(() => {
-    setLoading(true);
-    if (isGuest) {
+    if (!user || isGuest) {
       setLoading(false);
       return;
     }
-
-    if (user) {
-      // Listen to all adherence logs for real-time updates
-      const q = query(collection(db, 'users', user.uid, 'adherenceLogs'));
-      
-      const unsub = onSnapshot(q, (snapshot) => {
-        setFirestoreAdherence(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AdherenceLog)));
-        setLoading(false);
-      }, (error) => {
-        console.error("Failed to fetch adherence data:", error);
-        setLoading(false);
-      });
-      return () => unsub();
-    } else {
-        setLoading(false);
-    }
+    setLoading(true);
+    const q = query(collection(db, 'users', user.uid, 'adherenceLogs'));
+    
+    const unsub = onSnapshot(q, (snapshot) => {
+      setFirestoreAdherence(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AdherenceLog)));
+      setLoading(false);
+    }, (error) => {
+      console.error("Failed to fetch adherence data:", error);
+      setLoading(false);
+    });
+    return () => unsub();
   }, [user, isGuest]);
 
   const adherenceData = useMemo(() => {
     const logs = isGuest ? localAdherence : firestoreAdherence;
 
     if (period === 'daily') {
-        // Filter for today's logs
-        const todayLogs = logs.filter(log => isSameDay(new Date(log.takenAt), new Date()));
-        const hours = Array.from({ length: 24 }, (_, i) => ({
-            name: `${i}:00`,
-            taken: 0,
-            missed: 0
-        }));
+      const todayLogs = logs.filter(log => isSameDay(new Date(log.takenAt), new Date()));
+      const hours = Array.from({ length: 24 }, (_, i) => ({
+        name: `${i}:00`,
+        taken: 0,
+        missed: 0
+      }));
 
-        todayLogs.forEach(log => {
-            const hour = getHours(new Date(log.takenAt));
-            if (log.status === 'taken') {
-                hours[hour].taken += 1;
-            } else if (['missed', 'skipped', 'muted', 'stock_out'].includes(log.status)) {
-                hours[hour].missed += 1;
-            }
-        });
-        // We only show hours with data for a cleaner chart
-        return hours.filter(h => h.taken > 0 || h.missed > 0).map(h => ({ ...h, date: h.name}));
-    }
-
-    const daysToCover = period === 'weekly' ? 7 : 30;
-    const sinceDate = subDays(new Date(), daysToCover);
-    const lastXDays = Array.from({ length: daysToCover }, (_, i) => subDays(new Date(), i)).reverse();
-
-    return lastXDays.map(day => {
-      const dailyLogs = logs.filter(log => isSameDay(new Date(log.takenAt), day));
-      const taken = dailyLogs.filter(log => log.status === 'taken').length;
-      const missed = dailyLogs.filter(log => ['missed', 'skipped', 'muted', 'stock_out'].includes(log.status)).length;
+      todayLogs.forEach(log => {
+        const hour = getHours(new Date(log.takenAt));
+        if (log.status === 'taken') {
+          hours[hour].taken += 1;
+        } else if (['missed', 'skipped', 'muted', 'stock_out'].includes(log.status)) {
+          hours[hour].missed += 1;
+        }
+      });
       
-      return {
-        date: format(day, period === 'weekly' ? 'eee' : 'dd/MM'),
-        taken,
-        missed,
-      };
-    });
+      return hours
+        .map(h => ({ ...h, date: h.name}));
+
+    } else {
+        const daysToCover = period === 'weekly' ? 7 : 30;
+        const endDate = endOfToday();
+        const startDate = startOfDay(subDays(endDate, daysToCover - 1));
+
+        const dateRange = Array.from({ length: daysToCover }, (_, i) => subDays(endDate, i)).reverse();
+
+        return dateRange.map(day => {
+            const dailyLogs = logs.filter(log => isSameDay(new Date(log.takenAt), day));
+            const taken = dailyLogs.filter(log => log.status === 'taken').length;
+            const missed = dailyLogs.filter(log => ['missed', 'skipped', 'muted', 'stock_out'].includes(log.status)).length;
+            
+            return {
+                date: format(day, period === 'weekly' ? 'eee' : 'dd/MM'),
+                taken,
+                missed,
+            };
+        });
+    }
   }, [isGuest, localAdherence, firestoreAdherence, period]);
   
   const totalDoses = useMemo(() => adherenceData.reduce((acc, curr) => acc + curr.taken + curr.missed, 0), [adherenceData]);
