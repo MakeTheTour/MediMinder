@@ -40,6 +40,7 @@ export default function HomePage() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
 
   const [reminder, setReminder] = useState<{ medications: Medication[]; time: string } | null>(null);
+  const [greeting, setGreeting] = useState('');
   
   const escalationTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -234,7 +235,7 @@ export default function HomePage() {
       const scheduledTime = parse(time, 'HH:mm', new Date());
       
       // Check for doses missed by 30-31 minutes to send alert
-      if (now > addMinutes(scheduledTime, 30) && now <= addMinutes(scheduledTime, 31)) {
+      if (now > addMinutes(scheduledTime, 30) && now <= addMinutes(scheduledTime, 35)) {
         const anyMedHandled = medications.some(med =>
           adherenceLogs.some(log =>
             log.medicationId === med.id &&
