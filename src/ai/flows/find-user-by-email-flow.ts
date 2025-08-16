@@ -11,7 +11,8 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import { collection, query, where, getDocs, limit } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+// Important: Use the client DB instance for queries that need to respect client-side auth rules
+import { db } from '@/lib/firebase-client'; 
 
 const FindUserByEmailInputSchema = z.object({
   email: z.string().email(),
