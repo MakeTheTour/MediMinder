@@ -39,20 +39,16 @@ const findUserByEmailFlow = ai.defineFlow(
   async (input) => {
     try {
       const usersRef = collection(db, 'users');
-      const q = query(
-        usersRef,
-        where('email', '==', input.email),
-        limit(1)
-      );
-      const userSnap = await getDocs(q);
+      const q = query(usersRef, where('email', '==', input.email), limit(1));
+      const querySnapshot = await getDocs(q);
       
-      if (userSnap.empty) {
+      if (querySnapshot.empty) {
         return {
           found: false,
         };
       }
 
-      const userDoc = userSnap.docs[0];
+      const userDoc = querySnapshot.docs[0];
       const userData = userDoc.data();
 
       return {
