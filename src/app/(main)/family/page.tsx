@@ -53,15 +53,20 @@ export default function FamilyPage() {
           setLoading(false);
       });
 
-      // Listen for invitations sent TO this user
-      const receivedQuery = query(collection(db, 'invitations'), where('inviteeEmail', '==', user.email));
-      const receivedUnsub = onSnapshot(receivedQuery, (snapshot) => {
-          setReceivedInvitations(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Invitation)));
-      });
+      // Listen for invitations sent TO this user's email
+      if (user.email) {
+          const receivedQuery = query(collection(db, 'invitations'), where('inviteeEmail', '==', user.email));
+          const receivedUnsub = onSnapshot(receivedQuery, (snapshot) => {
+              setReceivedInvitations(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Invitation)));
+          });
+           return () => {
+                membersUnsub();
+                receivedUnsub();
+            };
+      }
 
       return () => {
         membersUnsub();
-        receivedUnsub();
       };
     }, [user, isGuest]);
 
@@ -75,8 +80,8 @@ export default function FamilyPage() {
 
         // 2. Find and delete the root invitation doc
         const q = query(collection(db, 'invitations'), where('inviterId', '==', user.uid), where('inviteeEmail', '==', memberEmail));
-        const invitations = await getDocs(q);
-        invitations.forEach((invitationDoc) => {
+        const invitationSnap = await getDocs(q);
+        invitationSnap.forEach((invitationDoc) => {
            batch.delete(doc(db, 'invitations', invitationDoc.id));
         });
 
@@ -87,7 +92,6 @@ export default function FamilyPage() {
     const handleRemoveLinkedMember = async (memberId: string) => {
         if (!user) return;
         // This is complex because it should update both users' records.
-        // For now, we just remove from the current user's list.
         // A more robust solution would use a Cloud Function to handle denormalization.
         await deleteDoc(doc(db, 'users', user.uid, 'familyMembers', memberId));
         toast({ title: 'Member Removed' });

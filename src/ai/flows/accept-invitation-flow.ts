@@ -71,7 +71,7 @@ const acceptInvitationFlow = ai.defineFlow(
         batch.set(inviteeFamilyRef, {
             name: invitationData.inviterName,
             email: inviterData.email, // Use the fetched email of the inviter
-            relation: `My ${invitationData.relation}`, // Simplified relation
+            relation: invitationData.relation, // Store the relation as the inviter defined it
             status: 'accepted',
             photoURL: invitationData.inviterPhotoUrl || null,
         });
