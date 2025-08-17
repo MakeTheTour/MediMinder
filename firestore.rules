@@ -3,46 +3,45 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    function isAppAdmin() {
-      return request.auth.token.email == 'admin@mediminder.com';
-    }
-    
-    function isOwner(userId) {
-      return request.auth.uid == userId;
+
+    // Helper function to check if the user is the admin
+    function isAdmin() {
+      return request.auth != null && request.auth.token.email == 'admin@mediminder.com';
     }
 
+    // Users can only read/write their own data. Admins can read/write any user data.
     match /users/{userId} {
-      allow read, update, delete: if isOwner(userId) || isAppAdmin();
-      allow create: if request.auth != null || isAppAdmin();
-      allow list: if isAppAdmin();
+      allow read, update, delete: if request.auth.uid == userId || isAdmin();
+      allow create: if request.auth.uid == userId;
 
-      match /{allPaths=**} {
-        allow read, write: if isOwner(userId) || isAppAdmin();
+      // Users can only read/write to their own subcollections. Admins have full access.
+      match /{subcollection}/{docId} {
+        allow read, write: if request.auth.uid == userId || isAdmin();
       }
     }
     
+    // Rules for the invitations collection
     match /invitations/{invitationId} {
-      // Allow list if the query is constrained to the user's inviterId or inviteeEmail
-      allow list: if (request.query.limit <= 10 && 
-                      (request.query.filters.size() == 1 &&
-                       'inviterId' in request.query.filters[0].field &&
-                       request.query.filters[0].value == request.auth.uid)) ||
-                     (request.query.filters.size() == 1 &&
-                      'inviteeEmail' in request.query.filters[0].field &&
-                      request.query.filters[0].value == request.auth.token.email);
+      // Allow creating an invitation
+      allow create: if request.auth.uid != null;
+      
+      // Allow reading an invitation if you are the inviter or the invitee
+      allow read: if request.auth.uid == resource.data.inviterId 
+                    || request.auth.token.email == resource.data.inviteeEmail
+                    || isAdmin();
 
-      // Allow get/read if the user is the inviter or invitee
-      allow get: if request.auth.uid == resource.data.inviterId || request.auth.token.email == resource.data.inviteeEmail || isAppAdmin();
+      // Allow updating an invitation (e.g., to accept it) if you are the invitee
+      allow update: if request.auth.token.email == resource.data.inviteeEmail || isAdmin();
       
-      // Allow create if the user is the inviter
-      allow create: if request.auth.uid == request.resource.data.inviterId;
-      
-      // Allow update if the user is the invitee (accepting)
-      allow update: if request.auth.token.email == resource.data.inviteeEmail;
-      
-      // Allow delete if the user sent the invitation (cancelling)
-      allow delete: if request.auth.uid == resource.data.inviterId;
+      // Allow deleting an invitation if you are the inviter
+      allow delete: if request.auth.uid == resource.data.inviterId || isAdmin();
+
+      // THIS IS THE CRITICAL FIX: Allow querying the collection
+      // A user can query the invitations collection if they are filtering by their UID as the inviter
+      // OR by their email as the invitee. This matches the queries in the Family page.
+      allow list: if (request.query.get("where_conditions")[0][0] == "inviterId" && request.query.get("where_conditions")[0][2] == request.auth.uid)
+                  || (request.query.get("where_conditions")[0][0] == "inviteeEmail" && request.query.get("where_conditions")[0][2] == request.auth.token.email)
+                  || isAdmin();
     }
   }
 }
