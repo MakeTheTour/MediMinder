@@ -4,24 +4,45 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
     function isAdmin() {
       return request.auth.token.email == 'admin@mediminder.com';
     }
 
+    // Rules for the 'users' collection
     match /users/{userId} {
-      allow read, update, delete: if request.auth.uid == userId || isAdmin();
-      allow create: if request.auth.uid != null;
-      allow list: if isAdmin();
+      // Only the owner or an admin can read/write their own document
+      allow read, update, delete: if isOwner(userId) || isAdmin();
+      // Any signed in user can create their own user document
+      allow create: if isSignedIn();
       
-      match /{allPaths=**} {
-        allow read, write: if request.auth.uid == userId || isAdmin();
+      // Rules for subcollections
+      match /{subcollection}/{docId} {
+        // Only the owner of the user document can manage its subcollections
+        allow read, write, delete: if isOwner(userId) || isAdmin();
       }
     }
-
+    
     match /invitations/{invitationId} {
-      allow read, update: if request.auth.uid != null && (request.auth.uid == resource.data.inviterId || request.auth.token.email == resource.data.inviteeEmail);
-      allow create, delete: if request.auth.uid != null;
-      allow list: if request.auth.uid != null && (request.query.where.inviterId == request.auth.uid || request.query.where.inviteeEmail == request.auth.token.email);
+        // Allow creation if the inviter is the currently signed-in user
+        allow create: if isSignedIn() && request.resource.data.inviterId == request.auth.uid;
+        
+        // Allow read if user is either the inviter or the invitee
+        allow read: if isSignedIn() && (request.auth.uid == resource.data.inviterId || request.auth.token.email == resource.data.inviteeEmail);
+
+        // Allow update (accepting) if the user is the invitee
+        allow update: if isSignedIn() && request.auth.token.email == resource.data.inviteeEmail;
+
+        // Allow deletion (declining/canceling) if the user is the inviter or invitee
+        allow delete: if isSignedIn() && (request.auth.uid == resource.data.inviterId || request.auth.token.email == resource.data.inviteeEmail);
     }
   }
 }
