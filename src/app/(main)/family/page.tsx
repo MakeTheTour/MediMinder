@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { FamilyMember, Invitation, UserProfile } from '@/lib/types';
 import { useAuth } from '@/context/auth-context';
 import { useState, useEffect } from 'react';
-import { collection, onSnapshot, doc, deleteDoc, query, where, getDoc, getDocs, writeBatch } from 'firebase/firestore';
+import { collection, onSnapshot, doc, deleteDoc, query, where, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase-client';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
@@ -54,49 +54,57 @@ export default function FamilyPage() {
       const membersUnsub = onSnapshot(collection(db, 'users', user.uid, 'familyMembers'), (snapshot) => {
           setFamilyMembers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as FamilyMember)));
           setLoading(false);
+      }, (error) => {
+          console.error("Error fetching family members:", error);
+          setLoading(false);
       });
 
       // Listen for invitations sent BY this user that are still pending
       const sentQuery = query(collection(db, 'invitations'), where('inviterId', '==', user.uid));
       const sentUnsub = onSnapshot(sentQuery, (snapshot) => {
          setSentInvitations(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Invitation)));
-      });
+      }, (error) => console.error("Error fetching sent invitations:", error));
 
 
       // Listen for invitations sent TO this user's email
-      if (user.email) {
-          const receivedQuery = query(collection(db, 'invitations'), where('inviteeEmail', '==', user.email));
-          const receivedUnsub = onSnapshot(receivedQuery, (snapshot) => {
-              setReceivedInvitations(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Invitation)));
-          });
-           return () => {
-                membersUnsub();
-                sentUnsub();
-                receivedUnsub();
-            };
-      }
+      const receivedQuery = query(collection(db, 'invitations'), where('inviteeEmail', '==', user.email));
+      const receivedUnsub = onSnapshot(receivedQuery, (snapshot) => {
+          setReceivedInvitations(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Invitation)));
+      }, (error) => console.error("Error fetching received invitations:", error));
 
       return () => {
         membersUnsub();
         sentUnsub();
+        receivedUnsub();
       };
     }, [user, isGuest]);
 
     const handleCancelSentInvitation = async (invitationId: string) => {
-        await deleteDoc(doc(db, 'invitations', invitationId));
-        toast({ title: 'Invitation Cancelled' });
+        if (!user) return;
+        try {
+            await deleteDoc(doc(db, 'invitations', invitationId));
+            toast({ title: 'Invitation Cancelled' });
+        } catch (error) {
+            console.error("Error cancelling invitation:", error);
+            toast({ title: 'Error', description: 'Could not cancel invitation.', variant: 'destructive'});
+        }
     };
     
     const handleRemoveLinkedMember = async (memberId: string) => {
         if (!user) return;
         // This is complex because it should update both users' records.
         // A more robust solution would use a Cloud Function to handle denormalization.
-        await deleteDoc(doc(db, 'users', user.uid, 'familyMembers', memberId));
-        toast({ title: 'Parent Removed' });
+        try {
+            await deleteDoc(doc(db, 'users', user.uid, 'familyMembers', memberId));
+            toast({ title: 'Parent Removed' });
+        } catch (error) {
+            console.error("Error removing linked member:", error);
+            toast({ title: 'Error', description: 'Could not remove parent.', variant: 'destructive'});
+        }
     }
 
     const handleAccept = async (invitation: Invitation) => {
-      if (!user) return;
+      if (!user || !user.email) return;
       if (!userProfile?.isPremium) {
         toast({
           title: 'Premium Required',
@@ -106,25 +114,33 @@ export default function FamilyPage() {
         return;
       }
       try {
-        await acceptInvitation({
+        const result = await acceptInvitation({
           invitationId: invitation.id,
           inviterId: invitation.inviterId,
           inviteeId: user.uid,
           inviteeName: user.displayName || 'New Parent',
-          inviteeEmail: user.email!,
+          inviteeEmail: user.email,
         });
-        toast({ title: 'Invitation Accepted!', description: `You are now linked with ${invitation.inviterName}.`});
-      } catch (e) {
-        toast({ title: 'Error', description: 'Could not accept invitation.', variant: 'destructive'});
+        if (result.success) {
+            toast({ title: 'Invitation Accepted!', description: `You are now linked with ${invitation.inviterName}.`});
+        } else {
+            throw new Error(result.message);
+        }
+      } catch (e: any) {
+        toast({ title: 'Error', description: e.message || 'Could not accept invitation.', variant: 'destructive'});
       }
     };
 
     const handleDecline = async (invitationId: string) => {
       try {
-        await declineInvitation({ invitationId });
-        toast({ title: 'Invitation Declined'});
-      } catch (e) {
-        toast({ title: 'Error', description: 'Could not decline invitation.', variant: 'destructive'});
+        const result = await declineInvitation({ invitationId });
+        if (result.success) {
+            toast({ title: 'Invitation Declined'});
+        } else {
+            throw new Error(result.message);
+        }
+      } catch (e: any) {
+        toast({ title: 'Error', description: e.message || 'Could not decline invitation.', variant: 'destructive'});
       }
     };
     
