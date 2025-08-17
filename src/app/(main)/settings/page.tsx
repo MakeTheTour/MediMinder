@@ -2,7 +2,7 @@
 'use client'
 
 import Link from 'next/link';
-import { User, Bell, Mic, ChevronRight, LogOut, Star, LineChart, KeyRound } from 'lucide-react';
+import { User, Bell, Mic, ChevronRight, LogOut, Star, LineChart, KeyRound, BellOff } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -31,6 +31,12 @@ const settingsItems = [
     icon: Bell,
     title: 'Notifications',
     description: 'Manage alert preferences.',
+  },
+    {
+    href: '/settings/snooze',
+    icon: BellOff,
+    title: 'Intelligent Snooze',
+    description: 'Configure smart snooze settings.',
   },
   {
     href: '/settings/reports',
@@ -95,5 +101,3 @@ export default function SettingsPage() {
     </div>
   );
 }
-
-    
