@@ -21,6 +21,7 @@ import { useToast } from '@/hooks/use-toast';
 import { generateAppointmentReminder } from '@/ai/flows/appointment-reminder-flow';
 import { generateFamilyAlert } from '@/ai/flows/family-alert-flow';
 import { GroupedMedicationCard } from '@/components/grouped-medication-card';
+import { AdCard } from '@/components/ad-card';
 
 export default function HomePage() {
   const { user, isGuest } = useAuth();
@@ -384,6 +385,8 @@ export default function HomePage() {
         <p className="text-muted-foreground">{format(new Date(), 'EEEE, dd/MM/yy')}</p>
       </header>
       
+      {!userProfile?.isPremium && <AdCard />}
+
       {nextMedication && (
         <Card className="bg-primary/10">
             <CardHeader>

@@ -4,38 +4,31 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Helper function to check for admin
     function isAdmin() {
       return request.auth != null && request.auth.token.email == 'admin@mediminder.com';
     }
 
-    // Users can only manage their own documents and subcollections
+    match /{document=**} {
+      allow read, write: if isAdmin();
+    }
+
     match /users/{userId}/{document=**} {
-      allow read, write: if request.auth.uid == userId || isAdmin();
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
     
-    // Rules for Invitations
     match /invitations/{invitationId} {
-      // Allow read if the user is the inviter or the invitee, or if admin
-      allow read: if (request.auth.uid == resource.data.inviterId || request.auth.token.email == resource.data.inviteeEmail) || isAdmin();
+      allow create: if request.auth != null;
+      allow read: if request.auth != null && (resource.data.inviterId == request.auth.uid || resource.data.inviteeEmail == request.auth.token.email);
+      allow update, delete: if request.auth != null && (resource.data.inviterId == request.auth.uid || resource.data.inviteeId == request.auth.uid)
+    }
 
-      // Allow creating an invitation if the inviter is the current user
-      allow create: if request.auth.uid == request.resource.data.inviterId;
-
-      // Allow update if user is the invitee (accepting/declining)
-      allow update: if request.auth.token.email == resource.data.inviteeEmail;
-
-      // Allow delete if the user is the inviter (cancelling)
-      allow delete: if request.auth.uid == resource.data.inviterId;
-
-      // Allow list (query) if the query is scoped to the user
-      allow list: if (request.query.where.inviterId == request.auth.uid || request.query.where.inviteeEmail == request.auth.token.email) || isAdmin();
+    match /invitations/{invitationId} {
+        allow list: if request.auth != null && (request.query.where.inviterId == request.auth.uid || request.query.where.inviteeEmail == request.auth.token.email);
     }
     
-    // Subscriptions can only be read by admins
-    match /subscriptions/{subscriptionId} {
-        allow read, write: if isAdmin();
-        allow create: if request.auth != null; // Users can create their own subscriptions
+    match /ads/{adId} {
+        allow read: if true;
+        allow write: if isAdmin();
     }
   }
 }
