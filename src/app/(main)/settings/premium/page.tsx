@@ -76,9 +76,20 @@ export default function PremiumPage() {
       // Simulate payment processing
       await new Promise(resolve => setTimeout(resolve, 2000));
       
+      const endDate = new Date();
+      if (billingCycle === 'yearly') {
+        endDate.setFullYear(endDate.getFullYear() + 1);
+      } else {
+        endDate.setMonth(endDate.getMonth() + 1);
+      }
+      
       // Update user in firestore
       const userRef = doc(db, 'users', user.uid);
-      await setDoc(userRef, { isPremium: true, premiumCycle: billingCycle }, { merge: true });
+      await setDoc(userRef, { 
+        isPremium: true, 
+        premiumCycle: billingCycle,
+        premiumEndDate: endDate.toISOString(),
+      }, { merge: true });
 
       // Send confirmation email
       await sendPremiumConfirmationEmail({

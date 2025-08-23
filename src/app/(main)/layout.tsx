@@ -6,6 +6,8 @@ import { useRouter, usePathname } from 'next/navigation';
 import { BottomNavbar } from '@/components/bottom-navbar';
 import { useAuth } from '@/context/auth-context';
 import { Loader2 } from 'lucide-react';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase-client';
 
 export default function MainLayout({ children }: { children: ReactNode }) {
   const { user, loading, isGuest } = useAuth();
@@ -33,6 +35,30 @@ export default function MainLayout({ children }: { children: ReactNode }) {
       }
     }
   }, []);
+
+  useEffect(() => {
+    const checkPremiumStatus = async () => {
+      if (user && !isGuest) {
+        const userRef = doc(db, 'users', user.uid);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          const userData = userSnap.data();
+          if (userData.isPremium && userData.premiumEndDate) {
+            const endDate = new Date(userData.premiumEndDate);
+            if (endDate < new Date()) {
+              // Premium has expired
+              await updateDoc(userRef, {
+                isPremium: false,
+                premiumCycle: null,
+                premiumEndDate: null,
+              });
+            }
+          }
+        }
+      }
+    };
+    checkPremiumStatus();
+  }, [user, isGuest]);
 
   if (loading && !isGuest) {
     return (

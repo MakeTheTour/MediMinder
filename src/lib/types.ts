@@ -97,6 +97,7 @@ export interface User {
   createdAt: string;
   photoURL?: string;
   isPremium?: boolean;
+  premiumEndDate?: string;
   status?: 'active' | 'suspended' | 'deactivated';
 }
 
