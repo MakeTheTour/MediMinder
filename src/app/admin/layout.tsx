@@ -24,6 +24,8 @@ import { useAuth } from '@/context/auth-context';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
+import { SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 
 
 const adminNavItems = [
@@ -91,9 +93,16 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     <SidebarProvider>
       <div className="flex min-h-screen">
         <Sidebar>
+          <SheetHeader className="sr-only">
+              <VisuallyHidden>
+                  <SheetTitle>Navigation Menu</SheetTitle>
+                  <SheetDescription>
+                      This is the main navigation menu for the application.
+                  </SheetDescription>
+              </VisuallyHidden>
+          </SheetHeader>
           <SidebarHeader>
             <div className="flex items-center gap-2">
-                <SidebarTrigger className="md:hidden"/>
                 <h2 className="text-lg font-semibold">MediMinder</h2>
             </div>
           </SidebarHeader>
@@ -151,14 +160,14 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             </Button>
           </SidebarFooter>
         </Sidebar>
-        <SidebarInset className="flex-grow flex flex-col ml-0">
+        <SidebarInset className="flex-grow flex flex-col ml-0 overflow-y-auto">
              <header className="p-4 border-b md:hidden sticky top-0 bg-background z-10">
                 <div className="flex items-center justify-between">
                     <h1 className="text-xl font-bold">Admin</h1>
                     <SidebarTrigger />
                 </div>
              </header>
-             <main className="flex-1 p-4 overflow-y-auto">{children}</main>
+             <main className="flex-1 p-4">{children}</main>
         </SidebarInset>
       </div>
     </SidebarProvider>

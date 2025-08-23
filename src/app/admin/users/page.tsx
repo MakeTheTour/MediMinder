@@ -134,14 +134,14 @@ export default function AdminUsersPage() {
         <h1 className="text-3xl font-bold">Live Users</h1>
         <p className="text-muted-foreground">A list of all registered users in the system.</p>
       </header>
-      <Card className="flex-1 flex flex-col">
+      <Card className="flex-grow flex flex-col">
         <CardHeader className="flex-shrink-0">
           <CardTitle>All Users</CardTitle>
           <CardDescription>
             {loading ? 'Loading...' : `Found ${users.length} users.`}
           </CardDescription>
         </CardHeader>
-        <CardContent className="flex-1 overflow-y-auto">
+        <CardContent className="flex-grow overflow-y-auto">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>

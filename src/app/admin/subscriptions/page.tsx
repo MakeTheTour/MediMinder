@@ -52,14 +52,14 @@ export default function AdminSubscriptionsPage() {
         <h1 className="text-3xl font-bold">User Subscriptions</h1>
         <p className="text-muted-foreground">A list of all user subscription details.</p>
       </header>
-      <Card className="flex-1 flex flex-col">
+      <Card className="flex-grow flex flex-col">
         <CardHeader className="flex-shrink-0">
           <CardTitle>All Subscriptions</CardTitle>
           <CardDescription>
             {loading ? 'Loading...' : `Found ${subscriptions.length} subscriptions.`}
           </CardDescription>
         </CardHeader>
-        <CardContent className="flex-1 overflow-y-auto">
+        <CardContent className="flex-grow overflow-y-auto">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
