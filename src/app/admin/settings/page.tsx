@@ -1,12 +1,19 @@
 
 'use client';
 
+import { useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { KeyRound, BrainCircuit, Facebook, Mail } from 'lucide-react';
+import { KeyRound, BrainCircuit, Facebook, Mail, Loader2 } from 'lucide-react';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase-client';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 
 const GoogleIcon = () => (
     <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24">
@@ -17,15 +24,66 @@ const GoogleIcon = () => (
     </svg>
 );
 
+const settingsSchema = z.object({
+    geminiApiKey: z.string().optional(),
+    googleClientId: z.string().optional(),
+    googleClientSecret: z.string().optional(),
+    facebookAppId: z.string().optional(),
+    facebookAppSecret: z.string().optional(),
+});
+
 export default function AdminSettingsPage() {
   const { toast } = useToast();
+  const [loading, setLoading] = useState(true);
 
-  const handleSaveChanges = () => {
-    toast({
-      title: "Settings Saved",
-      description: "API and integration settings have been updated.",
-    });
+  const form = useForm<z.infer<typeof settingsSchema>>({
+    resolver: zodResolver(settingsSchema),
+    defaultValues: {
+        geminiApiKey: '',
+        googleClientId: '',
+        googleClientSecret: '',
+        facebookAppId: '',
+        facebookAppSecret: '',
+    },
+  });
+
+  useEffect(() => {
+    async function fetchSettings() {
+        setLoading(true);
+        const settingsRef = doc(db, 'settings', 'api');
+        const docSnap = await getDoc(settingsRef);
+        if (docSnap.exists()) {
+            form.reset(docSnap.data());
+        }
+        setLoading(false);
+    }
+    fetchSettings();
+  }, [form]);
+
+  const handleSaveChanges = async (values: z.infer<typeof settingsSchema>) => {
+    try {
+        const settingsRef = doc(db, 'settings', 'api');
+        await setDoc(settingsRef, values, { merge: true });
+        toast({
+            title: "Settings Saved",
+            description: "API and integration settings have been updated.",
+        });
+    } catch (error) {
+        toast({
+            title: "Error Saving Settings",
+            description: "Could not save settings to the database.",
+            variant: "destructive",
+        });
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="container mx-auto p-4 flex justify-center items-center h-full">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto p-4">
@@ -34,56 +92,111 @@ export default function AdminSettingsPage() {
         <p className="text-muted-foreground">Manage third-party integrations and API keys.</p>
       </header>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2"><BrainCircuit /> AI Provider</CardTitle>
-            <CardDescription>Manage Gemini API Key.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="gemini-key">Gemini API Key</Label>
-              <Input id="gemini-key" type="password" placeholder="Enter your Gemini API key" />
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(handleSaveChanges)} className="space-y-6">
+            <div className="grid gap-6 lg:grid-cols-2">
+                <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><BrainCircuit /> AI Provider</CardTitle>
+                    <CardDescription>Manage Gemini API Key.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <FormField
+                        control={form.control}
+                        name="geminiApiKey"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Gemini API Key</FormLabel>
+                                <FormControl>
+                                    <Input type="password" placeholder="Enter your Gemini API key" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2"><KeyRound/> Social Logins</CardTitle>
+                        <CardDescription>Manage Google and Facebook login credentials.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                        <div>
+                            <h3 className="font-semibold mb-2 flex items-center gap-2"><GoogleIcon/> Google</h3>
+                            <div className="space-y-4">
+                                <FormField
+                                    control={form.control}
+                                    name="googleClientId"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Client ID</FormLabel>
+                                            <FormControl>
+                                                <Input placeholder="Your Google Client ID" {...field}/>
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="googleClientSecret"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Client Secret</FormLabel>
+                                            <FormControl>
+                                                <Input type="password" placeholder="Your Google Client Secret" {...field}/>
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+                        </div>
+                        <div className="border-t pt-6">
+                            <h3 className="font-semibold mb-2 flex items-center gap-2"><Facebook className="h-5 w-5 text-blue-600"/> Facebook</h3>
+                            <div className="space-y-4">
+                               <FormField
+                                    control={form.control}
+                                    name="facebookAppId"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>App ID</FormLabel>
+                                            <FormControl>
+                                                <Input placeholder="Your Facebook App ID" {...field}/>
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                               <FormField
+                                    control={form.control}
+                                    name="facebookAppSecret"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>App Secret</FormLabel>
+                                            <FormControl>
+                                                <Input type="password" placeholder="Your Facebook App Secret" {...field}/>
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
             </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2"><KeyRound/> Social Logins</CardTitle>
-                <CardDescription>Manage Google and Facebook login credentials.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-                <div>
-                    <h3 className="font-semibold mb-2 flex items-center gap-2"><GoogleIcon/> Google</h3>
-                    <div className="space-y-2">
-                        <Label htmlFor="google-client-id">Client ID</Label>
-                        <Input id="google-client-id" placeholder="Your Google Client ID"/>
-                    </div>
-                    <div className="space-y-2 mt-2">
-                        <Label htmlFor="google-client-secret">Client Secret</Label>
-                        <Input id="google-client-secret" type="password" placeholder="Your Google Client Secret"/>
-                    </div>
-                </div>
-                 <div className="border-t pt-6">
-                    <h3 className="font-semibold mb-2 flex items-center gap-2"><Facebook className="h-5 w-5 text-blue-600"/> Facebook</h3>
-                    <div className="space-y-2">
-                        <Label htmlFor="facebook-app-id">App ID</Label>
-                        <Input id="facebook-app-id" placeholder="Your Facebook App ID"/>
-                    </div>
-                    <div className="space-y-2 mt-2">
-                        <Label htmlFor="facebook-app-secret">App Secret</Label>
-                        <Input id="facebook-app-secret" type="password" placeholder="Your Facebook App Secret"/>
-                    </div>
-                </div>
-            </CardContent>
-        </Card>
-
-      </div>
-        <div className="mt-8">
-            <Button onClick={handleSaveChanges}>Save All Settings</Button>
-        </div>
+            <div className="mt-8">
+                <Button type="submit" disabled={form.formState.isSubmitting}>
+                    {form.formState.isSubmitting ? (
+                        <> <Loader2 className="mr-2 h-4 w-4 animate-spin"/> Saving...</>
+                    ) : 'Save All Settings'}
+                </Button>
+            </div>
+        </form>
+      </Form>
     </div>
   );
 }
