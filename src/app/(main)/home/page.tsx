@@ -184,6 +184,27 @@ export default function HomePage() {
     }
     setReminder(null);
   }, [user, isGuest, setLocalAdherence, toast, familyMembers, userProfile, clearReminderTimers]);
+  
+  const logMissedDose = useCallback(async (medication: Medication, scheduledTime: string) => {
+      const logEntry: Omit<AdherenceLog, 'id'> = {
+        medicationId: medication.id,
+        medicationName: medication.name,
+        takenAt: new Date().toISOString(),
+        status: 'missed',
+        userId: user?.uid || 'guest',
+        scheduledTime: scheduledTime,
+      };
+
+      if (isGuest || !user) {
+        setLocalAdherence(prev => [...prev, { ...logEntry, id: new Date().toISOString() }]);
+      } else {
+        await trackAdherence({
+            ...logEntry,
+            userId: user.uid,
+        });
+      }
+  }, [user, isGuest, setLocalAdherence]);
+
 
   const checkReminders = useCallback(() => {
     const now = new Date();
@@ -244,21 +265,19 @@ export default function HomePage() {
     let missedCount = 0;
   
     for (const { time, medications } of todaysMedicationsByTime) {
-      const scheduledTime = parse(time, 'HH:mm', new Date());
+      const scheduledTime = parse(time, 'HH:mm', startOfDay(now));
       
       if (isBefore(scheduledTime, now)) {
-        const isHandled = medications.some(med =>
-          adherenceLogs.some(log =>
-            log.medicationId === med.id &&
-            isToday(new Date(log.takenAt)) &&
-            log.scheduledTime === time
-          )
-        );
-        
-        if (!isHandled) {
-            missedCount++;
-            for(const med of medications) {
-               await handleReminderAction([med], time, 'missed');
+        for(const med of medications) {
+            const isHandled = adherenceLogs.some(log =>
+                log.medicationId === med.id &&
+                isToday(new Date(log.takenAt)) &&
+                log.scheduledTime === time
+            );
+            
+            if (!isHandled) {
+                missedCount++;
+                await logMissedDose(med, time);
             }
         }
       }
@@ -271,7 +290,7 @@ export default function HomePage() {
             duration: 10000,
         });
     }
-  }, [todaysMedicationsByTime, adherenceLogs, handleReminderAction, toast]);
+  }, [todaysMedicationsByTime, adherenceLogs, logMissedDose, toast]);
 
 
   const checkAppointmentReminders = useCallback(async () => {
