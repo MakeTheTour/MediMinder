@@ -1,19 +1,24 @@
 
 'use client'
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Users, DollarSign, Megaphone, Loader2, UserPlus, Star } from "lucide-react";
+import { Users, DollarSign, Megaphone, Loader2, UserPlus, Star, TrendingUp } from "lucide-react";
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase-client';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { startOfToday, endOfToday } from 'date-fns';
+import { startOfToday, endOfToday, subDays, subMonths, format, startOfDay } from 'date-fns';
 import type { User as UserType, Subscription } from '@/lib/types';
+import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
 
 interface User extends UserType {
   isPremium?: boolean;
   premiumCycle?: 'monthly' | 'yearly';
 }
+
+type Period = 'daily' | 'monthly' | 'yearly';
 
 export default function AdminDashboardPage() {
   const [userCount, setUserCount] = useState<number>(0);
@@ -22,6 +27,7 @@ export default function AdminDashboardPage() {
   const [todaysUsers, setTodaysUsers] = useState<UserType[]>([]);
   const [todaysSubscriptions, setTodaysSubscriptions] = useState<Subscription[]>([]);
   const [loading, setLoading] = useState(true);
+  const [period, setPeriod] = useState<Period>('monthly');
 
   useEffect(() => {
     const todayStart = startOfToday().toISOString();
@@ -76,6 +82,59 @@ export default function AdminDashboardPage() {
         unsubSubscriptions();
     }
   }, []);
+  
+  const analyticsData = useMemo(() => {
+      // NOTE: This is mock data since no analytics are being tracked.
+      const now = new Date();
+      if (period === 'daily') {
+          return Array.from({ length: 24 }, (_, i) => ({
+              name: `${i}:00`,
+              views: Math.floor(Math.random() * 200) + 50,
+              visitors: Math.floor(Math.random() * 80) + 20,
+          }));
+      }
+      if (period === 'monthly') {
+          return Array.from({ length: 30 }, (_, i) => {
+              const date = subDays(now, 29 - i);
+              return {
+                  name: format(date, 'dd/MM'),
+                  views: Math.floor(Math.random() * 5000) + 1000,
+                  visitors: Math.floor(Math.random() * 2000) + 500,
+              };
+          });
+      }
+      if (period === 'yearly') {
+          return Array.from({ length: 12 }, (_, i) => {
+              const date = subMonths(now, 11 - i);
+              return {
+                  name: format(date, 'MMM'),
+                  views: Math.floor(Math.random() * 60000) + 20000,
+                  visitors: Math.floor(Math.random() * 25000) + 10000,
+              };
+          });
+      }
+      return [];
+  }, [period]);
+
+  const Chart = () => (
+    <ResponsiveContainer width="100%" height={300}>
+      <BarChart data={analyticsData}>
+        <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
+        <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value / 1000}k`} />
+        <Tooltip
+            cursor={{ fill: 'hsl(var(--muted))' }}
+            contentStyle={{
+                backgroundColor: 'hsl(var(--background))',
+                borderColor: 'hsl(var(--border))',
+                borderRadius: 'var(--radius)',
+            }}
+        />
+        <Bar dataKey="views" name="Page Views" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+        <Bar dataKey="visitors" name="Unique Visitors" fill="hsl(var(--primary) / 0.5)" radius={[4, 4, 0, 0]} />
+      </BarChart>
+    </ResponsiveContainer>
+  );
+
 
   return (
     <div className="container mx-auto p-4 space-y-6">
@@ -138,6 +197,26 @@ export default function AdminDashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+       <Card>
+        <CardHeader>
+            <CardTitle className="flex items-center gap-2"><TrendingUp/> Traffic Analytics</CardTitle>
+            <CardDescription>A look at page views and unique visitors.</CardDescription>
+        </CardHeader>
+        <CardContent>
+           <Tabs defaultValue="monthly" onValueChange={(value) => setPeriod(value as Period)} className="space-y-4">
+                <TabsList>
+                    <TabsTrigger value="daily">Daily</TabsTrigger>
+                    <TabsTrigger value="monthly">Monthly</TabsTrigger>
+                    <TabsTrigger value="yearly">Yearly</TabsTrigger>
+                </TabsList>
+                <TabsContent value="daily"><Chart/></TabsContent>
+                <TabsContent value="monthly"><Chart/></TabsContent>
+                <TabsContent value="yearly"><Chart/></TabsContent>
+            </Tabs>
+        </CardContent>
+      </Card>
+
 
        <div className="grid gap-6 lg:grid-cols-2">
         <Card>
