@@ -8,12 +8,18 @@ import * as z from 'zod';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Plus, Trash2, Loader2, Pencil } from "lucide-react";
+import { Plus, Trash2, Loader2, Pencil, MoreVertical } from "lucide-react";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { collection, addDoc, onSnapshot, deleteDoc, doc, query, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase-client';
 import { EditAdDialog } from '@/components/edit-ad-dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 const adSchema = z.object({
     title: z.string().min(1, 'Ad title is required.'),
@@ -187,13 +193,25 @@ export default function AdminAdsPage() {
                                   <CardTitle>{ad.title}</CardTitle>
                                   <CardDescription>{ad.content}</CardDescription>
                               </CardHeader>
-                              <CardFooter className="flex gap-2">
-                                  <Button variant="outline" size="sm" onClick={() => setEditingAd(ad)}>
-                                      <Pencil className="mr-2 h-4 w-4"/> Edit Ad
-                                  </Button>
-                                  <Button variant="destructive" size="sm" onClick={() => handleDeleteAd(ad.id)}>
-                                      <Trash2 className="mr-2 h-4 w-4"/> Delete Ad
-                                  </Button>
+                              <CardFooter className="flex justify-end">
+                                 <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon">
+                                            <MoreVertical className="h-4 w-4" />
+                                            <span className="sr-only">More options</span>
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuItem onClick={() => setEditingAd(ad)}>
+                                            <Pencil className="mr-2 h-4 w-4" />
+                                            Edit
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => handleDeleteAd(ad.id)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
+                                            <Trash2 className="mr-2 h-4 w-4" />
+                                            Delete
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
                               </CardFooter>
                           </Card>
                       ))}
