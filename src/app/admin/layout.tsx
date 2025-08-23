@@ -151,7 +151,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             </Button>
           </SidebarFooter>
         </Sidebar>
-        <SidebarInset className="flex-grow flex flex-col overflow-auto md:ml-0">
+        <SidebarInset className="flex-grow flex flex-col overflow-auto ml-0">
              <header className="p-4 border-b md:hidden sticky top-0 bg-background z-10">
                 <div className="flex items-center justify-between">
                     <h1 className="text-xl font-bold">Admin</h1>
