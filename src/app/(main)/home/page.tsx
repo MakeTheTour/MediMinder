@@ -138,17 +138,46 @@ export default function HomePage() {
       delete reminderTimers.current[notificationId];
     }
   }, []);
-
-  const handleReminderAction = useCallback(async (medications: Medication[], scheduledTime: string, status: 'taken' | 'stock_out' | 'missed' | 'snoozed') => {
+  
+  const handleReminderAction = useCallback(async (medications: Medication[], scheduledTime: string, status: 'taken' | 'stock_out' | 'snoozed') => {
     const notificationId = `${medications[0].id}-${scheduledTime}-${format(new Date(), 'yyyy-MM-dd')}`;
     clearReminderTimers(notificationId);
-    
+
+    const logPromises = medications.map(medication => {
+      const logEntry: Omit<AdherenceLog, 'id'> = {
+        medicationId: medication.id,
+        medicationName: medication.name,
+        takenAt: new Date().toISOString(),
+        status: status,
+        userId: user?.uid || 'guest',
+        scheduledTime: scheduledTime,
+      };
+
+      if (isGuest || !user) {
+        setLocalAdherence(prev => [...prev, { ...logEntry, id: new Date().toISOString() }]);
+        return Promise.resolve();
+      } else {
+        return trackAdherence({
+            ...logEntry,
+            userId: user.uid,
+        });
+      }
+    });
+
+    await Promise.all(logPromises);
+    setReminder(null);
+  }, [user, isGuest, setLocalAdherence, clearReminderTimers]);
+  
+  const logMissedDoseAndAlertFamily = useCallback(async (medications: Medication[], scheduledTime: string) => {
+    const notificationId = `${medications[0].id}-${scheduledTime}-${format(new Date(), 'yyyy-MM-dd')}`;
+    clearReminderTimers(notificationId);
+
     for (const medication of medications) {
         const logEntry: Omit<AdherenceLog, 'id'> = {
           medicationId: medication.id,
           medicationName: medication.name,
           takenAt: new Date().toISOString(),
-          status: status,
+          status: 'missed',
           userId: user?.uid || 'guest',
           scheduledTime: scheduledTime,
         };
@@ -162,7 +191,13 @@ export default function HomePage() {
           });
         }
         
-        if (status === 'missed' && familyMembers.length > 0 && userProfile?.isPremium) {
+        toast({
+          title: `Dose Logged as Missed`,
+          description: `Your ${format(parse(scheduledTime, 'HH:mm', new Date()), 'h:mm a')} dose for ${medication.name} was missed.`,
+          variant: 'destructive',
+        });
+
+        if (familyMembers.length > 0 && userProfile?.isPremium) {
             for (const member of familyMembers) {
                 if (member.status === 'accepted') {
                     const alert = await generateFamilyAlert({
@@ -180,35 +215,11 @@ export default function HomePage() {
         }
     }
     
-    if (status === 'missed') {
-      toast({
-        title: `Dose Logged as Missed`,
-        description: `Your ${format(parse(scheduledTime, 'HH:mm', new Date()), 'h:mm a')} dose was missed.`,
-        variant: 'destructive',
-      })
-    }
-    setReminder(null);
-  }, [user, isGuest, setLocalAdherence, toast, familyMembers, userProfile, clearReminderTimers]);
-  
-  const logMissedDose = useCallback(async (medication: Medication, scheduledTime: string) => {
-      const logEntry: Omit<AdherenceLog, 'id'> = {
-        medicationId: medication.id,
-        medicationName: medication.name,
-        takenAt: new Date().toISOString(),
-        status: 'missed',
-        userId: user?.uid || 'guest',
-        scheduledTime: scheduledTime,
-      };
+    // Show reminder one last time to inform user it was missed, then close it.
+    setReminder({ medications, time: scheduledTime });
+    setTimeout(() => setReminder(null), 60 * 1000);
 
-      if (isGuest || !user) {
-        setLocalAdherence(prev => [...prev, { ...logEntry, id: new Date().toISOString() }]);
-      } else {
-        await trackAdherence({
-            ...logEntry,
-            userId: user.uid,
-        });
-      }
-  }, [user, isGuest, setLocalAdherence]);
+  }, [user, isGuest, setLocalAdherence, toast, familyMembers, userProfile, clearReminderTimers]);
 
 
   const checkReminders = useCallback(() => {
@@ -227,15 +238,14 @@ export default function HomePage() {
         )
       );
 
-      const alreadyNotifiedThisSession = !!reminderTimers.current[notificationId];
-      if (isBefore(now, scheduledTime) || isHandled || alreadyNotifiedThisSession) {
+      if (isBefore(now, scheduledTime) || isHandled || reminderTimers.current[notificationId]) {
         continue;
       }
       
       const showReminder = () => {
-        if (!reminder) { // only show one popup at a time
+        if (!reminder) {
           setReminder({ medications, time });
-          try {
+           try {
             new Notification('Time for your medication!', {
                 body: `It's time for your ${format(scheduledTime, 'h:mm a')} dose.`,
             });
@@ -247,32 +257,25 @@ export default function HomePage() {
 
       reminderTimers.current[notificationId] = [];
 
-      // Initial alert
+      // Initial Alert
       showReminder();
+      const t1 = setTimeout(() => setReminder(null), reminderSettings.initialDuration * 60 * 1000);
 
-      const { initialDuration, secondAlert, familyAlert } = reminderSettings;
-
-      // After initial duration, hide popup
-      const t1 = setTimeout(() => setReminder(null), initialDuration * 60 * 1000);
-
-      // After second alert time, show again for 1 minute
+      // Second Alert
       const t2 = setTimeout(() => {
         showReminder();
-        const t3 = setTimeout(() => setReminder(null), 1 * 60 * 1000);
+        const t3 = setTimeout(() => setReminder(null), 1 * 60 * 1000); // Ring for 1 minute
         reminderTimers.current[notificationId].push(t3);
-      }, secondAlert * 60 * 1000);
+      }, reminderSettings.secondAlert * 60 * 1000);
 
-      // After family alert time, mark as missed and notify family
+      // Final Missed Alert + Family Alert
       const t4 = setTimeout(async () => {
-        await handleReminderAction(medications, time, 'missed');
-        showReminder(); // Show one last time to inform user it was missed
-        const t5 = setTimeout(() => setReminder(null), 1 * 60 * 1000);
-        reminderTimers.current[notificationId].push(t5);
-      }, familyAlert * 60 * 1000);
+        await logMissedDoseAndAlertFamily(medications, time);
+      }, reminderSettings.familyAlert * 60 * 1000);
 
       reminderTimers.current[notificationId].push(t1, t2, t4);
     }
-  }, [todaysMedicationsByTime, adherenceLogs, reminder, handleReminderAction, reminderSettings]);
+  }, [todaysMedicationsByTime, adherenceLogs, reminder, reminderSettings, logMissedDoseAndAlertFamily]);
 
 
   const checkMissedDosesOnLoad = useCallback(async () => {
@@ -292,7 +295,19 @@ export default function HomePage() {
             
             if (!isHandled) {
                 missedCount++;
-                await logMissedDose(med, time);
+                const logEntry: Omit<AdherenceLog, 'id'> = {
+                  medicationId: med.id,
+                  medicationName: med.name,
+                  takenAt: new Date().toISOString(),
+                  status: 'missed',
+                  userId: user?.uid || 'guest',
+                  scheduledTime: time,
+                };
+                 if (isGuest || !user) {
+                  setLocalAdherence(prev => [...prev, { ...logEntry, id: new Date().toISOString() }]);
+                } else {
+                  await trackAdherence({ ...logEntry, userId: user.uid });
+                }
             }
         }
       }
@@ -305,7 +320,7 @@ export default function HomePage() {
             duration: 10000,
         });
     }
-  }, [todaysMedicationsByTime, adherenceLogs, logMissedDose, toast]);
+  }, [todaysMedicationsByTime, adherenceLogs, toast, user, isGuest, setLocalAdherence]);
 
 
   const checkAppointmentReminders = useCallback(async () => {
@@ -522,3 +537,5 @@ export default function HomePage() {
     </>
   );
 }
+
+    
