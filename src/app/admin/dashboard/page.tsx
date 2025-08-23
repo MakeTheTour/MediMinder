@@ -2,12 +2,12 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Users, DollarSign, Megaphone, Loader2, UserPlus, Star, TrendingUp } from "lucide-react";
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase-client';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { startOfToday, endOfToday, subDays, subMonths, format, startOfDay } from 'date-fns';
+import { startOfToday, endOfToday, subDays, subMonths, format, startOfDay, isWithinInterval } from 'date-fns';
 import type { User as UserType, Subscription } from '@/lib/types';
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -19,15 +19,19 @@ interface User extends UserType {
 }
 
 type Period = 'daily' | 'monthly' | 'yearly';
+type SubscriptionPeriod = 'daily' | 'monthly' | 'yearly';
+
 
 export default function AdminDashboardPage() {
   const [userCount, setUserCount] = useState<number>(0);
   const [revenue, setRevenue] = useState<number>(0);
   const [activeAdsCount, setActiveAdsCount] = useState<number>(0);
   const [todaysUsers, setTodaysUsers] = useState<UserType[]>([]);
-  const [todaysSubscriptions, setTodaysSubscriptions] = useState<Subscription[]>([]);
+  const [allSubscriptions, setAllSubscriptions] = useState<Subscription[]>([]);
   const [loading, setLoading] = useState(true);
-  const [period, setPeriod] = useState<Period>('monthly');
+  const [analyticsPeriod, setAnalyticsPeriod] = useState<Period>('monthly');
+  const [subscriptionPeriod, setSubscriptionPeriod] = useState<SubscriptionPeriod>('daily');
+
 
   useEffect(() => {
     const todayStart = startOfToday().toISOString();
@@ -66,13 +70,9 @@ export default function AdminDashboardPage() {
         setActiveAdsCount(snapshot.size);
     });
     
-    const todaysSubscriptionsQuery = query(
-        collection(db, 'subscriptions'),
-        where('startDate', '>=', todayStart),
-        where('startDate', '<=', todayEnd)
-    );
-    const unsubSubscriptions = onSnapshot(todaysSubscriptionsQuery, (snapshot) => {
-        setTodaysSubscriptions(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Subscription)));
+    const subscriptionsQuery = query(collection(db, 'subscriptions'));
+    const unsubSubscriptions = onSnapshot(subscriptionsQuery, (snapshot) => {
+        setAllSubscriptions(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Subscription)));
     });
 
     return () => {
@@ -86,14 +86,14 @@ export default function AdminDashboardPage() {
   const analyticsData = useMemo(() => {
       // NOTE: This is mock data since no analytics are being tracked.
       const now = new Date();
-      if (period === 'daily') {
+      if (analyticsPeriod === 'daily') {
           return Array.from({ length: 24 }, (_, i) => ({
               name: `${i}:00`,
               views: Math.floor(Math.random() * 200) + 50,
               visitors: Math.floor(Math.random() * 80) + 20,
           }));
       }
-      if (period === 'monthly') {
+      if (analyticsPeriod === 'monthly') {
           return Array.from({ length: 30 }, (_, i) => {
               const date = subDays(now, 29 - i);
               return {
@@ -103,7 +103,7 @@ export default function AdminDashboardPage() {
               };
           });
       }
-      if (period === 'yearly') {
+      if (analyticsPeriod === 'yearly') {
           return Array.from({ length: 12 }, (_, i) => {
               const date = subMonths(now, 11 - i);
               return {
@@ -114,7 +114,31 @@ export default function AdminDashboardPage() {
           });
       }
       return [];
-  }, [period]);
+  }, [analyticsPeriod]);
+  
+  const { filteredSubscriptions, totalAmount } = useMemo(() => {
+    const now = new Date();
+    let startDate: Date;
+
+    if (subscriptionPeriod === 'daily') {
+      startDate = startOfToday();
+    } else if (subscriptionPeriod === 'monthly') {
+      startDate = subDays(now, 30);
+    } else { // yearly
+      startDate = subDays(now, 365);
+    }
+
+    const filtered = allSubscriptions.filter(sub => 
+        isWithinInterval(new Date(sub.startDate), { start: startDate, end: now })
+    );
+
+    const total = filtered.reduce((acc, sub) => {
+      return acc + (sub.plan === 'Premium Yearly' ? 99.99 : 9.99);
+    }, 0);
+
+    return { filteredSubscriptions: filtered, totalAmount: total };
+  }, [allSubscriptions, subscriptionPeriod]);
+
 
   const Chart = () => (
     <ResponsiveContainer width="100%" height={300}>
@@ -204,7 +228,7 @@ export default function AdminDashboardPage() {
             <CardDescription>A look at page views and unique visitors.</CardDescription>
         </CardHeader>
         <CardContent>
-           <Tabs defaultValue="monthly" onValueChange={(value) => setPeriod(value as Period)} className="space-y-4">
+           <Tabs defaultValue="monthly" onValueChange={(value) => setAnalyticsPeriod(value as Period)} className="space-y-4">
                 <TabsList>
                     <TabsTrigger value="daily">Daily</TabsTrigger>
                     <TabsTrigger value="monthly">Monthly</TabsTrigger>
@@ -248,42 +272,54 @@ export default function AdminDashboardPage() {
           </CardContent>
         </Card>
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Star/> Today's New Subscriptions</CardTitle>
-            <CardDescription>Users who upgraded to premium today.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-                <p className="text-sm text-muted-foreground">Loading today's subscriptions...</p>
-            ) : todaysSubscriptions.length > 0 ? (
-                <div className="space-y-4">
-                    {todaysSubscriptions.map(sub => (
-                        <div key={sub.id} className="flex items-center justify-between gap-4">
-                           <div className="flex items-center gap-4">
-                                <Avatar>
-                                    <AvatarImage src={sub.user.photoURL || undefined} alt={sub.user.name || 'User'} />
-                                    <AvatarFallback>{sub.user.name?.charAt(0) || 'U'}</AvatarFallback>
-                                </Avatar>
-                                <div>
-                                    <p className="font-semibold">{sub.user.name}</p>
-                                    <p className="text-sm text-muted-foreground">{sub.plan}</p>
+            <Tabs defaultValue="daily" onValueChange={(value) => setSubscriptionPeriod(value as SubscriptionPeriod)}>
+                <CardHeader>
+                    <CardTitle className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2"><Star/> Subscriptions</div>
+                         <TabsList className="grid w-auto grid-cols-3">
+                            <TabsTrigger value="daily">Daily</TabsTrigger>
+                            <TabsTrigger value="monthly">Monthly</TabsTrigger>
+                            <TabsTrigger value="yearly">Yearly</TabsTrigger>
+                        </TabsList>
+                    </CardTitle>
+                     <CardDescription>Users who upgraded to premium.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                     {loading ? (
+                        <p className="text-sm text-muted-foreground">Loading subscriptions...</p>
+                    ) : filteredSubscriptions.length > 0 ? (
+                        <div className="space-y-4">
+                            {filteredSubscriptions.map(sub => (
+                                <div key={sub.id} className="flex items-center justify-between gap-4">
+                                <div className="flex items-center gap-4">
+                                        <Avatar>
+                                            <AvatarImage src={sub.user.photoURL || undefined} alt={sub.user.name || 'User'} />
+                                            <AvatarFallback>{sub.user.name?.charAt(0) || 'U'}</AvatarFallback>
+                                        </Avatar>
+                                        <div>
+                                            <p className="font-semibold">{sub.user.name}</p>
+                                            <p className="text-sm text-muted-foreground">{sub.plan}</p>
+                                        </div>
                                 </div>
-                           </div>
-                           <div className="text-right">
-                                <p className="font-semibold">
-                                    {sub.plan === 'Premium Yearly' ? '$99.99' : '$9.99'}
-                                </p>
-                                <p className="text-sm text-muted-foreground">
-                                    {sub.paymentMethod}
-                                </p>
-                           </div>
+                                <div className="text-right">
+                                        <p className="font-semibold">
+                                            {sub.plan === 'Premium Yearly' ? '$99.99' : '$9.99'}
+                                        </p>
+                                        <p className="text-sm text-muted-foreground">
+                                            {sub.paymentMethod}
+                                        </p>
+                                </div>
+                                </div>
+                            ))}
                         </div>
-                    ))}
-                </div>
-            ) : (
-                 <p className="text-sm text-muted-foreground text-center py-4">No new subscriptions today.</p>
-            )}
-          </CardContent>
+                    ) : (
+                        <p className="text-sm text-muted-foreground text-center py-4">No new subscriptions in this period.</p>
+                    )}
+                </CardContent>
+                <CardFooter className="flex justify-end font-bold">
+                    Total: ${totalAmount.toFixed(2)}
+                </CardFooter>
+            </Tabs>
         </Card>
       </div>
     </div>
