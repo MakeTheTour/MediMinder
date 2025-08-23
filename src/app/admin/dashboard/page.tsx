@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Users, DollarSign, Megaphone, Loader2 } from "lucide-react";
-import { collection, onSnapshot, query, orderBy, limit } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, limit, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase-client';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
@@ -18,6 +18,7 @@ interface User {
 export default function AdminDashboardPage() {
   const [userCount, setUserCount] = useState<number>(0);
   const [revenue, setRevenue] = useState<number>(0);
+  const [activeAdsCount, setActiveAdsCount] = useState<number>(0);
   const [recentUsers, setRecentUsers] = useState<UserType[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -45,11 +46,17 @@ export default function AdminDashboardPage() {
     const unsubRecentUsers = onSnapshot(recentUsersQuery, (snapshot) => {
       setRecentUsers(snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserType)));
     });
+    
+    const activeAdsQuery = query(collection(db, 'ads'), where('status', '==', 'active'));
+    const unsubAds = onSnapshot(activeAdsQuery, (snapshot) => {
+        setActiveAdsCount(snapshot.size);
+    });
 
 
     return () => {
         unsubUsers();
         unsubRecentUsers();
+        unsubAds();
     }
   }, []);
 
@@ -103,9 +110,13 @@ export default function AdminDashboardPage() {
             <Megaphone className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">0</div>
+            {loading ? (
+                 <Loader2 className="h-6 w-6 animate-spin" />
+            ) : (
+                <div className="text-2xl font-bold">{activeAdsCount}</div>
+            )}
             <p className="text-xs text-muted-foreground">
-              No active campaigns
+                {activeAdsCount > 0 ? `${activeAdsCount} active campaign${activeAdsCount > 1 ? 's' : ''}` : 'No active campaigns'}
             </p>
           </CardContent>
         </Card>
