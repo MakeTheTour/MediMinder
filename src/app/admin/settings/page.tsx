@@ -108,7 +108,7 @@ export default function AdminSettingsPage() {
                             <FormItem>
                                 <FormLabel>Gemini API Key</FormLabel>
                                 <FormControl>
-                                    <Input type="password" placeholder="Enter your Gemini API key" {...field} />
+                                    <Input type="text" placeholder="Enter your Gemini API key" {...field} />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>
@@ -146,7 +146,7 @@ export default function AdminSettingsPage() {
                                         <FormItem>
                                             <FormLabel>Client Secret</FormLabel>
                                             <FormControl>
-                                                <Input type="password" placeholder="Your Google Client Secret" {...field}/>
+                                                <Input type="text" placeholder="Your Google Client Secret" {...field}/>
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -177,7 +177,7 @@ export default function AdminSettingsPage() {
                                         <FormItem>
                                             <FormLabel>App Secret</FormLabel>
                                             <FormControl>
-                                                <Input type="password" placeholder="Your Facebook App Secret" {...field}/>
+                                                <Input type="text" placeholder="Your Facebook App Secret" {...field}/>
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
