@@ -17,7 +17,7 @@ const SpecialistRecommendationInputSchema = z.object({
 });
 export type SpecialistRecommendationInput = z.infer<typeof SpecialistRecommendationInputSchema>;
 
-const SpecialistRecommendationOutputSchema = z.object({
+export const SpecialistRecommendationOutputSchema = z.object({
   specialist: z.string().describe("The type of medical specialist recommended (e.g., Cardiologist, Neurologist)."),
   reasoning: z.string().describe("A brief explanation for why this specialist is recommended based on the symptoms."),
   doctorName: z.string().optional().describe("The name of a top-rated doctor for the suggested specialty in the user's city."),
