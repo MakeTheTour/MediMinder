@@ -247,18 +247,22 @@ export default function HomePage() {
       // After 1 minute, hide popup
       const t1 = setTimeout(() => setReminder(null), 1 * 60 * 1000);
 
-      // After 3 minutes, show again
-      const t2 = setTimeout(() => showReminder(), 3 * 60 * 1000);
+      // After 3 minutes, show again for 1 minute
+      const t2 = setTimeout(() => {
+        showReminder();
+        const t3 = setTimeout(() => setReminder(null), 1 * 60 * 1000);
+        reminderTimers.current[notificationId].push(t3);
+      }, 3 * 60 * 1000);
 
       // After 10 minutes, mark as missed and notify family
-      const t3 = setTimeout(async () => {
+      const t4 = setTimeout(async () => {
         await handleReminderAction(medications, time, 'missed');
         showReminder(); // Show one last time to inform user it was missed
-        const t4 = setTimeout(() => setReminder(null), 1 * 60 * 1000);
-        reminderTimers.current[notificationId].push(t4);
+        const t5 = setTimeout(() => setReminder(null), 1 * 60 * 1000);
+        reminderTimers.current[notificationId].push(t5);
       }, 10 * 60 * 1000);
 
-      reminderTimers.current[notificationId].push(t1, t2, t3);
+      reminderTimers.current[notificationId].push(t1, t2, t4);
     }
   }, [todaysMedicationsByTime, adherenceLogs, reminder, handleReminderAction]);
 
