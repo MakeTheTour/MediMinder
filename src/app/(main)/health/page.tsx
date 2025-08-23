@@ -163,14 +163,16 @@ export default function HealthPage() {
         const unsubSuggestions = onSnapshot(suggestionQuery, (snapshot) => {
              setSavedSuggestions(snapshot.docs.map(doc => {
                 const data = doc.data();
+                // Safe mapping to prevent internal errors if recommendation object is missing
+                const recommendation = data.recommendation || {};
                 return {
                     id: doc.id,
                     symptoms: data.symptoms || '',
                     createdAt: data.createdAt,
-                    specialist: data.recommendation?.specialist || 'N/A',
-                    reasoning: data.recommendation?.reasoning || '',
-                    doctorName: data.recommendation?.doctorName,
-                    doctorAddress: data.recommendation?.doctorAddress,
+                    specialist: recommendation.specialist || 'N/A',
+                    reasoning: recommendation.reasoning || '',
+                    doctorName: recommendation.doctorName,
+                    doctorAddress: recommendation.doctorAddress,
                 } as SavedSuggestion
              }));
         });
@@ -193,10 +195,12 @@ export default function HealthPage() {
     }, [user, isGuest]);
     
     useEffect(() => {
-        if (userProfile && (healthMetrics.length > 0 || savedSuggestions.length > 0)) {
+        // Automatically generate insights when data changes, but only if not already loading.
+        if (!loadingInsights && userProfile && (healthMetrics.length > 0 || savedSuggestions.length > 0)) {
             handleGetInsights();
         }
-    }, [healthMetrics, savedSuggestions, userProfile, handleGetInsights]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [healthMetrics, savedSuggestions, userProfile]);
     
     const handleEditHealthMetric = (id: string) => {
         router.push(`/health/edit/${id}`);
