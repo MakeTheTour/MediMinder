@@ -8,10 +8,10 @@ import * as z from 'zod';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Plus, Trash2, Loader2, Pencil, MoreVertical } from "lucide-react";
+import { Plus, Trash2, Loader2, Pencil, MoreVertical, Eye, EyeOff } from "lucide-react";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { collection, addDoc, onSnapshot, deleteDoc, doc, query, orderBy } from 'firebase/firestore';
+import { collection, addDoc, onSnapshot, deleteDoc, doc, query, orderBy, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase-client';
 import { EditAdDialog } from '@/components/edit-ad-dialog';
 import {
@@ -20,6 +20,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { Badge } from '@/components/ui/badge';
 
 const adSchema = z.object({
     title: z.string().min(1, 'Ad title is required.'),
@@ -34,6 +35,7 @@ interface Ad {
     content: string;
     imageUrl: string;
     redirectUrl?: string;
+    status: 'active' | 'inactive';
 }
 
 export default function AdminAdsPage() {
@@ -65,6 +67,7 @@ export default function AdminAdsPage() {
     try {
         await addDoc(collection(db, 'ads'), {
             ...values,
+            status: 'active',
             createdAt: new Date().toISOString(),
         });
         toast({ title: "Ad Campaign Created", description: "Your new ad is now active." });
@@ -81,6 +84,17 @@ export default function AdminAdsPage() {
     } catch (error) {
         toast({ title: "Error", description: "Could not delete ad campaign.", variant: "destructive" });
     }
+  }
+
+  const handleToggleAdStatus = async (ad: Ad) => {
+      const newStatus = ad.status === 'active' ? 'inactive' : 'active';
+      try {
+          const adRef = doc(db, 'ads', ad.id);
+          await updateDoc(adRef, { status: newStatus });
+          toast({ title: "Status Updated", description: `Ad is now ${newStatus}.` });
+      } catch (error) {
+          toast({ title: "Error", description: "Could not update ad status.", variant: "destructive" });
+      }
   }
 
   return (
@@ -190,7 +204,10 @@ export default function AdminAdsPage() {
                           <Card key={ad.id} className="overflow-hidden">
                               <img src={ad.imageUrl} alt={ad.title} className="w-full h-32 object-cover"/>
                               <CardHeader>
-                                  <CardTitle>{ad.title}</CardTitle>
+                                  <div className="flex items-center justify-between">
+                                      <CardTitle>{ad.title}</CardTitle>
+                                      <Badge variant={ad.status === 'active' ? 'default' : 'secondary'}>{ad.status}</Badge>
+                                  </div>
                                   <CardDescription>{ad.content}</CardDescription>
                               </CardHeader>
                               <CardFooter className="flex justify-end">
@@ -205,6 +222,10 @@ export default function AdminAdsPage() {
                                         <DropdownMenuItem onClick={() => setEditingAd(ad)}>
                                             <Pencil className="mr-2 h-4 w-4" />
                                             Edit
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => handleToggleAdStatus(ad)}>
+                                            {ad.status === 'active' ? <EyeOff className="mr-2 h-4 w-4" /> : <Eye className="mr-2 h-4 w-4" />}
+                                            <span>{ad.status === 'active' ? 'Deactivate' : 'Activate'}</span>
                                         </DropdownMenuItem>
                                         <DropdownMenuItem onClick={() => handleDeleteAd(ad.id)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
                                             <Trash2 className="mr-2 h-4 w-4" />

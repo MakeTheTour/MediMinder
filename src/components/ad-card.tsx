@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase-client';
 import Image from 'next/image';
 import { Megaphone } from 'lucide-react';
@@ -15,6 +15,7 @@ interface Ad {
   content: string;
   imageUrl: string;
   redirectUrl?: string;
+  status: 'active' | 'inactive';
 }
 
 export function AdCard() {
@@ -22,7 +23,12 @@ export function AdCard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const q = query(collection(db, 'ads'), orderBy('createdAt', 'desc'), limit(1));
+    const q = query(
+        collection(db, 'ads'), 
+        where('status', '==', 'active'),
+        orderBy('createdAt', 'desc'), 
+        limit(1)
+    );
     const unsub = onSnapshot(q, (snapshot) => {
       if (!snapshot.empty) {
         setAd({ id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as Ad);
@@ -77,4 +83,3 @@ export function AdCard() {
 
   return AdContent;
 }
-
