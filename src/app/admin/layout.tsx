@@ -18,7 +18,7 @@ import {
   SidebarMenuSubItem,
 } from '@/components/ui/sidebar';
 import { usePathname, useRouter } from 'next/navigation';
-import { Users, LayoutDashboard, DollarSign, Megaphone, CreditCard, User, LogOut, Mail, ChevronDown } from 'lucide-react';
+import { Users, LayoutDashboard, DollarSign, Megaphone, CreditCard, User, LogOut, Mail, ChevronDown, KeyRound } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/context/auth-context';
 import { Loader2 } from 'lucide-react';
@@ -32,6 +32,7 @@ const adminNavItems = [
   { href: '/admin/ads', label: 'Custom Ads', icon: Megaphone },
   { href: '/admin/premium', label: 'Premium Plan', icon: DollarSign },
   { href: '/admin/email', label: 'Email Settings', icon: Mail },
+  { href: '/admin/settings', label: 'API Settings', icon: KeyRound },
   { href: '/admin/profile', label: 'Profile', icon: User },
 ];
 
@@ -122,14 +123,18 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                     <CollapsibleContent asChild>
                         <SidebarMenuSub>
                             <SidebarMenuSubItem>
-                                <SidebarMenuSubButton asChild isActive={pathname === '/admin/subscriptions'}>
-                                    <Link href="/admin/subscriptions">Subscriptions</Link>
-                                </SidebarMenuSubButton>
+                                <Link href="/admin/subscriptions">
+                                    <SidebarMenuSubButton isActive={pathname === '/admin/subscriptions'}>
+                                        Subscriptions
+                                    </SidebarMenuSubButton>
+                                </Link>
                             </SidebarMenuSubItem>
                             <SidebarMenuSubItem>
-                                <SidebarMenuSubButton asChild isActive={pathname === '/admin/payments'}>
-                                    <Link href="/admin/payments">Gateways Setting</Link>
-                                </SidebarMenuSubButton>
+                                <Link href="/admin/payments">
+                                    <SidebarMenuSubButton isActive={pathname === '/admin/payments'}>
+                                        Gateways Setting
+                                    </SidebarMenuSubButton>
+                                </Link>
                             </SidebarMenuSubItem>
                         </SidebarMenuSub>
                     </CollapsibleContent>
