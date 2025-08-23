@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, HeartPulse, BrainCircuit, Activity, Utensils, Dumbbell, Pill, AlertCircle, Trash2, Pencil, MoreVertical, Sparkles, User, MapPin } from 'lucide-react';
+import { Plus, HeartPulse, BrainCircuit, Activity, Utensils, Dumbbell, Leaf, AlertCircle, Trash2, Pencil, MoreVertical, Sparkles, User, MapPin } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -296,20 +296,18 @@ export default function HealthPage() {
       
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2"><BrainCircuit /> AI Insights</CardTitle>
-          <CardDescription>Personalized insights based on your recent health data.</CardDescription>
+          <CardTitle className="flex items-center gap-2"><Sparkles /> NatureMed Insights</CardTitle>
+          <CardDescription>Personalized insights from a holistic perspective.</CardDescription>
         </CardHeader>
         <CardContent>
             {loadingProfile ? (
                  <p className="text-sm text-muted-foreground">Loading profile to generate insights...</p>
-            ) : (!userProfile?.height || healthMetrics.length === 0 || !healthMetrics[0].weight) && !isGuest && (
+            ) : healthMetrics.length === 0 && !isGuest && (
                  <Alert variant="default" className="mb-4">
                     <AlertCircle className="h-4 w-4" />
-                    <AlertTitle>Get BMI Insights!</AlertTitle>
+                    <AlertTitle>Get Your Insights!</AlertTitle>
                     <AlertDescription>
-                        To get BMI-based insights, please make sure you have added your height in your{' '}
-                        <Link href="/settings/profile" className="font-bold underline">profile</Link>
-                        {' '}and logged your weight.
+                        To get your NatureMed insights, please log some of your recent health data.
                     </AlertDescription>
                 </Alert>
             )}
@@ -333,10 +331,10 @@ export default function HealthPage() {
                            </div>
                         </div>
                          <div className="flex items-start gap-3">
-                           <Pill className="h-5 w-5 text-primary mt-1 shrink-0" />
+                           <Leaf className="h-5 w-5 text-primary mt-1 shrink-0" />
                            <div>
-                                <h4 className="font-semibold text-foreground">Medication Observation</h4>
-                                <p className="text-sm">{insights.medicationObservation}</p>
+                                <h4 className="font-semibold text-foreground">Holistic Observation</h4>
+                                <p className="text-sm">{insights.holisticObservation}</p>
                            </div>
                         </div>
                     </div>
