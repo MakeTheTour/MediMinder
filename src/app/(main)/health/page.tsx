@@ -303,7 +303,7 @@ export default function HealthPage() {
                                 <Leaf className="h-5 w-5 text-primary mt-1 shrink-0" />
                                 <div>
                                     <h4 className="font-semibold text-foreground">Holistic Observation</h4>
-                                    <p className="text-sm">{insights.medicationObservation}</p>
+                                    <p className="text-sm">{insights.holisticObservation}</p>
                                 </div>
                                 </div>
                             </div>

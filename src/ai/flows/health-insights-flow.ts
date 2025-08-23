@@ -26,7 +26,7 @@ const HealthInsightsOutputSchema = z.object({
   insight: z.string().describe("A concise, helpful insight based on the provided health data. Address the user directly."),
   foodSuggestion: z.string().describe("A practical food or diet suggestion from an alternative/holistic medicine perspective."),
   exerciseSuggestion: z.string().describe("A practical exercise suggestion from an alternative/holistic medicine perspective (e.g., yoga, tai chi)."),
-  medicationObservation: z.string().describe("A general observation about the user's wellness journey. Do not give medical advice."),
+  holisticObservation: z.string().describe("A general observation about the user's wellness journey. Do not give medical advice."),
 });
 export type HealthInsightsOutput = z.infer<typeof HealthInsightsOutputSchema>;
 
@@ -58,7 +58,7 @@ Based on all this data, provide one overall insight for {{{userProfile.name}}}. 
 Then, provide an alternative food/diet suggestion, and an alternative exercise suggestion.
 - The food suggestion should be a simple, natural tip (e.g., "Consider incorporating ginger and turmeric into your diet to help with inflammation, which may be related to your joint pain symptoms.")
 - The exercise suggestion should be a gentle, holistic activity (e.g., "Gentle yoga or Tai Chi could help improve your balance and reduce stress, which might positively impact your blood pressure.")
-- The 'medicationObservation' should be a general, supportive comment on their wellness journey.
+- The 'holisticObservation' should be a general, supportive comment on their wellness journey.
 
 Keep the tone positive, gentle, and supportive.
   `,
@@ -76,7 +76,7 @@ const healthInsightsFlow = ai.defineFlow(
             insight: "No health data recorded yet. Log your data to get AI insights.",
             foodSuggestion: "Log your health data to get food recommendations.",
             exerciseSuggestion: "Log your health data to get exercise suggestions.",
-            medicationObservation: "Log your health data to see observations."
+            holisticObservation: "Log your health data to see observations."
         }
     }
     const {output} = await prompt(input);
