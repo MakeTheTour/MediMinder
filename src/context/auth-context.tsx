@@ -3,7 +3,8 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { onAuthStateChanged, User, signOut } from 'firebase/auth';
-import { auth } from '@/lib/firebase-client';
+import { auth, db } from '@/lib/firebase-client';
+import { collection, onSnapshot, query, where } from 'firebase/firestore';
 
 interface AuthContextType {
   user: User | null;
@@ -11,14 +12,16 @@ interface AuthContextType {
   isGuest: boolean;
   setGuest: (isGuest: boolean) => void;
   logout: () => void;
+  pendingInvitationCount: number;
 }
 
-const AuthContext = createContext<AuthContextType>({ user: null, loading: true, isGuest: false, setGuest: () => {}, logout: () => {} });
+const AuthContext = createContext<AuthContextType>({ user: null, loading: true, isGuest: false, setGuest: () => {}, logout: () => {}, pendingInvitationCount: 0 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [isGuest, setIsGuestState] = useState(false);
+  const [pendingInvitationCount, setPendingInvitationCount] = useState(0);
 
    useEffect(() => {
     const storedIsGuest = typeof window !== 'undefined' && window.sessionStorage.getItem('isGuest') === 'true';
@@ -45,6 +48,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (user?.email) {
+      const q = query(
+        collection(db, 'invitations'),
+        where('inviteeEmail', '==', user.email),
+        where('status', '==', 'pending')
+      );
+      
+      const unsub = onSnapshot(q, (snapshot) => {
+        setPendingInvitationCount(snapshot.size);
+      });
+
+      return () => unsub();
+    } else {
+      setPendingInvitationCount(0);
+    }
+  }, [user]);
 
   const setGuest = (isGuestMode: boolean) => {
       setIsGuestState(isGuestMode);
@@ -79,6 +100,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isGuest,
       setGuest,
       logout,
+      pendingInvitationCount,
   }
 
   return (
