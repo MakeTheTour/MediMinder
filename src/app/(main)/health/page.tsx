@@ -2,11 +2,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, HeartPulse, BrainCircuit, Activity, Utensils, Dumbbell, Pill, AlertCircle, Trash2, Pencil, MoreVertical } from 'lucide-react';
+import { Plus, HeartPulse, BrainCircuit, Activity, Utensils, Dumbbell, Pill, AlertCircle, Trash2, Pencil, MoreVertical, Sparkles, User, MapPin } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { HealthMetric, UserProfile } from '@/lib/types';
+import { HealthMetric, UserProfile, SpecialistRecommendationOutput } from '@/lib/types';
 import { useAuth } from '@/context/auth-context';
 import { collection, onSnapshot, query, orderBy, getDoc, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase-client';
@@ -22,6 +22,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { deleteDoctorSuggestion } from '@/ai/flows/delete-doctor-suggestion-flow';
+
+interface SavedSuggestion extends SpecialistRecommendationOutput {
+    id: string;
+    symptoms: string;
+    createdAt: string;
+}
 
 function HealthHistoryItem({ metric, onDelete, onEdit }: { metric: HealthMetric, onDelete: (id: string) => void, onEdit: (id: string) => void }) {
     return (
@@ -57,12 +64,57 @@ function HealthHistoryItem({ metric, onDelete, onEdit }: { metric: HealthMetric,
     )
 }
 
+function SavedSuggestionCard({ suggestion, onDelete }: { suggestion: SavedSuggestion, onDelete: (id: string) => void }) {
+    return (
+        <div className="p-4 rounded-lg bg-muted/50">
+            <div className="flex justify-between items-start">
+                 <div>
+                    <p className="text-sm text-muted-foreground">{format(new Date(suggestion.createdAt), 'MMMM d, yyyy')}</p>
+                    <p className="font-semibold text-foreground">For: "{suggestion.symptoms}"</p>
+                 </div>
+                 <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => onDelete(suggestion.id)}>
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                    <span className="sr-only">Delete suggestion</span>
+                </Button>
+            </div>
+            <div className="p-3 mt-2 bg-primary/10 rounded-lg border border-primary/20 space-y-3">
+                 <div className="flex items-start gap-3">
+                  <Sparkles className="h-5 w-5 text-primary mt-1 shrink-0" />
+                  <div>
+                    <h4 className="font-semibold text-foreground">{suggestion.specialist}</h4>
+                    <p className="text-sm">{suggestion.reasoning}</p>
+                  </div>
+                </div>
+                {suggestion.doctorName && (
+                     <div className="border-t border-primary/20 pt-3 space-y-3">
+                         <div className="flex items-start gap-3">
+                             <User className="h-5 w-5 text-primary mt-1 shrink-0" />
+                            <div>
+                                <h4 className="font-semibold text-foreground">Suggested Doctor</h4>
+                                <p>{suggestion.doctorName}</p>
+                            </div>
+                        </div>
+                         <div className="flex items-start gap-3">
+                            <MapPin className="h-5 w-5 text-primary mt-1 shrink-0" />
+                            <div>
+                                <h4 className="font-semibold text-foreground">Location</h4>
+                                <p className="text-muted-foreground">{suggestion.doctorAddress}</p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    )
+}
+
 export default function HealthPage() {
     const { user, isGuest } = useAuth();
     const router = useRouter();
     const { toast } = useToast();
     
     const [healthMetrics, setHealthMetrics] = useState<HealthMetric[]>([]);
+    const [savedSuggestions, setSavedSuggestions] = useState<SavedSuggestion[]>([]);
     const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
     const [insights, setInsights] = useState<HealthInsightsOutput | null>(null);
     const [loadingInsights, setLoadingInsights] = useState(false);
@@ -73,12 +125,26 @@ export default function HealthPage() {
             setHealthMetrics([]);
             setUserProfile(null);
             setLoadingProfile(false);
+            setSavedSuggestions([]);
             return;
         };
 
-        const q = query(collection(db, 'users', user.uid, 'healthMetrics'), orderBy('date', 'desc'));
-        const unsubHealth = onSnapshot(q, (snapshot) => {
+        const healthQuery = query(collection(db, 'users', user.uid, 'healthMetrics'), orderBy('date', 'desc'));
+        const unsubHealth = onSnapshot(healthQuery, (snapshot) => {
             setHealthMetrics(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as HealthMetric)));
+        });
+        
+        const suggestionQuery = query(collection(db, 'users', user.uid, 'doctorSuggestions'), orderBy('createdAt', 'desc'));
+        const unsubSuggestions = onSnapshot(suggestionQuery, (snapshot) => {
+             setSavedSuggestions(snapshot.docs.map(doc => {
+                const data = doc.data();
+                return {
+                    id: doc.id,
+                    symptoms: data.symptoms,
+                    createdAt: data.createdAt,
+                    ...data.recommendation,
+                } as SavedSuggestion
+             }));
         });
         
         const fetchUserProfile = async () => {
@@ -94,6 +160,7 @@ export default function HealthPage() {
         
         return () => {
           unsubHealth();
+          unsubSuggestions();
         }
     }, [user, isGuest]);
     
@@ -136,6 +203,24 @@ export default function HealthPage() {
             toast({ title: "Error", description: "Could not delete the reading. Please try again.", variant: 'destructive' });
         }
     };
+
+    const handleDeleteSuggestion = async (id: string) => {
+        if (isGuest || !user) {
+            toast({ title: "Cannot Delete", description: "You must be signed in to delete history." });
+            return;
+        }
+        try {
+            const result = await deleteDoctorSuggestion({ userId: user.uid, suggestionId: id });
+            if (result.success) {
+                toast({ title: "Suggestion Deleted", description: "The saved suggestion has been removed." });
+            } else {
+                throw new Error(result.message);
+            }
+        } catch (error) {
+             const errorMessage = error instanceof Error ? error.message : "Could not delete the suggestion. Please try again.";
+            toast({ title: "Error", description: errorMessage, variant: 'destructive' });
+        }
+    };
     
     const handleAddClick = () => {
         if (isGuest || !user) {
@@ -158,6 +243,28 @@ export default function HealthPage() {
       </header>
       
       <DoctorSuggestion />
+
+       <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><BrainCircuit /> Saved AI Suggestions</CardTitle>
+          <CardDescription>A history of your AI-generated doctor suggestions.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {savedSuggestions.length > 0 ? (
+            <div className="space-y-4">
+              {savedSuggestions.map((suggestion) => (
+                <SavedSuggestionCard key={suggestion.id} suggestion={suggestion} onDelete={handleDeleteSuggestion}/>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-10">
+                <BrainCircuit className="mx-auto h-12 w-12 text-muted-foreground" />
+                <h3 className="mt-4 text-lg font-semibold">{isGuest ? "Sign in to save suggestions" : "No Saved Suggestions"}</h3>
+                <p className="mt-1 text-sm text-muted-foreground">{isGuest ? "Create an account or sign in to get and save AI suggestions." : "Use the 'Doctor Suggestion' tool to get a recommendation."}</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
@@ -239,7 +346,6 @@ export default function HealthPage() {
             </Button>
         </CardContent>
       </Card>
-
     </div>
   );
 }
