@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, HeartPulse, BrainCircuit, Activity, Utensils, Dumbbell, Pill, AlertCircle, Trash2, Pencil, MoreVertical, Sparkles, User, MapPin, History, Save } from 'lucide-react';
+import { Plus, HeartPulse, BrainCircuit, Activity, Utensils, Dumbbell, Pill, AlertCircle, Trash2, Pencil, MoreVertical, Sparkles, User, MapPin, History, Save, Leaf } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -169,8 +169,8 @@ export default function HealthPage() {
     }, [user, isGuest]);
     
     const handleGetInsights = async () => {
-        if (healthMetrics.length === 0) {
-            toast({ title: "Not Enough Data", description: "Log some health data first to get insights."});
+        if (healthMetrics.length === 0 && savedSuggestions.length === 0) {
+            toast({ title: "Not Enough Data", description: "Log some health data or save a suggestion first to get insights."});
             return;
         }
         if (!userProfile) {
@@ -182,6 +182,7 @@ export default function HealthPage() {
         try {
             const result = await generateHealthInsights({
                 healthMetrics: healthMetrics.slice(0, 10), // Send last 10 records
+                savedSuggestions: savedSuggestions.map(s => ({symptoms: s.symptoms, recommendation: s})),
                 userProfile: userProfile,
             });
             setInsights(result);
@@ -264,7 +265,7 @@ export default function HealthPage() {
                 <TabsContent value="insights" className="pt-4">
                     {loadingProfile ? (
                         <p className="text-sm text-muted-foreground">Loading profile to generate insights...</p>
-                    ) : healthMetrics.length === 0 && !isGuest && (
+                    ) : healthMetrics.length === 0 && savedSuggestions.length === 0 && !isGuest && (
                         <Alert variant="default" className="my-4">
                             <AlertCircle className="h-4 w-4" />
                             <AlertTitle>Get Your Insights!</AlertTitle>
