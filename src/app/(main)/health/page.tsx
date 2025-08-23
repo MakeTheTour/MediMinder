@@ -22,6 +22,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { deleteDoctorSuggestion } from '@/ai/flows/delete-doctor-suggestion-flow';
+import { DoctorSuggestion } from '@/components/doctor-suggestion';
 
 interface SavedSuggestion extends SpecialistRecommendationOutput {
     id: string;
@@ -240,6 +241,8 @@ export default function HealthPage() {
             <Plus className="mr-2 h-4 w-4" /> {isGuest ? 'Sign In to Log' : 'Add Reading'}
         </Button>
       </header>
+
+      <DoctorSuggestion />
       
        <Card>
         <CardHeader>
