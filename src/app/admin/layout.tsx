@@ -92,7 +92,12 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       <div className="flex min-h-screen">
         <Sidebar>
           <SidebarHeader>
-            <SidebarTrigger />
+            <div className="flex items-center gap-2">
+                <Button variant="ghost" size="icon" className="md:hidden">
+                    <SidebarTrigger />
+                </Button>
+                <h2 className="text-lg font-semibold">MediMinder</h2>
+            </div>
           </SidebarHeader>
           <SidebarContent>
             <SidebarMenu>
@@ -149,6 +154,12 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           </SidebarFooter>
         </Sidebar>
         <SidebarInset className="flex-grow flex flex-col overflow-auto">
+             <header className="p-4 border-b md:hidden sticky top-0 bg-background z-10">
+                <div className="flex items-center justify-between">
+                    <h1 className="text-xl font-bold">Admin</h1>
+                    <SidebarTrigger />
+                </div>
+             </header>
              <main className="flex-1 p-4">{children}</main>
         </SidebarInset>
       </div>
