@@ -31,7 +31,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [isGuest, setIsGuestState] = useState(false);
   const [pendingInvitationCount, setPendingInvitationCount] = useState(0);
-  const [haveInvitationsBeenViewed, setHaveInvitationsBeenViewed] = useState(false);
 
    useEffect(() => {
     const storedIsGuest = typeof window !== 'undefined' && window.sessionStorage.getItem('isGuest') === 'true';
@@ -39,8 +38,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setIsGuestState(true);
         setLoading(false);
     }
-    const viewedInvites = typeof window !== 'undefined' && window.sessionStorage.getItem('viewedPendingInvitations') === 'true';
-    setHaveInvitationsBeenViewed(viewedInvites);
 
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
@@ -80,10 +77,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user]);
   
   const setInvitationsAsViewed = () => {
-    if (typeof window !== 'undefined') {
-      window.sessionStorage.setItem('viewedPendingInvitations', 'true');
-      setHaveInvitationsBeenViewed(true);
-    }
+    // This function can be used in the future if we want to hide the badge after viewing,
+    // but for now we will always show it if there are pending invitations.
   };
 
   const setGuest = (isGuestMode: boolean) => {
@@ -104,7 +99,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsGuestState(false);
     if (typeof window !== 'undefined') {
       window.sessionStorage.removeItem('isGuest');
-      window.sessionStorage.removeItem('viewedPendingInvitations');
       // Optionally clear local storage data for guest
       window.localStorage.removeItem('guest-medications');
       window.localStorage.removeItem('guest-appointments');
@@ -120,7 +114,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isGuest,
       setGuest,
       logout,
-      pendingInvitationCount: haveInvitationsBeenViewed ? 0 : pendingInvitationCount,
+      pendingInvitationCount,
       setInvitationsAsViewed,
   }
 

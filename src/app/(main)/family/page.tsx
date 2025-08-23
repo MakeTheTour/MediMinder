@@ -163,14 +163,15 @@ export default function FamilyPage() {
     }
 
     const allLinkedAccounts = [
-        ...familyMembers,
+        ...familyMembers.filter(m => m.status === 'accepted'),
         ...sentInvitations.filter(inv => inv.status === 'pending').map(inv => ({
             id: inv.id,
             uid: '', // Pending invitations don't have a confirmed user ID yet
             name: inv.inviteeName,
             email: inv.inviteeEmail,
             relation: inv.relation,
-            status: 'pending' as const
+            status: 'pending' as const,
+            photoURL: '',
         }))
     ];
 
@@ -251,7 +252,7 @@ export default function FamilyPage() {
                         ) : (
                             <Badge variant="default">Linked</Badge>
                         )}
-                        <Button variant="ghost" size="sm" onClick={() => member.status === 'pending' ? handleCancelSentInvitation(member.id) : handleRemoveLinkedMember(member)}>
+                        <Button variant="ghost" size="sm" onClick={() => member.status === 'pending' ? handleCancelSentInvitation(member.id) : handleRemoveLinkedMember(member as FamilyMember)}>
                             {member.status === 'pending' ? 'Cancel' : 'Remove'}
                         </Button>
                     </div>
