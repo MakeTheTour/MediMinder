@@ -43,6 +43,7 @@ export default function ReportsPage() {
 
   const adherenceData = useMemo(() => {
     const logs = isGuest ? localAdherence : firestoreAdherence;
+    const missedStatuses = ['missed', 'skipped', 'muted', 'stock_out', 'snoozed'];
 
     if (period === 'daily') {
       const todayLogs = logs.filter(log => isSameDay(new Date(log.takenAt), new Date()));
@@ -56,7 +57,7 @@ export default function ReportsPage() {
         const hour = getHours(new Date(log.takenAt));
         if (log.status === 'taken') {
           hours[hour].taken += 1;
-        } else if (['missed', 'skipped', 'muted', 'stock_out'].includes(log.status)) {
+        } else if (missedStatuses.includes(log.status)) {
           hours[hour].missed += 1;
         }
       });
@@ -74,7 +75,7 @@ export default function ReportsPage() {
         return dateRange.map(day => {
             const dailyLogs = logs.filter(log => isSameDay(new Date(log.takenAt), day));
             const taken = dailyLogs.filter(log => log.status === 'taken').length;
-            const missed = dailyLogs.filter(log => ['missed', 'skipped', 'muted', 'stock_out'].includes(log.status)).length;
+            const missed = dailyLogs.filter(log => missedStatuses.includes(log.status)).length;
             
             return {
                 date: format(day, period === 'weekly' ? 'eee' : 'dd/MM'),
