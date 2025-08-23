@@ -14,7 +14,6 @@ import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import { generateHealthInsights, HealthInsightsOutput } from '@/ai/flows/health-insights-flow';
 import { useToast } from '@/hooks/use-toast';
-import { DoctorSuggestion } from '@/components/doctor-suggestion';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   DropdownMenu,
@@ -242,8 +241,6 @@ export default function HealthPage() {
         </Button>
       </header>
       
-      <DoctorSuggestion />
-
        <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><BrainCircuit /> Saved AI Suggestions</CardTitle>
