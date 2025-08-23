@@ -22,10 +22,11 @@ export function AdCard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // This query requires a composite index on (status, createdAt desc).
     const q = query(
         collection(db, 'ads'), 
         where('status', '==', 'active'),
-        orderBy('createdAt', 'desc'), 
+        orderBy('createdAt', 'desc'),
         limit(1)
     );
     const unsub = onSnapshot(q, (snapshot) => {
@@ -35,6 +36,9 @@ export function AdCard() {
         setAd(null);
       }
       setLoading(false);
+    }, (error) => {
+        console.error("Error fetching ad:", error);
+        setLoading(false);
     });
 
     return () => unsub();
