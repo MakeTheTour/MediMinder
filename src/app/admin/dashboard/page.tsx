@@ -1,7 +1,7 @@
 
 'use client'
 
-import { useState, useEffect, useMemo } from 'eact';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Users, DollarSign, Megaphone, Loader2, UserPlus, Star, TrendingUp } from "lucide-react";
 import { collection, onSnapshot, query, where, getDocs } from 'firebase/firestore';
@@ -367,5 +367,3 @@ export default function AdminDashboardPage() {
     </div>
   );
 }
-
-    
