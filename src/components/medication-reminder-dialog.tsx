@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Medication } from '@/lib/types';
-import { Pill, BellRing, PackageX, Check, Snooze } from 'lucide-react';
+import { Pill, BellRing, PackageX, Check, AlarmClockOff } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { format, parse } from 'date-fns';
 
@@ -114,7 +114,7 @@ export function MedicationReminderDialog({
             Taken
           </Button>
            <Button variant="secondary" className="col-span-2" onClick={() => handleAction(onSnooze)}>
-            <Snooze className="mr-2 h-4 w-4" />
+            <AlarmClockOff className="mr-2 h-4 w-4" />
             Snooze (10 min)
           </Button>
         </AlertDialogFooter>
