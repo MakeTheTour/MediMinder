@@ -12,13 +12,12 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import { collection, doc, updateDoc, writeBatch, query, where, getDocs, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { findUserByEmail } from './find-user-by-email-flow';
 
 const AcceptInvitationInputSchema = z.object({
   invitationId: z.string(),
   inviterId: z.string(),
   inviteeId: z.string(),
-  inviteeName: z.string(),
-  inviteeEmail: z.string().email(),
 });
 export type AcceptInvitationInput = z.infer<typeof AcceptInvitationInputSchema>;
 
@@ -38,12 +37,12 @@ const acceptInvitationFlow = ai.defineFlow(
     inputSchema: AcceptInvitationInputSchema,
     outputSchema: AcceptInvitationOutputSchema,
   },
-  async (input) => {
+  async ({ invitationId, inviterId, inviteeId }) => {
     try {
       const batch = writeBatch(db);
 
       // 1. Update the invitation status to 'accepted'
-      const invitationRef = doc(db, 'invitations', input.invitationId);
+      const invitationRef = doc(db, 'invitations', invitationId);
       const invitationSnap = await getDoc(invitationRef);
       const invitationData = invitationSnap.data();
 
@@ -51,27 +50,35 @@ const acceptInvitationFlow = ai.defineFlow(
         throw new Error("Invitation not found.");
       }
       
-      batch.update(invitationRef, { status: 'accepted', inviteeId: input.inviteeId });
+      batch.update(invitationRef, { status: 'accepted', inviteeId: inviteeId });
       
-      // 2. Add the parent to the child's (inviter's) familyMembers subcollection
-      const childFamilyMemberRef = doc(collection(db, 'users', input.inviterId, 'familyMembers'));
+      const inviterProfile = (await getDoc(doc(db, 'users', inviterId))).data();
+      const inviteeProfile = (await getDoc(doc(db, 'users', inviteeId))).data();
+      
+      if (!inviterProfile || !inviteeProfile) {
+        throw new Error("Could not find user profiles.");
+      }
+
+      // 2. Add the parent (invitee) to the child's (inviter's) familyMembers subcollection
+      const childFamilyMemberRef = doc(collection(db, 'users', inviterId, 'familyMembers'));
       batch.set(childFamilyMemberRef, {
-          name: input.inviteeName,
-          email: input.inviteeEmail,
+          uid: inviteeId,
+          name: inviteeProfile.name,
+          email: inviteeProfile.email,
           relation: invitationData.relation,
           status: 'accepted',
-          // In a real app, you might fetch the invitee's photoURL here
-          photoURL: null, 
+          photoURL: inviteeProfile.photoURL || null, 
       });
 
-      // 3. Add the child to the parent's (invitee's) familyMembers subcollection
-      const parentFamilyMemberRef = doc(collection(db, 'users', input.inviteeId, 'familyMembers'));
+      // 3. Add the child (inviter) to the parent's (invitee's) familyMembers subcollection
+      const parentFamilyMemberRef = doc(collection(db, 'users', inviteeId, 'familyMembers'));
       batch.set(parentFamilyMemberRef, {
-          name: invitationData.inviterName,
-          email: (await getDoc(doc(db, 'users', input.inviterId))).data()?.email, // Fetch child's email
+          uid: inviterId,
+          name: inviterProfile.name,
+          email: inviterProfile.email,
           relation: 'Child', // The inviter is the child of the parent accepting
           status: 'accepted',
-          photoURL: invitationData.inviterPhotoUrl || null,
+          photoURL: inviterProfile.photoURL || null,
       });
       
       await batch.commit();

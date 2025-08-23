@@ -71,7 +71,8 @@ export interface AdherenceLog {
 }
 
 export interface FamilyMember {
-  id: string;
+  id: string; // Document ID
+  uid: string; // User ID of the family member
   name: string;
   relation: string;
   email: string;
@@ -88,6 +89,7 @@ export interface Invitation {
   relation: string;
   status: 'pending' | 'accepted' | 'declined';
   inviteeId?: string;
+  inviteeName?: string;
 }
 
 export interface User {

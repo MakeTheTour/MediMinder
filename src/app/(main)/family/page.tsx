@@ -16,6 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { acceptInvitation } from '@/ai/flows/accept-invitation-flow';
 import { declineInvitation } from '@/ai/flows/decline-invitation-flow';
 import { AddParentDialog } from '@/components/add-parent-dialog';
+import { removeFamilyMember } from '@/ai/flows/remove-family-member-flow';
 
 export default function FamilyPage() {
     const { user, isGuest, setInvitationsAsViewed } = useAuth();
@@ -95,16 +96,22 @@ export default function FamilyPage() {
         }
     };
     
-    const handleRemoveLinkedMember = async (memberId: string) => {
+    const handleRemoveLinkedMember = async (member: FamilyMember) => {
         if (!user) return;
-        // This is complex because it should update both users' records.
-        // A more robust solution would use a Cloud Function to handle denormalization.
         try {
-            await deleteDoc(doc(db, 'users', user.uid, 'familyMembers', memberId));
-            toast({ title: 'Parent Removed' });
+            const result = await removeFamilyMember({
+                removerId: user.uid,
+                removedId: member.uid,
+            });
+            if (result.success) {
+                toast({ title: 'Parent Removed', description: `Your link with ${member.name} has been removed.` });
+            } else {
+                throw new Error(result.message);
+            }
         } catch (error) {
             console.error("Error removing linked member:", error);
-            toast({ title: 'Error', description: 'Could not remove parent.', variant: 'destructive'});
+            const errorMessage = error instanceof Error ? error.message : 'Could not remove parent.';
+            toast({ title: 'Error', description: errorMessage, variant: 'destructive'});
         }
     }
 
@@ -123,8 +130,6 @@ export default function FamilyPage() {
           invitationId: invitation.id,
           inviterId: invitation.inviterId,
           inviteeId: user.uid,
-          inviteeName: user.displayName || 'New Parent',
-          inviteeEmail: user.email,
         });
         if (result.success) {
             toast({ title: 'Invitation Accepted!', description: `You are now linked with ${invitation.inviterName}.`});
@@ -161,6 +166,7 @@ export default function FamilyPage() {
         ...familyMembers,
         ...sentInvitations.filter(inv => inv.status === 'pending').map(inv => ({
             id: inv.id,
+            uid: '', // Pending invitations don't have a confirmed user ID yet
             name: inv.inviteeName,
             email: inv.inviteeEmail,
             relation: inv.relation,
@@ -245,7 +251,7 @@ export default function FamilyPage() {
                         ) : (
                             <Badge variant="default">Linked</Badge>
                         )}
-                        <Button variant="ghost" size="sm" onClick={() => member.status === 'pending' ? handleCancelSentInvitation(member.id) : handleRemoveLinkedMember(member.id)}>
+                        <Button variant="ghost" size="sm" onClick={() => member.status === 'pending' ? handleCancelSentInvitation(member.id) : handleRemoveLinkedMember(member)}>
                             {member.status === 'pending' ? 'Cancel' : 'Remove'}
                         </Button>
                     </div>
