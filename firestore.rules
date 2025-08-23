@@ -1,44 +1,41 @@
-
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper function to check if the user is an admin
-    function isAdmin() {
-      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.email == 'admin@mediminder.com';
-    }
-
-    // Users can only read/write their own data.
-    // The {document=**} wildcard ensures this rule applies recursively to all subcollections.
-    match /users/{userId}/{document=**} {
+    // Users can only access their own data, recursively.
+    match /users/{userId}/{documents=**} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
-    
-    // Invitations can be read by the inviter or the invitee.
-    // They can be created by any authenticated user.
-    // They can be updated/deleted by the inviter or invitee.
+
+    // Rules for invitations
     match /invitations/{invitationId} {
-      allow read, update, delete: if request.auth != null && 
-          (request.auth.uid == resource.data.inviterId || request.auth.token.email == resource.data.inviteeEmail);
-      allow create: if request.auth != null;
+      // Allow reading a specific invitation if you are the inviter or invitee
+      allow get: if request.auth != null && (resource.data.inviterId == request.auth.uid || resource.data.inviteeEmail == request.auth.token.email);
+      
+      // Allow querying the collection if filtering by inviterId (for sent) or inviteeEmail (for received)
+      allow list: if request.auth != null && (request.query.resource.data.inviterId == request.auth.uid || request.query.resource.data.inviteeEmail == request.auth.token.email);
+      
+      // Allow creating an invitation if you are the inviter
+      allow create: if request.auth != null && request.resource.data.inviterId == request.auth.uid;
+      
+      // Allow updating or deleting if you are the inviter or the (accepted) invitee
+      allow update, delete: if request.auth != null && (resource.data.inviterId == request.auth.uid || resource.data.inviteeId == request.auth.uid);
     }
     
-    // Only admins can manage ads, but anyone can read them.
+    // Ads can be read by anyone, but only written by an admin
     match /ads/{adId} {
       allow read: if true;
-      allow write, delete, create: if isAdmin();
+      allow write: if request.auth != null && request.auth.token.email == 'admin@mediminder.com';
+    }
+
+    // Subscriptions can only be accessed by an admin
+     match /subscriptions/{subId} {
+      allow read, write: if request.auth != null && request.auth.token.email == 'admin@mediminder.com';
     }
     
-    // Only admins can manage subscriptions.
-    match /subscriptions/{subId} {
-        allow read, write, create, delete: if isAdmin();
-    }
-    
-    // Only admins can manage API settings
+    // API settings can only be accessed by an admin
     match /settings/api {
-        allow read, write: if isAdmin();
+        allow read, write: if request.auth != null && request.auth.token.email == 'admin@mediminder.com';
     }
   }
 }
