@@ -61,7 +61,12 @@ export function DoctorSuggestion() {
       const result = await saveDoctorSuggestion({
         userId: user.uid,
         symptoms: form.getValues('symptoms'),
-        recommendation: recommendation,
+        recommendation: {
+          specialist: recommendation.specialist,
+          reasoning: recommendation.reasoning,
+          doctorName: recommendation.doctorName,
+          doctorAddress: recommendation.doctorAddress,
+        },
       });
 
       if (result.success) {
