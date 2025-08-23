@@ -24,8 +24,6 @@ import { useAuth } from '@/context/auth-context';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
-import { SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 
 
 const adminNavItems = [
@@ -93,14 +91,6 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     <SidebarProvider>
       <div className="flex min-h-screen">
         <Sidebar>
-          <SheetHeader className="sr-only">
-              <VisuallyHidden>
-                  <SheetTitle>Navigation Menu</SheetTitle>
-                  <SheetDescription>
-                      This is the main navigation menu for the application.
-                  </SheetDescription>
-              </VisuallyHidden>
-          </SheetHeader>
           <SidebarHeader>
             <div className="flex items-center gap-2">
                 <h2 className="text-lg font-semibold">MediMinder</h2>
