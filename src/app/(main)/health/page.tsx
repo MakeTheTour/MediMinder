@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, HeartPulse, BrainCircuit, Activity, Utensils, Dumbbell, Pill, AlertCircle, Trash2, Pencil, MoreVertical, Sparkles, User, MapPin } from 'lucide-react';
+import { Plus, HeartPulse, BrainCircuit, Activity, Utensils, Dumbbell, Pill, AlertCircle, Trash2, Pencil, MoreVertical, Sparkles, User, MapPin, History, Save } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { deleteDoctorSuggestion } from '@/ai/flows/delete-doctor-suggestion-flow';
 import { DoctorSuggestion } from '@/components/doctor-suggestion';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface SavedSuggestion extends SpecialistRecommendationOutput {
     id: string;
@@ -247,104 +248,102 @@ export default function HealthPage() {
 
       <DoctorSuggestion />
       
-       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2"><BrainCircuit /> Saved AI Suggestions</CardTitle>
-          <CardDescription>A history of your AI-generated doctor suggestions.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {savedSuggestions.length > 0 ? (
-            <div className="space-y-4">
-              {savedSuggestions.map((suggestion) => (
-                <SavedSuggestionCard key={suggestion.id} suggestion={suggestion} onDelete={handleDeleteSuggestion}/>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-10">
-                <BrainCircuit className="mx-auto h-12 w-12 text-muted-foreground" />
-                <h3 className="mt-4 text-lg font-semibold">{isGuest ? "Sign in to save suggestions" : "No Saved Suggestions"}</h3>
-                <p className="mt-1 text-sm text-muted-foreground">{isGuest ? "Create an account or sign in to get and save AI suggestions." : "Use the 'Doctor Suggestion' tool to get a recommendation."}</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Activity /> History Log</CardTitle>
-          <CardDescription>Your most recent health readings.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {healthMetrics.length > 0 ? (
-            <div className="space-y-4">
-              {healthMetrics.map((metric) => (
-                <HealthHistoryItem key={metric.id} metric={metric} onEdit={handleEditHealthMetric} onDelete={handleDeleteHealthMetric} />
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-10">
-                <HeartPulse className="mx-auto h-12 w-12 text-muted-foreground" />
-                <h3 className="mt-4 text-lg font-semibold">{isGuest ? "Sign in to track your health" : "No Health Data Logged"}</h3>
-                <p className="mt-1 text-sm text-muted-foreground">{isGuest ? "Create an account or sign in to save and track your health metrics." : "Add your first health reading to see your history here."}</p>
-                 <Button onClick={handleAddClick} size="sm" className="mt-4">
-                    <Plus className="mr-2 h-4 w-4" /> {isGuest ? 'Sign In' : 'Add First Reading'}
-                </Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-      
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><Sparkles /> AI Insights</CardTitle>
-          <CardDescription>Personalized health insights based on your data.</CardDescription>
+          <CardDescription>Your health data, history, and personalized insights.</CardDescription>
         </CardHeader>
         <CardContent>
-            {loadingProfile ? (
-                 <p className="text-sm text-muted-foreground">Loading profile to generate insights...</p>
-            ) : healthMetrics.length === 0 && !isGuest && (
-                 <Alert variant="default" className="mb-4">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertTitle>Get Your Insights!</AlertTitle>
-                    <AlertDescription>
-                        To get your AI insights, please log some of your recent health data.
-                    </AlertDescription>
-                </Alert>
-            )}
-            {insights ? (
-                <div className="space-y-4 p-4 bg-primary/10 rounded-lg">
-                    <p className="font-semibold text-foreground">Insight:</p>
-                    <p className="italic">"{insights.insight}"</p>
-                    <div className="border-t border-primary/20 pt-4 space-y-4">
-                        <div className="flex items-start gap-3">
-                           <Utensils className="h-5 w-5 text-primary mt-1 shrink-0" />
-                           <div>
-                                <h4 className="font-semibold text-foreground">Food Suggestion</h4>
-                                <p className="text-sm">{insights.foodSuggestion}</p>
-                           </div>
+            <Tabs defaultValue="insights">
+                <TabsList className="grid w-full grid-cols-3">
+                    <TabsTrigger value="insights"><Sparkles className="mr-2 h-4 w-4" /> Insights</TabsTrigger>
+                    <TabsTrigger value="history"><History className="mr-2 h-4 w-4" /> History Log</TabsTrigger>
+                    <TabsTrigger value="suggestions"><Save className="mr-2 h-4 w-4" /> Saved Suggestions</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="insights" className="pt-4">
+                    {loadingProfile ? (
+                        <p className="text-sm text-muted-foreground">Loading profile to generate insights...</p>
+                    ) : healthMetrics.length === 0 && !isGuest && (
+                        <Alert variant="default" className="my-4">
+                            <AlertCircle className="h-4 w-4" />
+                            <AlertTitle>Get Your Insights!</AlertTitle>
+                            <AlertDescription>
+                                To get your AI insights, please log some of your recent health data.
+                            </AlertDescription>
+                        </Alert>
+                    )}
+                    {insights ? (
+                        <div className="space-y-4 p-4 bg-primary/10 rounded-lg">
+                            <p className="font-semibold text-foreground">Insight:</p>
+                            <p className="italic">"{insights.insight}"</p>
+                            <div className="border-t border-primary/20 pt-4 space-y-4">
+                                <div className="flex items-start gap-3">
+                                <Utensils className="h-5 w-5 text-primary mt-1 shrink-0" />
+                                <div>
+                                    <h4 className="font-semibold text-foreground">Food Suggestion</h4>
+                                    <p className="text-sm">{insights.foodSuggestion}</p>
+                                </div>
+                                </div>
+                                <div className="flex items-start gap-3">
+                                <Dumbbell className="h-5 w-5 text-primary mt-1 shrink-0" />
+                                <div>
+                                    <h4 className="font-semibold text-foreground">Exercise Suggestion</h4>
+                                    <p className="text-sm">{insights.exerciseSuggestion}</p>
+                                </div>
+                                </div>
+                                <div className="flex items-start gap-3">
+                                <Pill className="h-5 w-5 text-primary mt-1 shrink-0" />
+                                <div>
+                                    <h4 className="font-semibold text-foreground">Medication Observation</h4>
+                                    <p className="text-sm">{insights.medicationObservation}</p>
+                                </div>
+                                </div>
+                            </div>
                         </div>
-                         <div className="flex items-start gap-3">
-                           <Dumbbell className="h-5 w-5 text-primary mt-1 shrink-0" />
-                           <div>
-                                <h4 className="font-semibold text-foreground">Exercise Suggestion</h4>
-                                <p className="text-sm">{insights.exerciseSuggestion}</p>
-                           </div>
+                    ): (
+                        <p className="text-muted-foreground text-sm">Click the button to generate insights from your logged data.</p>
+                    )}
+                    <Button onClick={handleGetInsights} disabled={loadingInsights || isGuest || loadingProfile} className="mt-4">
+                        {loadingInsights ? 'Generating...' : 'Generate New Insights'}
+                    </Button>
+                </TabsContent>
+
+                <TabsContent value="history" className="pt-4">
+                    {healthMetrics.length > 0 ? (
+                        <div className="space-y-4">
+                        {healthMetrics.map((metric) => (
+                            <HealthHistoryItem key={metric.id} metric={metric} onEdit={handleEditHealthMetric} onDelete={handleDeleteHealthMetric} />
+                        ))}
                         </div>
-                         <div className="flex items-start gap-3">
-                           <Pill className="h-5 w-5 text-primary mt-1 shrink-0" />
-                           <div>
-                                <h4 className="font-semibold text-foreground">Medication Observation</h4>
-                                <p className="text-sm">{insights.medicationObservation}</p>
-                           </div>
+                    ) : (
+                        <div className="text-center py-10">
+                            <HeartPulse className="mx-auto h-12 w-12 text-muted-foreground" />
+                            <h3 className="mt-4 text-lg font-semibold">{isGuest ? "Sign in to track your health" : "No Health Data Logged"}</h3>
+                            <p className="mt-1 text-sm text-muted-foreground">{isGuest ? "Create an account or sign in to save and track your health metrics." : "Add your first health reading to see your history here."}</p>
+                            <Button onClick={handleAddClick} size="sm" className="mt-4">
+                                <Plus className="mr-2 h-4 w-4" /> {isGuest ? 'Sign In' : 'Add First Reading'}
+                            </Button>
                         </div>
-                    </div>
-                </div>
-            ): (
-                 <p className="text-muted-foreground text-sm">Click the button to generate insights from your logged data.</p>
-            )}
-             <Button onClick={handleGetInsights} disabled={loadingInsights || isGuest || loadingProfile} className="mt-4">
-                {loadingInsights ? 'Generating...' : 'Generate New Insights'}
-            </Button>
+                    )}
+                </TabsContent>
+
+                <TabsContent value="suggestions" className="pt-4">
+                    {savedSuggestions.length > 0 ? (
+                        <div className="space-y-4">
+                        {savedSuggestions.map((suggestion) => (
+                            <SavedSuggestionCard key={suggestion.id} suggestion={suggestion} onDelete={handleDeleteSuggestion}/>
+                        ))}
+                        </div>
+                    ) : (
+                        <div className="text-center py-10">
+                            <BrainCircuit className="mx-auto h-12 w-12 text-muted-foreground" />
+                            <h3 className="mt-4 text-lg font-semibold">{isGuest ? "Sign in to save suggestions" : "No Saved Suggestions"}</h3>
+                            <p className="mt-1 text-sm text-muted-foreground">{isGuest ? "Create an account or sign in to get and save AI suggestions." : "Use the 'Doctor Suggestion' tool to get a recommendation."}</p>
+                        </div>
+                    )}
+                </TabsContent>
+            </Tabs>
         </CardContent>
       </Card>
     </div>
