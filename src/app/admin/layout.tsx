@@ -93,9 +93,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         <Sidebar>
           <SidebarHeader>
             <div className="flex items-center gap-2">
-                <Button variant="ghost" size="icon" className="md:hidden">
-                    <SidebarTrigger />
-                </Button>
+                <SidebarTrigger className="md:hidden"/>
                 <h2 className="text-lg font-semibold">MediMinder</h2>
             </div>
           </SidebarHeader>
