@@ -258,22 +258,28 @@ export default function HomePage() {
       reminderTimers.current[notificationId] = [];
 
       // Initial Alert
-      showReminder();
-      const t1 = setTimeout(() => setReminder(null), reminderSettings.initialDuration * 60 * 1000);
+      const t1 = setTimeout(() => {
+        showReminder();
+        // Automatically close the first alert after its duration
+        const t2 = setTimeout(() => setReminder(null), reminderSettings.initialDuration * 60 * 1000);
+        reminderTimers.current[notificationId].push(t2);
+      }, 0); // Show immediately
+      
 
       // Second Alert
-      const t2 = setTimeout(() => {
+      const t3 = setTimeout(() => {
         showReminder();
-        const t3 = setTimeout(() => setReminder(null), 1 * 60 * 1000); // Ring for 1 minute
-        reminderTimers.current[notificationId].push(t3);
+        // Ring for 1 minute then close
+        const t4 = setTimeout(() => setReminder(null), 1 * 60 * 1000); 
+        reminderTimers.current[notificationId].push(t4);
       }, reminderSettings.secondAlert * 60 * 1000);
 
       // Final Missed Alert + Family Alert
-      const t4 = setTimeout(async () => {
+      const t5 = setTimeout(async () => {
         await logMissedDoseAndAlertFamily(medications, time);
       }, reminderSettings.familyAlert * 60 * 1000);
 
-      reminderTimers.current[notificationId].push(t1, t2, t4);
+      reminderTimers.current[notificationId].push(t1, t3, t5);
     }
   }, [todaysMedicationsByTime, adherenceLogs, reminder, reminderSettings, logMissedDoseAndAlertFamily]);
 
@@ -285,6 +291,7 @@ export default function HomePage() {
     for (const { time, medications } of todaysMedicationsByTime) {
       const scheduledTime = parse(time, 'HH:mm', startOfDay(now));
       
+      // Check if the medication time is in the past for today
       if (isBefore(scheduledTime, now)) {
         for(const med of medications) {
             const isHandled = adherenceLogs.some(log =>
@@ -371,22 +378,29 @@ export default function HomePage() {
 
   // Run on first load
   useEffect(() => {
-    checkMissedDosesOnLoad();
-  }, [checkMissedDosesOnLoad]);
+    const handleOnLoad = async () => {
+        await checkMissedDosesOnLoad();
+        
+        // Now start the live checkers
+        const reminderInterval = setInterval(checkReminders, 5000); // Check every 5 seconds for more responsive initial alert
+        const appointmentReminderInterval = setInterval(checkAppointmentReminders, 60000 * 5); // check every 5 mins
 
-  useEffect(() => {
-    const reminderInterval = setInterval(checkReminders, 5000); // Check every 5 seconds for more responsive initial alert
-    const appointmentReminderInterval = setInterval(checkAppointmentReminders, 60000 * 5); // check every 5 mins
+        checkReminders();
+        checkAppointmentReminders();
 
-    checkReminders();
-    checkAppointmentReminders();
+        return () => {
+            clearInterval(reminderInterval);
+            clearInterval(appointmentReminderInterval);
+            Object.values(reminderTimers.current).forEach(timers => timers.forEach(clearTimeout));
+        };
+    }
+    
+    const cleanupPromise = handleOnLoad();
 
     return () => {
-      clearInterval(reminderInterval);
-      clearInterval(appointmentReminderInterval);
-      Object.values(reminderTimers.current).forEach(timers => timers.forEach(clearTimeout));
+        cleanupPromise.then(cleanup => cleanup && cleanup());
     };
-  }, [checkReminders, checkAppointmentReminders]);
+  }, [checkReminders, checkAppointmentReminders, checkMissedDosesOnLoad]);
 
 
   const todaysAppointments = useMemo(() => {
@@ -535,3 +549,5 @@ export default function HomePage() {
     </>
   );
 }
+
+    
