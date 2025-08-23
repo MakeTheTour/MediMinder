@@ -18,7 +18,7 @@ import { declineInvitation } from '@/ai/flows/decline-invitation-flow';
 import { AddParentDialog } from '@/components/add-parent-dialog';
 
 export default function FamilyPage() {
-    const { user, isGuest } = useAuth();
+    const { user, isGuest, setInvitationsAsViewed } = useAuth();
     const { toast } = useToast();
     const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
     const [sentInvitations, setSentInvitations] = useState<Invitation[]>([]);
@@ -27,6 +27,11 @@ export default function FamilyPage() {
     const [loading, setLoading] = useState(true);
     const [isAddParentDialogOpen, setIsAddParentDialogOpen] = useState(false);
     const router = useRouter();
+
+    useEffect(() => {
+        // When the user visits this page, mark the invitations as viewed for this session.
+        setInvitationsAsViewed();
+    }, [setInvitationsAsViewed]);
 
     useEffect(() => {
       if (!user || isGuest) {
