@@ -20,6 +20,7 @@ const adSchema = z.object({
     title: z.string().min(1, 'Ad title is required.'),
     content: z.string().min(1, 'Ad content is required.'),
     imageUrl: z.string().url('A valid image URL is required.'),
+    redirectUrl: z.string().url('Please enter a valid URL.').optional().or(z.literal('')),
 });
 
 interface Ad {
@@ -40,6 +41,7 @@ export default function AdminAdsPage() {
       title: '',
       content: '',
       imageUrl: '',
+      redirectUrl: '',
     },
   });
 
@@ -126,6 +128,19 @@ export default function AdminAdsPage() {
                                     <FormLabel>Image URL</FormLabel>
                                     <FormControl>
                                         <Input placeholder="https://placehold.co/600x400.png" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                         <FormField
+                            control={form.control}
+                            name="redirectUrl"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Redirect URL (Optional)</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="https://example.com/product-page" {...field} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>

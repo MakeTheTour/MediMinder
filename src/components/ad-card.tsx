@@ -7,12 +7,14 @@ import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestor
 import { db } from '@/lib/firebase-client';
 import Image from 'next/image';
 import { Megaphone } from 'lucide-react';
+import Link from 'next/link';
 
 interface Ad {
   id: string;
   title: string;
   content: string;
   imageUrl: string;
+  redirectUrl?: string;
 }
 
 export function AdCard() {
@@ -36,9 +38,9 @@ export function AdCard() {
   if (loading || !ad) {
     return null; // Don't render anything if loading or no ad is found
   }
-
-  return (
-    <Card className="overflow-hidden border-primary/20 bg-primary/10">
+  
+  const AdContent = (
+    <Card className="overflow-hidden border-primary/20 bg-primary/10 w-full hover:shadow-lg transition-shadow">
         <CardHeader className="p-4 pb-2">
             <CardTitle className="flex items-center gap-2 text-sm text-primary">
                 <Megaphone className="h-4 w-4"/>
@@ -64,4 +66,14 @@ export function AdCard() {
       </CardContent>
     </Card>
   );
+
+  if (ad.redirectUrl) {
+    return (
+        <Link href={ad.redirectUrl} target="_blank" rel="noopener noreferrer" className="no-underline">
+            {AdContent}
+        </Link>
+    )
+  }
+
+  return AdContent;
 }
