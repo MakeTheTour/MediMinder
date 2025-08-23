@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, HeartPulse, BrainCircuit, Activity, Utensils, Dumbbell, Leaf, AlertCircle, Trash2, Pencil, MoreVertical, Sparkles, User, MapPin } from 'lucide-react';
+import { Plus, HeartPulse, BrainCircuit, Activity, Utensils, Dumbbell, Pill, AlertCircle, Trash2, Pencil, MoreVertical, Sparkles, User, MapPin } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -90,7 +90,7 @@ function SavedSuggestionCard({ suggestion, onDelete }: { suggestion: SavedSugges
                          <div className="flex items-start gap-3">
                              <User className="h-5 w-5 text-primary mt-1 shrink-0" />
                             <div>
-                                <h4 className="font-semibold text-foreground">Suggested Practitioner</h4>
+                                <h4 className="font-semibold text-foreground">Suggested Doctor</h4>
                                 <p>{suggestion.doctorName}</p>
                             </div>
                         </div>
@@ -250,7 +250,7 @@ export default function HealthPage() {
        <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><BrainCircuit /> Saved AI Suggestions</CardTitle>
-          <CardDescription>A history of your AI-generated practitioner suggestions.</CardDescription>
+          <CardDescription>A history of your AI-generated doctor suggestions.</CardDescription>
         </CardHeader>
         <CardContent>
           {savedSuggestions.length > 0 ? (
@@ -263,7 +263,7 @@ export default function HealthPage() {
             <div className="text-center py-10">
                 <BrainCircuit className="mx-auto h-12 w-12 text-muted-foreground" />
                 <h3 className="mt-4 text-lg font-semibold">{isGuest ? "Sign in to save suggestions" : "No Saved Suggestions"}</h3>
-                <p className="mt-1 text-sm text-muted-foreground">{isGuest ? "Create an account or sign in to get and save AI suggestions." : "Use the 'Practitioner Suggestion' tool to get a recommendation."}</p>
+                <p className="mt-1 text-sm text-muted-foreground">{isGuest ? "Create an account or sign in to get and save AI suggestions." : "Use the 'Doctor Suggestion' tool to get a recommendation."}</p>
             </div>
           )}
         </CardContent>
@@ -296,8 +296,8 @@ export default function HealthPage() {
       
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Sparkles /> NatureMed Insights</CardTitle>
-          <CardDescription>Personalized insights from a holistic perspective.</CardDescription>
+          <CardTitle className="flex items-center gap-2"><Sparkles /> AI Insights</CardTitle>
+          <CardDescription>Personalized health insights based on your data.</CardDescription>
         </CardHeader>
         <CardContent>
             {loadingProfile ? (
@@ -307,7 +307,7 @@ export default function HealthPage() {
                     <AlertCircle className="h-4 w-4" />
                     <AlertTitle>Get Your Insights!</AlertTitle>
                     <AlertDescription>
-                        To get your NatureMed insights, please log some of your recent health data.
+                        To get your AI insights, please log some of your recent health data.
                     </AlertDescription>
                 </Alert>
             )}
@@ -331,10 +331,10 @@ export default function HealthPage() {
                            </div>
                         </div>
                          <div className="flex items-start gap-3">
-                           <Leaf className="h-5 w-5 text-primary mt-1 shrink-0" />
+                           <Pill className="h-5 w-5 text-primary mt-1 shrink-0" />
                            <div>
-                                <h4 className="font-semibold text-foreground">Holistic Observation</h4>
-                                <p className="text-sm">{insights.holisticObservation}</p>
+                                <h4 className="font-semibold text-foreground">Medication Observation</h4>
+                                <p className="text-sm">{insights.medicationObservation}</p>
                            </div>
                         </div>
                     </div>
@@ -350,4 +350,3 @@ export default function HealthPage() {
     </div>
   );
 }
-

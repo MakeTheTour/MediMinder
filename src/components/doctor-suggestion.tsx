@@ -61,12 +61,7 @@ export function DoctorSuggestion() {
       const result = await saveDoctorSuggestion({
         userId: user.uid,
         symptoms: form.getValues('symptoms'),
-        recommendation: {
-          specialist: recommendation.specialist,
-          reasoning: recommendation.reasoning,
-          doctorName: recommendation.doctorName,
-          doctorAddress: recommendation.doctorAddress,
-        },
+        recommendation: recommendation,
       });
 
       if (result.success) {
@@ -118,10 +113,10 @@ export function DoctorSuggestion() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Stethoscope />
-              NatureMed Practitioner Suggestion
+              AI Doctor Suggestion
             </CardTitle>
             <CardDescription>
-              Describe your symptoms, and our AI will suggest a type of holistic practitioner to consult. This is for informational purposes only.
+              Describe your symptoms, and our AI will suggest a medical specialist to consult. This is for informational purposes only.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -145,7 +140,7 @@ export function DoctorSuggestion() {
                   <FormLabel>Your Symptoms</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="e.g., I've been feeling stressed and having trouble sleeping..."
+                      placeholder="e.g., I've been feeling dizzy and having chest pains..."
                       {...field}
                       rows={4}
                       disabled={isGuest}
@@ -173,7 +168,7 @@ export function DoctorSuggestion() {
                          <div className="flex items-start gap-3">
                              <User className="h-5 w-5 text-primary mt-1 shrink-0" />
                             <div>
-                                <h4 className="font-semibold text-foreground">Suggested Practitioner</h4>
+                                <h4 className="font-semibold text-foreground">Suggested Doctor</h4>
                                 <p className="font-bold text-primary">{recommendation.doctorName}</p>
                             </div>
                         </div>
@@ -224,4 +219,3 @@ export function DoctorSuggestion() {
     </Card>
   );
 }
-

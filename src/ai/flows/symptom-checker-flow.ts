@@ -28,19 +28,19 @@ const prompt = ai.definePrompt({
   name: 'specialistRecommendationPrompt',
   input: {schema: SpecialistRecommendationInputSchema},
   output: {schema: SpecialistRecommendationOutputSchema},
-  prompt: `You are a helpful AI assistant in a holistic health app called NatureMed. Your task is to analyze a user's reported symptoms and recommend the most appropriate type of alternative medicine practitioner to consult.
+  prompt: `You are a helpful AI assistant in a health app. Your task is to analyze a user's reported symptoms and recommend the most appropriate type of medical specialist to consult.
 
-Do not provide a diagnosis or medical advice. Your sole purpose is to suggest the right kind of holistic practitioner.
+Do not provide a diagnosis or medical advice. Your sole purpose is to suggest the right kind of doctor.
 
 User's Symptoms: "{{{symptoms}}}"
 {{#if city}}
 User's City: "{{{city}}}"
 
-Based on the symptoms, first recommend an alternative medicine specialist (e.g., Naturopath, Acupuncturist, Herbalist) and provide a brief reasoning from a holistic perspective.
-Then, acting as if you have access to a list of top-rated practitioners, generate a plausible name and full address for a fictional, top-rated practitioner of that specialty in the user's city.
-For example, for "San Francisco", you could suggest "Elara Finch, Licensed Acupuncturist" at "123 Serenity Lane, San Francisco, CA 94108".
+Based on the symptoms, first recommend a medical specialist (e.g., Cardiologist, Neurologist) and provide a brief reasoning.
+Then, acting as if you have access to a list of top-rated doctors, generate a plausible name and full address for a fictional, top-rated doctor of that specialty in the user's city.
+For example, for "San Francisco", you could suggest "Dr. Evelyn Reed, Cardiologist" at "456 Heartwell Tower, San Francisco, CA 94102".
 {{else}}
-Based on these symptoms, recommend an alternative medicine specialist (e.g., Naturopath, Acupuncturist, Herbalist) and provide a very brief, one-sentence reasoning from a holistic perspective. For example, if the user reports stress and sleep issues, you might recommend an "Acupuncturist" with the reasoning "Acupuncture can help rebalance the body's energy flow (Qi) to promote relaxation and improve sleep quality."
+Based on these symptoms, recommend a medical specialist (e.g., Cardiologist, Neurologist) and provide a very brief, one-sentence reasoning. For example, if the user reports chest pain and shortness of breath, you might recommend a "Cardiologist" with the reasoning "A cardiologist specializes in heart-related issues, which could be related to your symptoms."
 {{/if}}
   `,
 });
@@ -56,4 +56,3 @@ const specialistRecommendationFlow = ai.defineFlow(
     return output!;
   }
 );
-

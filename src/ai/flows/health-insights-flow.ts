@@ -1,7 +1,7 @@
 
 'use server';
 /**
- * @fileOverview Analyzes user health data to provide insights and suggestions from an alternative medicine perspective.
+ * @fileOverview Analyzes user health data to provide insights and suggestions.
  *
  * - generateHealthInsights - A function that creates health insights based on tracked metrics.
  * - HealthInsightsInput - The input type for the generateHealthInsights function.
@@ -19,10 +19,10 @@ const HealthInsightsInputSchema = z.object({
 export type HealthInsightsInput = z.infer<typeof HealthInsightsInputSchema>;
 
 const HealthInsightsOutputSchema = z.object({
-  insight: z.string().describe("A concise, helpful insight based on the provided health data from a holistic perspective. Address the user directly."),
-  foodSuggestion: z.string().describe("A practical food or natural supplement suggestion for the user to maintain or improve their well-being."),
-  exerciseSuggestion: z.string().describe("A practical mind-body exercise suggestion (like yoga or tai chi) for the user."),
-  holisticObservation: z.string().describe("A general observation about balance, energy, or patterns in the user's data. Do not give medical advice."),
+  insight: z.string().describe("A concise, helpful insight based on the provided health data. Address the user directly."),
+  foodSuggestion: z.string().describe("A practical food or diet suggestion for the user to maintain or improve their well-being."),
+  exerciseSuggestion: z.string().describe("A practical exercise suggestion for the user."),
+  medicationObservation: z.string().describe("A general observation about the user's medication adherence or patterns. Do not give medical advice."),
 });
 export type HealthInsightsOutput = z.infer<typeof HealthInsightsOutputSchema>;
 
@@ -34,7 +34,7 @@ const prompt = ai.definePrompt({
   name: 'healthInsightsPrompt',
   input: {schema: HealthInsightsInputSchema},
   output: {schema: HealthInsightsOutputSchema},
-  prompt: `You are an AI assistant for an app called NatureMed. Your goal is to analyze a user's health data from a holistic and alternative medicine perspective. Provide a simple, encouraging insight, and practical suggestions for natural foods/herbs, mind-body exercises, and a general holistic observation. Do not provide medical advice.
+  prompt: `You are an AI assistant for a health app. Your goal is to analyze a user's health data. Provide a simple, encouraging insight, and practical suggestions for food/diet, exercise, and a general observation. Do not provide medical advice.
 
 User Name: {{{userProfile.name}}}
 
@@ -43,13 +43,13 @@ Health Data (most recent is first):
 - Date: {{this.date}}, Weight: {{this.weight}}kg, BP: {{this.bloodPressure.systolic}}/{{this.bloodPressure.diastolic}}, Sugar: {{this.bloodSugar}}mg/dL, HR: {{this.heartRate}}bpm
 {{/each}}
 
-Based on this data, provide one overall insight for {{{userProfile.name}}} focused on balance and well-being. Look for patterns or recent changes. For example: "It looks like your energy, reflected in your heart rate, has been very steady lately. This is a great sign of inner balance."
+Based on this data, provide one overall insight for {{{userProfile.name}}}. Look for patterns or recent changes. For example: "Your heart rate has been very consistent lately, which is a great sign of stable cardiovascular health."
 
-Then, provide a food/herb suggestion, an exercise suggestion, and a holistic observation.
+Then, provide a food/diet suggestion, an exercise suggestion, and a general observation.
 
-- The food suggestion should be a simple natural tip. (e.g., "Consider incorporating ginger tea into your morning routine to support digestion and energy flow.")
-- The exercise suggestion should be a mind-body activity. (e.g., "A gentle 15-minute yoga session in the morning can help align your body and mind for the day.")
-- The holistic observation should be a general, supportive comment about their overall wellness journey. (e.g., "Consistently tracking your body's signals is a wonderful practice of self-awareness. Keep honoring your journey.")
+- The food suggestion should be a simple tip. (e.g., "Consider incorporating more leafy greens into your diet to boost your iron levels.")
+- The exercise suggestion should be a simple activity. (e.g., "A brisk 30-minute walk each day can significantly improve your cardiovascular health.")
+- The medication observation should be a general, supportive comment if medication data were present. (e.g., "Remembering to take your medication consistently is key to managing your health effectively. Keep up the great work!")
 
 Keep the tone positive, gentle, and supportive.
   `,
@@ -64,10 +64,10 @@ const healthInsightsFlow = ai.defineFlow(
   async input => {
     if (input.healthMetrics.length === 0) {
         return {
-            insight: "No health data recorded yet. Log your data to get NatureMed insights.",
+            insight: "No health data recorded yet. Log your data to get AI insights.",
             foodSuggestion: "Log your health data to get food recommendations.",
             exerciseSuggestion: "Log your health data to get exercise suggestions.",
-            holisticObservation: "Log your health data to see holistic observations."
+            medicationObservation: "Log your health data to see medication observations."
         }
     }
     const {output} = await prompt(input);
