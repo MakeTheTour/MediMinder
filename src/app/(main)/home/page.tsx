@@ -139,7 +139,7 @@ export default function HomePage() {
     }
   }, []);
   
-  const handleReminderAction = useCallback(async (medications: Medication[], scheduledTime: string, status: 'taken' | 'stock_out' | 'snoozed') => {
+  const handleReminderAction = useCallback(async (medications: Medication[], scheduledTime: string, status: 'taken' | 'stock_out' | 'missed') => {
     const notificationId = `${medications[0].id}-${scheduledTime}-${format(new Date(), 'yyyy-MM-dd')}`;
     clearReminderTimers(notificationId);
 
@@ -419,9 +419,7 @@ export default function HomePage() {
             time={reminder.time}
             onTake={() => handleReminderAction(reminder.medications, reminder.time, 'taken')}
             onStockOut={() => handleReminderAction(reminder.medications, reminder.time, 'stock_out')}
-            onSnooze={() => {
-                handleReminderAction(reminder.medications, reminder.time, 'snoozed');
-            }}
+            onMiss={() => handleReminderAction(reminder.medications, reminder.time, 'missed')}
             onClose={() => {
                 const notificationId = `${reminder.medications[0].id}-${reminder.time}-${format(new Date(), 'yyyy-MM-dd')}`;
                 clearReminderTimers(notificationId);
@@ -537,5 +535,3 @@ export default function HomePage() {
     </>
   );
 }
-
-    
