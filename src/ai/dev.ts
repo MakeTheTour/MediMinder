@@ -11,3 +11,4 @@ import '@/ai/flows/symptom-checker-flow.ts';
 import '@/ai/flows/appointment-reminder-flow.ts';
 import '@/ai/flows/generate-family-alert-flow.ts';
 import '@/ai/flows/remove-family-member-flow.ts';
+import '@/ai/flows/save-doctor-suggestion-flow.ts';

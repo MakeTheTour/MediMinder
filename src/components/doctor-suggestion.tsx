@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Stethoscope, Loader2, Sparkles, MapPin, User, AlertCircle } from 'lucide-react';
+import { Stethoscope, Loader2, Sparkles, MapPin, User, AlertCircle, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Textarea } from '@/components/ui/textarea';
@@ -17,6 +17,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase-client';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import Link from 'next/link';
+import { saveDoctorSuggestion } from '@/ai/flows/save-doctor-suggestion-flow';
 
 const symptomSchema = z.object({
   symptoms: z.string().min(10, 'Please describe your symptoms in at least 10 characters.'),
@@ -27,6 +28,7 @@ export function DoctorSuggestion() {
   const { user, isGuest } = useAuth();
   const [recommendation, setRecommendation] = useState<SpecialistRecommendationOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [userCity, setUserCity] = useState<string | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
 
@@ -50,6 +52,38 @@ export function DoctorSuggestion() {
       symptoms: '',
     },
   });
+  
+  const handleSaveSuggestion = async () => {
+    if (!user || !recommendation) return;
+
+    setIsSaving(true);
+    try {
+      const result = await saveDoctorSuggestion({
+        userId: user.uid,
+        symptoms: form.getValues('symptoms'),
+        recommendation: recommendation,
+      });
+
+      if (result.success) {
+        toast({
+          title: 'Suggestion Saved',
+          description: 'The recommendation has been saved to your health history.',
+        });
+      } else {
+        throw new Error(result.message);
+      }
+    } catch (error) {
+      console.error('Failed to save recommendation:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Could not save suggestion.';
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: errorMessage,
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   async function onSubmit(values: z.infer<typeof symptomSchema>) {
     setIsLoading(true);
@@ -147,6 +181,21 @@ export function DoctorSuggestion() {
                         </div>
                     </div>
                  )}
+                 <div className="border-t border-primary/20 pt-4">
+                     <Button type="button" size="sm" variant="secondary" onClick={handleSaveSuggestion} disabled={isSaving}>
+                        {isSaving ? (
+                            <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin"/>
+                                Saving...
+                            </>
+                        ) : (
+                            <>
+                                <Save className="mr-2 h-4 w-4"/>
+                                Save to Health History
+                            </>
+                        )}
+                    </Button>
+                 </div>
               </div>
             )}
           </CardContent>
