@@ -9,9 +9,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Medication, Appointment, AdherenceLog, FamilyMember, UserProfile } from '@/lib/types';
 import { MedicationCard } from '@/components/medication-card';
 import { AppointmentCard } from '@/components/appointment-card';
-import { format, parse, isToday, isFuture, addMinutes, differenceInHours, differenceInMinutes, startOfDay, isAfter } from 'date-fns';
+import { format, parse, isToday, isFuture, differenceInHours, differenceInMinutes, isBefore, startOfDay } from 'date-fns';
 import { useAuth } from '@/context/auth-context';
-import { collection, onSnapshot, query, orderBy, getDocs, doc, getDoc } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase-client';
 import { useRouter } from 'next/navigation';
 import { useLocalStorage } from '@/hooks/use-local-storage';
@@ -43,7 +43,7 @@ export default function HomePage() {
   const [reminder, setReminder] = useState<{ medications: Medication[]; time: string } | null>(null);
   const [greeting, setGreeting] = useState('');
   
-  const escalationTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const reminderTimers = useRef<Record<string, NodeJS.Timeout[]>>({});
 
   useEffect(() => {
     if (user && !isGuest) {
@@ -80,6 +80,7 @@ export default function HomePage() {
         adherenceUnsub();
         familyUnsub();
         userProfileUnsub();
+        Object.values(reminderTimers.current).forEach(timers => timers.forEach(clearTimeout));
       };
     } else {
       setFirestoreMedications([]);
@@ -122,18 +123,21 @@ export default function HomePage() {
 
   const nextMedication = useMemo(() => {
     const now = new Date();
-    // Find the first medication time in the sorted list that is in the future
     return todaysMedicationsByTime
       .find(item => parse(item.time, 'HH:mm', new Date()) > now) || null;
   }, [todaysMedicationsByTime]);
 
-  const handleReminderAction = useCallback(async (medications: Medication[], scheduledTime: string, status: 'taken' | 'stock_out' | 'missed') => {
-    if (escalationTimerRef.current) {
-        clearTimeout(escalationTimerRef.current);
-        escalationTimerRef.current = null;
+  const clearReminderTimers = useCallback((notificationId: string) => {
+    if (reminderTimers.current[notificationId]) {
+      reminderTimers.current[notificationId].forEach(clearTimeout);
+      delete reminderTimers.current[notificationId];
     }
+  }, []);
+
+  const handleReminderAction = useCallback(async (medications: Medication[], scheduledTime: string, status: 'taken' | 'stock_out' | 'missed') => {
+    const notificationId = `${medications[0].id}-${scheduledTime}-${format(new Date(), 'yyyy-MM-dd')}`;
+    clearReminderTimers(notificationId);
     
-    // Log for all medications in the group
     for (const medication of medications) {
         const logEntry: Omit<AdherenceLog, 'id'> = {
           medicationId: medication.id,
@@ -153,8 +157,7 @@ export default function HomePage() {
           });
         }
         
-        // Family alert logic for Stock Out or Missed
-        if ((status === 'stock_out' || status === 'missed') && familyMembers.length > 0 && userProfile?.isPremium) {
+        if (status === 'missed' && familyMembers.length > 0 && userProfile?.isPremium) {
             for (const member of familyMembers) {
                 if (member.status === 'accepted') {
                     const alert = await generateFamilyAlert({
@@ -165,7 +168,7 @@ export default function HomePage() {
                     console.log(`Sending alert to ${member.name}: ${alert.alertMessage}`);
                     toast({
                         title: 'Family Alert Sent',
-                        description: `Notified ${member.name} about ${medication.name}.`,
+                        description: `Notified ${member.name} about missed dose of ${medication.name}.`,
                     });
                 }
             }
@@ -174,81 +177,77 @@ export default function HomePage() {
     
     if (status === 'missed') {
       toast({
-        title: `Dose Missed`,
-        description: `You missed your ${scheduledTime} dose.`,
+        title: `Dose Logged as Missed`,
+        description: `Your ${format(parse(scheduledTime, 'HH:mm', new Date()), 'h:mm a')} dose was missed.`,
         variant: 'destructive',
       })
     }
     setReminder(null);
-  }, [user, isGuest, setLocalAdherence, toast, familyMembers, userProfile]);
-
- const showNotification = useCallback((time: string, medications: Medication[]) => {
-    if (typeof window === "undefined" || !("Notification" in window) || Notification.permission !== "granted") {
-      return;
-    }
-    
-    const medNames = medications.map(m => m.name).join(', ');
-    const title = 'Time for your medication!';
-    const body = `It's time for your ${format(parse(time, 'HH:mm', new Date()), 'h:mm a')} dose: ${medNames}.`;
-
-    new Notification(title, { body });
-  }, []);
+  }, [user, isGuest, setLocalAdherence, toast, familyMembers, userProfile, clearReminderTimers]);
 
   const checkReminders = useCallback(() => {
     const now = new Date();
     
-    // Do not show new reminders if one is already active
-    if (reminder) return;
-
     for (const group of todaysMedicationsByTime) {
       const { time, medications } = group;
       const scheduledTime = parse(time, 'HH:mm', new Date());
-
-      // Check if it's time for the medication
-      if (now < scheduledTime) continue;
-
-      // Check if this dose has already been handled today
-      const anyMedicationHandled = medications.some(med => 
+      const notificationId = `${medications[0].id}-${time}-${format(now, 'yyyy-MM-dd')}`;
+      
+      const isHandled = medications.some(med => 
         adherenceLogs.some(log => 
           log.medicationId === med.id &&
           isToday(new Date(log.takenAt)) &&
           log.scheduledTime === time
         )
       );
-      
-      const notificationId = `${medications[0].id}-${time}-${format(now, 'yyyy-MM-dd')}`;
-      const alreadyNotified = sentNotifications.includes(notificationId);
 
-      if (!anyMedicationHandled && !alreadyNotified && !reminder) {
-        
-        showNotification(time, medications);
-        setReminder({ medications, time });
-        
-        if (escalationTimerRef.current) clearTimeout(escalationTimerRef.current);
-        
-        // Auto-miss after 10 minutes and send family alert
-        escalationTimerRef.current = setTimeout(() => {
-            handleReminderAction(medications, time, 'missed');
-        }, 10 * 60 * 1000); // 10 minutes
-        
-        setSentNotifications(prev => [...prev, notificationId]);
-        return; // Show one reminder at a time
+      const alreadyNotifiedThisSession = !!reminderTimers.current[notificationId];
+      if (isBefore(now, scheduledTime) || isHandled || alreadyNotifiedThisSession) {
+        continue;
       }
+      
+      const showReminder = () => {
+        if (!reminder) { // only show one popup at a time
+          setReminder({ medications, time });
+          new Notification('Time for your medication!', {
+            body: `It's time for your ${format(scheduledTime, 'h:mm a')} dose.`,
+          });
+        }
+      };
+
+      reminderTimers.current[notificationId] = [];
+
+      // Initial alert
+      showReminder();
+
+      // After 1 minute, hide popup
+      const t1 = setTimeout(() => setReminder(null), 1 * 60 * 1000);
+
+      // After 3 minutes, show again
+      const t2 = setTimeout(() => showReminder(), 3 * 60 * 1000);
+
+      // After 10 minutes, mark as missed and notify family
+      const t3 = setTimeout(() => {
+        handleReminderAction(medications, time, 'missed');
+        showReminder(); // Show one last time to inform user it was missed
+        const t4 = setTimeout(() => setReminder(null), 1 * 60 * 1000);
+        reminderTimers.current[notificationId].push(t4);
+      }, 10 * 60 * 1000);
+
+      reminderTimers.current[notificationId].push(t1, t2, t3);
     }
-  }, [todaysMedicationsByTime, adherenceLogs, reminder, sentNotifications, setSentNotifications, handleReminderAction, showNotification]);
+  }, [todaysMedicationsByTime, adherenceLogs, reminder, handleReminderAction]);
 
 
-  const checkMissedDoses = useCallback(async () => {
+  const checkMissedDosesOnLoad = useCallback(async () => {
     const now = new Date();
+    let missedCount = 0;
   
     for (const { time, medications } of todaysMedicationsByTime) {
       const scheduledTime = parse(time, 'HH:mm', new Date());
       
-      // Check for doses missed by 30-35 minutes to send alert
-      const timeSinceScheduled = differenceInMinutes(now, scheduledTime);
-      if (timeSinceScheduled >= 30 && timeSinceScheduled < 35) {
-
-        const anyMedHandled = medications.some(med =>
+      if (isBefore(scheduledTime, now)) {
+        const isHandled = medications.some(med =>
           adherenceLogs.some(log =>
             log.medicationId === med.id &&
             isToday(new Date(log.takenAt)) &&
@@ -256,37 +255,27 @@ export default function HomePage() {
           )
         );
         
-        const missedNotificationId = `missed-${medications[0].id}-${time}-${format(now, 'yyyy-MM-dd')}`;
-        const alreadyNotified = sentNotifications.includes(missedNotificationId);
-  
-        if (!anyMedHandled && !alreadyNotified) {
-          toast({
-            title: `Your Dose already Missed`,
-            description: `Your ${format(scheduledTime, 'h:mm a')} dose was missed. You can still log it if needed.`,
-            variant: 'destructive',
-            duration: 10000,
-          });
-          setSentNotifications(prev => [...prev, missedNotificationId]);
-          
-          // Send family alert for missed dose
-          if (!isGuest && user && familyMembers.length > 0 && userProfile?.isPremium) {
-               for (const member of familyMembers) {
-                  if (member.status === 'accepted') {
-                      for(const medication of medications) {
-                          await handleReminderAction([medication], time, 'missed');
-                      }
-                  }
-              }
-          }
+        if (!isHandled) {
+            missedCount++;
+            for(const med of medications) {
+               await handleReminderAction([med], time, 'missed');
+            }
         }
       }
     }
-  }, [todaysMedicationsByTime, adherenceLogs, user, isGuest, familyMembers, toast, userProfile, handleReminderAction, sentNotifications, setSentNotifications]);
+    if(missedCount > 0) {
+        toast({
+            title: "You have missed doses!",
+            description: `We've logged ${missedCount} missed dose${missedCount > 1 ? 's' : ''} from earlier today. Check your reports for details.`,
+            variant: "destructive",
+            duration: 10000,
+        });
+    }
+  }, [todaysMedicationsByTime, adherenceLogs, handleReminderAction, toast]);
 
 
   const checkAppointmentReminders = useCallback(async () => {
     if (isGuest || !user) return;
-
     const now = new Date();
     
     for (const appt of activeAppointments) {
@@ -312,12 +301,9 @@ export default function HomePage() {
             description: result.reminderMessage,
           });
           
-          // Also notify family members for appointments
           if (familyMembers.length > 0 && userProfile?.isPremium) {
             for (const member of familyMembers) {
               if(member.status === 'accepted') {
-                console.log(`Notifying family member ${member.name} about appointment.`);
-                // In a real app, you would generate a specific alert for the family member
                 toast({
                   title: `Family Alert Sent`,
                   description: `Notified ${member.name} about ${user.displayName}'s upcoming appointment.`
@@ -325,40 +311,33 @@ export default function HomePage() {
               }
             }
           }
-
           setSentAppointmentReminders(prev => [...prev, reminderId]);
         }
       };
 
-      if (hoursUntil > 23 && hoursUntil <= 24) {
-        await checkAndSend('24h');
-      }
-
-      if (hoursUntil > 2 && hoursUntil <= 3) {
-        await checkAndSend('3h');
-      }
+      if (hoursUntil > 23 && hoursUntil <= 24) await checkAndSend('24h');
+      if (hoursUntil > 2 && hoursUntil <= 3) await checkAndSend('3h');
     }
   }, [isGuest, user, activeAppointments, sentAppointmentReminders, setSentAppointmentReminders, toast, familyMembers, userProfile]);
 
+  // Run on first load
+  useEffect(() => {
+    checkMissedDosesOnLoad();
+  }, [checkMissedDosesOnLoad]);
 
   useEffect(() => {
-    const reminderInterval = setInterval(checkReminders, 10000); // Check every 10 seconds
-    const missedDoseInterval = setInterval(checkMissedDoses, 60000); // Check every minute
-    const appointmentReminderInterval = setInterval(checkAppointmentReminders, 60000 * 10);
+    const reminderInterval = setInterval(checkReminders, 5000); // Check every 5 seconds for more responsive initial alert
+    const appointmentReminderInterval = setInterval(checkAppointmentReminders, 60000 * 5); // check every 5 mins
 
     checkReminders();
-    checkMissedDoses();
     checkAppointmentReminders();
 
     return () => {
       clearInterval(reminderInterval);
-      clearInterval(missedDoseInterval);
       clearInterval(appointmentReminderInterval);
-      if (escalationTimerRef.current) {
-        clearTimeout(escalationTimerRef.current);
-      }
+      Object.values(reminderTimers.current).forEach(timers => timers.forEach(clearTimeout));
     };
-  }, [checkReminders, checkMissedDoses, checkAppointmentReminders]);
+  }, [checkReminders, checkAppointmentReminders]);
 
 
   const todaysAppointments = useMemo(() => {
@@ -368,11 +347,10 @@ export default function HomePage() {
   }, [activeAppointments]);
 
   const nextAppointment = useMemo(() => {
-    const futureAppointments = activeAppointments.filter(app => {
-        const appDate = new Date(`${app.date}T00:00:00`);
-        return isFuture(appDate) || isToday(appDate);
-    });
-    return futureAppointments[0] || null;
+    return activeAppointments.find(app => {
+        const appDate = parse(`${app.date} ${app.time}`, 'yyyy-MM-dd HH:mm', new Date());
+        return isFuture(appDate);
+    }) || null;
   }, [activeAppointments]);
 
 
@@ -392,6 +370,11 @@ export default function HomePage() {
             time={reminder.time}
             onTake={() => handleReminderAction(reminder.medications, reminder.time, 'taken')}
             onStockOut={() => handleReminderAction(reminder.medications, reminder.time, 'stock_out')}
+            onClose={() => {
+                const notificationId = `${reminder.medications[0].id}-${reminder.time}-${format(new Date(), 'yyyy-MM-dd')}`;
+                clearReminderTimers(notificationId);
+                setReminder(null);
+            }}
         />
     )}
     <div className="container mx-auto max-w-2xl p-4 space-y-6">

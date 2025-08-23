@@ -21,6 +21,7 @@ interface MedicationReminderDialogProps {
   time: string;
   onTake: () => void;
   onStockOut: () => void;
+  onClose: () => void;
 }
 
 export function MedicationReminderDialog({
@@ -29,6 +30,7 @@ export function MedicationReminderDialog({
   time,
   onTake,
   onStockOut,
+  onClose,
 }: MedicationReminderDialogProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -39,14 +41,10 @@ export function MedicationReminderDialog({
         audioRef.current.loop = true;
       }
       audioRef.current.play().catch(e => console.error("Audio play failed:", e));
+    } else if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
     }
-
-    return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.currentTime = 0;
-      }
-    };
   }, [isOpen]);
 
   const handleAction = (action: () => void) => {
@@ -68,7 +66,11 @@ export function MedicationReminderDialog({
   if (!isOpen) return null;
 
   return (
-    <AlertDialog open={isOpen}>
+    <AlertDialog open={isOpen} onOpenChange={(open) => {
+        if (!open) {
+            handleAction(onClose);
+        }
+    }}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary">
