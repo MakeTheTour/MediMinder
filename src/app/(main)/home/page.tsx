@@ -447,7 +447,13 @@ export default function HomePage() {
         <p className="text-muted-foreground">{format(new Date(), 'EEEE, dd/MM/yy')}</p>
       </header>
       
-      {!userProfile?.isPremium && <AdCard />}
+      {!userProfile?.isPremium && (
+        <Card>
+            <CardContent className="p-0">
+                <AdCard />
+            </CardContent>
+        </Card>
+      )}
 
       {nextMedication && (
         <Card className="bg-primary/10">
@@ -549,5 +555,3 @@ export default function HomePage() {
     </>
   );
 }
-
-    
