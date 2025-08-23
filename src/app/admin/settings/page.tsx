@@ -133,7 +133,7 @@ export default function AdminSettingsPage() {
                                         <FormItem>
                                             <FormLabel>Client ID</FormLabel>
                                             <FormControl>
-                                                <Input placeholder="Your Google Client ID" {...field}/>
+                                                <Input type="text" placeholder="Your Google Client ID" {...field}/>
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -164,7 +164,7 @@ export default function AdminSettingsPage() {
                                         <FormItem>
                                             <FormLabel>App ID</FormLabel>
                                             <FormControl>
-                                                <Input placeholder="Your Facebook App ID" {...field}/>
+                                                <Input type="text" placeholder="Your Facebook App ID" {...field}/>
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
