@@ -90,7 +90,7 @@ function SavedSuggestionCard({ suggestion, onDelete }: { suggestion: SavedSugges
                          <div className="flex items-start gap-3">
                              <User className="h-5 w-5 text-primary mt-1 shrink-0" />
                             <div>
-                                <h4 className="font-semibold text-foreground">Suggested Doctor</h4>
+                                <h4 className="font-semibold text-foreground">Suggested Practitioner</h4>
                                 <p>{suggestion.doctorName}</p>
                             </div>
                         </div>
@@ -250,7 +250,7 @@ export default function HealthPage() {
        <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><BrainCircuit /> Saved AI Suggestions</CardTitle>
-          <CardDescription>A history of your AI-generated doctor suggestions.</CardDescription>
+          <CardDescription>A history of your AI-generated practitioner suggestions.</CardDescription>
         </CardHeader>
         <CardContent>
           {savedSuggestions.length > 0 ? (
@@ -263,7 +263,7 @@ export default function HealthPage() {
             <div className="text-center py-10">
                 <BrainCircuit className="mx-auto h-12 w-12 text-muted-foreground" />
                 <h3 className="mt-4 text-lg font-semibold">{isGuest ? "Sign in to save suggestions" : "No Saved Suggestions"}</h3>
-                <p className="mt-1 text-sm text-muted-foreground">{isGuest ? "Create an account or sign in to get and save AI suggestions." : "Use the 'Doctor Suggestion' tool to get a recommendation."}</p>
+                <p className="mt-1 text-sm text-muted-foreground">{isGuest ? "Create an account or sign in to get and save AI suggestions." : "Use the 'Practitioner Suggestion' tool to get a recommendation."}</p>
             </div>
           )}
         </CardContent>
@@ -350,3 +350,4 @@ export default function HealthPage() {
     </div>
   );
 }
+

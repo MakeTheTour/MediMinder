@@ -118,10 +118,10 @@ export function DoctorSuggestion() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Stethoscope />
-              Doctor Suggestion
+              NatureMed Practitioner Suggestion
             </CardTitle>
             <CardDescription>
-              Describe your symptoms, and our AI will suggest a type of specialist to consult. This is not medical advice.
+              Describe your symptoms, and our AI will suggest a type of holistic practitioner to consult. This is for informational purposes only.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -145,7 +145,7 @@ export function DoctorSuggestion() {
                   <FormLabel>Your Symptoms</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="e.g., I've had a persistent cough and mild fever for three days..."
+                      placeholder="e.g., I've been feeling stressed and having trouble sleeping..."
                       {...field}
                       rows={4}
                       disabled={isGuest}
@@ -173,7 +173,7 @@ export function DoctorSuggestion() {
                          <div className="flex items-start gap-3">
                              <User className="h-5 w-5 text-primary mt-1 shrink-0" />
                             <div>
-                                <h4 className="font-semibold text-foreground">Suggested Doctor</h4>
+                                <h4 className="font-semibold text-foreground">Suggested Practitioner</h4>
                                 <p className="font-bold text-primary">{recommendation.doctorName}</p>
                             </div>
                         </div>
@@ -224,3 +224,4 @@ export function DoctorSuggestion() {
     </Card>
   );
 }
+
