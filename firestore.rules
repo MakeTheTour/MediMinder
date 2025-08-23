@@ -3,45 +3,39 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Helper function to check if the user is the admin
+    
+    // Helper function to check for admin
     function isAdmin() {
       return request.auth != null && request.auth.token.email == 'admin@mediminder.com';
     }
 
-    // Users can only read/write their own data. Admins can read/write any user data.
-    match /users/{userId} {
-      allow read, update, delete: if request.auth.uid == userId || isAdmin();
-      allow create: if request.auth.uid == userId;
-
-      // Users can only read/write to their own subcollections. Admins have full access.
-      match /{subcollection}/{docId} {
-        allow read, write: if request.auth.uid == userId || isAdmin();
-      }
+    // Users can only manage their own documents and subcollections
+    match /users/{userId}/{document=**} {
+      allow read, write: if request.auth.uid == userId || isAdmin();
     }
     
-    // Rules for the invitations collection
+    // Rules for Invitations
     match /invitations/{invitationId} {
-      // Allow creating an invitation
-      allow create: if request.auth.uid != null;
-      
-      // Allow reading an invitation if you are the inviter or the invitee
-      allow read: if request.auth.uid == resource.data.inviterId 
-                    || request.auth.token.email == resource.data.inviteeEmail
-                    || isAdmin();
+      // Allow read if the user is the inviter or the invitee, or if admin
+      allow read: if (request.auth.uid == resource.data.inviterId || request.auth.token.email == resource.data.inviteeEmail) || isAdmin();
 
-      // Allow updating an invitation (e.g., to accept it) if you are the invitee
-      allow update: if request.auth.token.email == resource.data.inviteeEmail || isAdmin();
-      
-      // Allow deleting an invitation if you are the inviter
-      allow delete: if request.auth.uid == resource.data.inviterId || isAdmin();
+      // Allow creating an invitation if the inviter is the current user
+      allow create: if request.auth.uid == request.resource.data.inviterId;
 
-      // THIS IS THE CRITICAL FIX: Allow querying the collection
-      // A user can query the invitations collection if they are filtering by their UID as the inviter
-      // OR by their email as the invitee. This matches the queries in the Family page.
-      allow list: if (request.query.get("where_conditions")[0][0] == "inviterId" && request.query.get("where_conditions")[0][2] == request.auth.uid)
-                  || (request.query.get("where_conditions")[0][0] == "inviteeEmail" && request.query.get("where_conditions")[0][2] == request.auth.token.email)
-                  || isAdmin();
+      // Allow update if user is the invitee (accepting/declining)
+      allow update: if request.auth.token.email == resource.data.inviteeEmail;
+
+      // Allow delete if the user is the inviter (cancelling)
+      allow delete: if request.auth.uid == resource.data.inviterId;
+
+      // Allow list (query) if the query is scoped to the user
+      allow list: if (request.query.where.inviterId == request.auth.uid || request.query.where.inviteeEmail == request.auth.token.email) || isAdmin();
+    }
+    
+    // Subscriptions can only be read by admins
+    match /subscriptions/{subscriptionId} {
+        allow read, write: if isAdmin();
+        allow create: if request.auth != null; // Users can create their own subscriptions
     }
   }
 }

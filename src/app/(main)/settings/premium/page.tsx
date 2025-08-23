@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { CheckCircle2, Star, Users, Loader2 } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
 import { useToast } from "@/hooks/use-toast";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, updateDoc, addDoc, collection } from "firebase/firestore";
 import { db } from "@/lib/firebase-client";
 import { sendPremiumConfirmationEmail } from "@/ai/flows/send-premium-confirmation-email";
 import { Label } from "@/components/ui/label";
@@ -76,7 +76,8 @@ export default function PremiumPage() {
       // Simulate payment processing
       await new Promise(resolve => setTimeout(resolve, 2000));
       
-      const endDate = new Date();
+      const startDate = new Date();
+      const endDate = new Date(startDate);
       if (billingCycle === 'yearly') {
         endDate.setFullYear(endDate.getFullYear() + 1);
       } else {
@@ -85,11 +86,28 @@ export default function PremiumPage() {
       
       // Update user in firestore
       const userRef = doc(db, 'users', user.uid);
-      await setDoc(userRef, { 
+      await updateDoc(userRef, { 
         isPremium: true, 
         premiumCycle: billingCycle,
         premiumEndDate: endDate.toISOString(),
-      }, { merge: true });
+      });
+      
+      // Create a subscription record
+      const subscriptionsRef = collection(db, 'subscriptions');
+      await addDoc(subscriptionsRef, {
+        userId: user.uid,
+        user: { // Embed user info for easy display in admin panel
+            name: user.displayName,
+            email: user.email,
+            photoURL: user.photoURL,
+        },
+        plan: billingCycle === 'monthly' ? 'Premium Monthly' : 'Premium Yearly',
+        status: 'active',
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+        paymentMethod: method,
+        transactionId: `${method.toLowerCase()}_${new Date().getTime()}`
+      });
 
       // Send confirmation email
       await sendPremiumConfirmationEmail({

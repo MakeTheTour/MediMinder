@@ -6,52 +6,32 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
-import type { Subscription, User } from '@/lib/types';
+import type { Subscription } from '@/lib/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-
-
-const dummySubscriptions: Subscription[] = [
-    {
-        id: 'sub_1',
-        user: { uid: 'user_1', name: 'Alice Johnson', email: 'alice@example.com', country: 'USA', createdAt: new Date().toISOString() },
-        plan: 'Premium Monthly',
-        status: 'active',
-        startDate: new Date(2023, 10, 15).toISOString(),
-        endDate: new Date(2024, 10, 15).toISOString(),
-        paymentMethod: 'Stripe',
-        transactionId: 'pi_123abc'
-    },
-    {
-        id: 'sub_2',
-        user: { uid: 'user_2', name: 'Bob Williams', email: 'bob@example.com', country: 'Canada', createdAt: new Date().toISOString() },
-        plan: 'Premium Yearly',
-        status: 'active',
-        startDate: new Date(2023, 8, 1).toISOString(),
-        endDate: new Date(2024, 8, 1).toISOString(),
-        paymentMethod: 'PayPal',
-        transactionId: 'pp_456def'
-    },
-    {
-        id: 'sub_3',
-        user: { uid: 'user_3', name: 'Charlie Brown', email: 'charlie@example.com', country: 'UK', createdAt: new Date().toISOString() },
-        plan: 'Premium Monthly',
-        status: 'cancelled',
-        startDate: new Date(2023, 9, 20).toISOString(),
-        endDate: new Date(2023, 10, 20).toISOString(),
-        paymentMethod: 'Stripe',
-        transactionId: 'pi_789ghi'
-    }
-];
+import { collection, onSnapshot } from 'firebase/firestore';
+import { db } from '@/lib/firebase-client';
+import { useToast } from '@/hooks/use-toast';
 
 export default function AdminSubscriptionsPage() {
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
   useEffect(() => {
-    // In a real app, you would fetch this data from your database.
-    setSubscriptions(dummySubscriptions);
-    setLoading(false);
-  }, []);
+    setLoading(true);
+    const subCollection = collection(db, 'subscriptions');
+    const unsub = onSnapshot(subCollection, (snapshot) => {
+      const subsList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Subscription));
+      setSubscriptions(subsList);
+      setLoading(false);
+    }, (error) => {
+        console.error("Error fetching subscriptions: ", error);
+        toast({ title: "Error", description: "Could not fetch subscriptions.", variant: "destructive"});
+        setLoading(false);
+    });
+
+    return () => unsub();
+  }, [toast]);
   
   const getStatusVariant = (status: string): 'default' | 'secondary' | 'destructive' | 'outline' => {
     switch (status) {
@@ -104,13 +84,12 @@ export default function AdminSubscriptionsPage() {
                     <TableCell>
                        <div className="flex items-center gap-3">
                          <Avatar>
-                           <AvatarImage src={sub.user.photoURL || `https://placehold.co/40x40.png`} alt={sub.user.name} />
+                           <AvatarImage src={sub.user.photoURL || undefined} alt={sub.user.name} />
                            <AvatarFallback>{sub.user.name?.charAt(0) || 'U'}</AvatarFallback>
                          </Avatar>
                          <div>
                             <p className="font-medium">{sub.user.name}</p>
                             <p className="text-xs text-muted-foreground">{sub.user.email}</p>
-                            <p className="text-xs text-muted-foreground">{sub.user.country}</p>
                          </div>
                        </div>
                     </TableCell>
@@ -120,7 +99,7 @@ export default function AdminSubscriptionsPage() {
                         <Badge variant={getStatusVariant(sub.status)} className="capitalize">{sub.status}</Badge>
                     </TableCell>
                      <TableCell>
-                      {format(new Date(sub.startDate), 'dd/MM/yy')} - {format(new Date(sub.endDate), 'dd/MM/yy')}
+                      {sub.startDate ? format(new Date(sub.startDate), 'dd/MM/yy') : 'N/A'} - {sub.endDate ? format(new Date(sub.endDate), 'dd/MM/yy') : 'N/A'}
                     </TableCell>
                     <TableCell className="font-mono text-xs">{sub.transactionId}</TableCell>
                   </TableRow>

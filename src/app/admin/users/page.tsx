@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { collection, onSnapshot, doc, updateDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, updateDoc, writeBatch, query, where, getDocs, addDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase-client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -44,19 +44,76 @@ export default function AdminUsersPage() {
     return () => unsub();
   }, [toast]);
 
-  const updateUser = async (uid: string, data: Partial<User>) => {
+  const updateUserStatus = async (uid: string, status: 'active' | 'suspended' | 'deactivated') => {
     try {
         const userRef = doc(db, 'users', uid);
-        await updateDoc(userRef, data);
+        await updateDoc(userRef, { status });
         toast({
             title: "User Updated",
-            description: "The user's information has been successfully updated."
+            description: `User status set to ${status}.`
         });
     } catch (error) {
-        console.error("Error updating user: ", error);
-        toast({ title: "Error", description: "Could not update user.", variant: "destructive"});
+        console.error("Error updating user status: ", error);
+        toast({ title: "Error", description: "Could not update user status.", variant: "destructive"});
     }
   }
+
+  const togglePremium = async (user: User) => {
+    const newPremiumStatus = !user.isPremium;
+    const batch = writeBatch(db);
+
+    try {
+        const userRef = doc(db, 'users', user.uid);
+        
+        if (newPremiumStatus) { // Upgrading to Premium
+            const endDate = new Date();
+            endDate.setFullYear(endDate.getFullYear() + 1); // Give 1 year by default from admin
+
+            batch.update(userRef, {
+                isPremium: true,
+                premiumCycle: 'yearly',
+                premiumEndDate: endDate.toISOString(),
+            });
+
+            const subData = {
+                userId: user.uid,
+                user: { name: user.name, email: user.email, photoURL: user.photoURL || null },
+                plan: 'Premium Yearly',
+                status: 'active',
+                startDate: new Date().toISOString(),
+                endDate: endDate.toISOString(),
+                paymentMethod: 'Admin Grant',
+                transactionId: `admin_${user.uid}_${Date.now()}`
+            };
+            const subRef = doc(collection(db, "subscriptions"));
+            batch.set(subRef, subData);
+
+        } else { // Downgrading to Free
+             batch.update(userRef, {
+                isPremium: false,
+                premiumCycle: null,
+                premiumEndDate: null,
+            });
+            // Find active subscription and set to cancelled
+            const q = query(collection(db, "subscriptions"), where("userId", "==", user.uid), where("status", "==", "active"));
+            const querySnapshot = await getDocs(q);
+            querySnapshot.forEach(doc => {
+                batch.update(doc.ref, { status: 'cancelled' });
+            });
+        }
+        
+        await batch.commit();
+        toast({
+            title: "User Updated",
+            description: `User has been ${newPremiumStatus ? 'upgraded to Premium' : 'downgraded to Free'}.`
+        });
+
+    } catch (error) {
+        console.error("Error toggling premium status: ", error);
+        toast({ title: "Error", description: "Could not update user's premium status.", variant: "destructive"});
+    }
+  };
+
 
   const getStatusVariant = (status?: string): 'default' | 'secondary' | 'destructive' | 'outline' => {
     switch (status) {
@@ -110,7 +167,7 @@ export default function AdminUsersPage() {
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <Avatar>
-                          <AvatarImage src={user.photoURL || `https://placehold.co/40x40.png`} alt={user.name} />
+                          <AvatarImage src={user.photoURL || undefined} alt={user.name} />
                           <AvatarFallback>{user.name?.charAt(0) || 'U'}</AvatarFallback>
                         </Avatar>
                         <span className="font-medium">{user.name}</span>
@@ -144,27 +201,30 @@ export default function AdminUsersPage() {
                                 <DropdownMenuContent align="end">
                                     <DropdownMenuLabel>Manage User</DropdownMenuLabel>
                                     <DropdownMenuSeparator />
-                                    <DropdownMenuItem onClick={() => updateUser(user.uid, { status: 'active' })}>
+                                    <DropdownMenuItem onClick={() => updateUserStatus(user.uid, 'active')}>
                                         <UserCheck className="mr-2 h-4 w-4" />
                                         <span>Set Active</span>
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => updateUser(user.uid, { status: 'suspended' })}>
+                                    <DropdownMenuItem onClick={() => updateUserStatus(user.uid, 'suspended')}>
                                         <UserX className="mr-2 h-4 w-4" />
                                         <span>Set Suspended</span>
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => updateUser(user.uid, { status: 'deactivated' })} className="text-destructive">
+                                    <DropdownMenuItem onClick={() => updateUserStatus(user.uid, 'deactivated')} className="text-destructive">
                                         <CircleSlash className="mr-2 h-4 w-4" />
                                         <span>Set Deactivated</span>
                                     </DropdownMenuItem>
                                     <DropdownMenuSeparator />
-                                    <DropdownMenuItem onClick={() => updateUser(user.uid, { isPremium: true })}>
-                                        <Star className="mr-2 h-4 w-4" />
-                                        <span>Upgrade to Premium</span>
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => updateUser(user.uid, { isPremium: false })}>
-                                        <ShieldOff className="mr-2 h-4 w-4" />
-                                        <span>Downgrade to Free</span>
-                                    </DropdownMenuItem>
+                                    {user.isPremium ? (
+                                        <DropdownMenuItem onClick={() => togglePremium(user)}>
+                                            <ShieldOff className="mr-2 h-4 w-4" />
+                                            <span>Downgrade to Free</span>
+                                        </DropdownMenuItem>
+                                    ) : (
+                                        <DropdownMenuItem onClick={() => togglePremium(user)}>
+                                            <Star className="mr-2 h-4 w-4" />
+                                            <span>Upgrade to Premium</span>
+                                        </DropdownMenuItem>
+                                    )}
                                 </DropdownMenuContent>
                             </DropdownMenu>
                         )}

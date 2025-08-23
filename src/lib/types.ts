@@ -97,17 +97,23 @@ export interface User {
   createdAt: string;
   photoURL?: string;
   isPremium?: boolean;
-  premiumEndDate?: string;
+  premiumCycle?: 'monthly' | 'yearly';
+  premiumEndDate?: string | null;
   status?: 'active' | 'suspended' | 'deactivated';
 }
 
 export interface Subscription {
     id: string;
-    user: User;
-    plan: 'Free' | 'Premium Monthly' | 'Premium Yearly';
+    userId: string;
+    user: {
+        name?: string | null;
+        email?: string | null;
+        photoURL?: string | null;
+    };
+    plan: 'Premium Monthly' | 'Premium Yearly';
     status: 'active' | 'cancelled' | 'expired';
     startDate: string;
     endDate: string;
-    paymentMethod: 'Stripe' | 'PayPal' | 'Payoneer' | 'N/A';
+    paymentMethod: 'Stripe' | 'PayPal' | 'Payoneer' | 'Admin Grant';
     transactionId: string;
 }
