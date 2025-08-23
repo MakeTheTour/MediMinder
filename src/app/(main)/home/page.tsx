@@ -182,6 +182,17 @@ export default function HomePage() {
     setReminder(null);
   }, [user, isGuest, setLocalAdherence, toast, familyMembers, userProfile]);
 
+ const showNotification = useCallback((time: string, medications: Medication[]) => {
+    if (typeof window === "undefined" || !("Notification" in window) || Notification.permission !== "granted") {
+      return;
+    }
+    
+    const medNames = medications.map(m => m.name).join(', ');
+    const title = 'Time for your medication!';
+    const body = `It's time for your ${format(parse(time, 'HH:mm', new Date()), 'h:mm a')} dose: ${medNames}.`;
+
+    new Notification(title, { body });
+  }, []);
 
   const checkReminders = useCallback(() => {
     const now = new Date();
@@ -210,20 +221,21 @@ export default function HomePage() {
 
       if (!anyMedicationHandled && !alreadyNotified && !reminder) {
         
+        showNotification(time, medications);
         setReminder({ medications, time });
         
         if (escalationTimerRef.current) clearTimeout(escalationTimerRef.current);
         
-        // Auto-miss after 2 minutes
+        // Auto-miss after 10 minutes and send family alert
         escalationTimerRef.current = setTimeout(() => {
             handleReminderAction(medications, time, 'missed');
-        }, 2 * 60 * 1000);
+        }, 10 * 60 * 1000); // 10 minutes
         
         setSentNotifications(prev => [...prev, notificationId]);
         return; // Show one reminder at a time
       }
     }
-  }, [todaysMedicationsByTime, adherenceLogs, reminder, sentNotifications, setSentNotifications, handleReminderAction]);
+  }, [todaysMedicationsByTime, adherenceLogs, reminder, sentNotifications, setSentNotifications, handleReminderAction, showNotification]);
 
 
   const checkMissedDoses = useCallback(async () => {
@@ -342,6 +354,9 @@ export default function HomePage() {
       clearInterval(reminderInterval);
       clearInterval(missedDoseInterval);
       clearInterval(appointmentReminderInterval);
+      if (escalationTimerRef.current) {
+        clearTimeout(escalationTimerRef.current);
+      }
     };
   }, [checkReminders, checkMissedDoses, checkAppointmentReminders]);
 
