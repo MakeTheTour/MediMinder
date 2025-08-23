@@ -5,7 +5,6 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { collection, query, where, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase-client';
-import Image from 'next/image';
 import { Megaphone } from 'lucide-react';
 import Link from 'next/link';
 
@@ -56,11 +55,11 @@ export function AdCard() {
       <CardContent className="p-4 pt-0">
         <div className="flex flex-col sm:flex-row gap-4 items-center">
             <div className="w-full sm:w-1/3">
-                 <Image
+                 <img
                     src={ad.imageUrl}
                     alt={ad.title}
-                    width={200}
-                    height={100}
+                    width="200"
+                    height="100"
                     className="rounded-md object-cover w-full h-auto"
                 />
             </div>
