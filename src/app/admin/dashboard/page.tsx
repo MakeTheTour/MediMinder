@@ -3,14 +3,14 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Users, DollarSign, Megaphone, Loader2 } from "lucide-react";
-import { collection, onSnapshot, query, orderBy, limit, where } from 'firebase/firestore';
+import { Users, DollarSign, Megaphone, Loader2, UserPlus, Star } from "lucide-react";
+import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase-client';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { formatDistanceToNow } from 'date-fns';
-import type { User as UserType } from '@/lib/types';
+import { startOfToday, endOfToday } from 'date-fns';
+import type { User as UserType, Subscription } from '@/lib/types';
 
-interface User {
+interface User extends UserType {
   isPremium?: boolean;
   premiumCycle?: 'monthly' | 'yearly';
 }
@@ -19,10 +19,14 @@ export default function AdminDashboardPage() {
   const [userCount, setUserCount] = useState<number>(0);
   const [revenue, setRevenue] = useState<number>(0);
   const [activeAdsCount, setActiveAdsCount] = useState<number>(0);
-  const [recentUsers, setRecentUsers] = useState<UserType[]>([]);
+  const [todaysUsers, setTodaysUsers] = useState<UserType[]>([]);
+  const [todaysSubscriptions, setTodaysSubscriptions] = useState<Subscription[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const todayStart = startOfToday().toISOString();
+    const todayEnd = endOfToday().toISOString();
+
     const usersQuery = query(collection(db, 'users'));
     const unsubUsers = onSnapshot(usersQuery, (snapshot) => {
       const users = snapshot.docs.map(doc => doc.data() as User);
@@ -42,21 +46,34 @@ export default function AdminDashboardPage() {
       setLoading(false);
     });
 
-    const recentUsersQuery = query(collection(db, 'users'), orderBy('createdAt', 'desc'), limit(5));
-    const unsubRecentUsers = onSnapshot(recentUsersQuery, (snapshot) => {
-      setRecentUsers(snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserType)));
+    const todaysUsersQuery = query(
+        collection(db, 'users'), 
+        where('createdAt', '>=', todayStart),
+        where('createdAt', '<=', todayEnd)
+    );
+    const unsubRecentUsers = onSnapshot(todaysUsersQuery, (snapshot) => {
+      setTodaysUsers(snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserType)));
     });
     
     const activeAdsQuery = query(collection(db, 'ads'), where('status', '==', 'active'));
     const unsubAds = onSnapshot(activeAdsQuery, (snapshot) => {
         setActiveAdsCount(snapshot.size);
     });
-
+    
+    const todaysSubscriptionsQuery = query(
+        collection(db, 'subscriptions'),
+        where('startDate', '>=', todayStart),
+        where('startDate', '<=', todayEnd)
+    );
+    const unsubSubscriptions = onSnapshot(todaysSubscriptionsQuery, (snapshot) => {
+        setTodaysSubscriptions(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Subscription)));
+    });
 
     return () => {
         unsubUsers();
         unsubRecentUsers();
         unsubAds();
+        unsubSubscriptions();
     }
   }, []);
 
@@ -125,44 +142,58 @@ export default function AdminDashboardPage() {
        <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Recent Signups</CardTitle>
-            <CardDescription>The latest users to join MediMinder.</CardDescription>
+            <CardTitle className="flex items-center gap-2"><UserPlus/> Today's New Users</CardTitle>
+            <CardDescription>Users who signed up today.</CardDescription>
           </CardHeader>
           <CardContent>
             {loading ? (
-                <p className="text-sm text-muted-foreground">Loading recent users...</p>
-            ) : recentUsers.length > 0 ? (
+                <p className="text-sm text-muted-foreground">Loading today's users...</p>
+            ) : todaysUsers.length > 0 ? (
                 <div className="space-y-4">
-                    {recentUsers.map(user => (
-                        <div key={user.uid} className="flex items-center justify-between">
-                            <div className="flex items-center gap-4">
-                                <Avatar>
-                                    <AvatarImage src={user.photoURL || undefined} alt={user.name} />
-                                    <AvatarFallback>{user.name?.charAt(0) || 'U'}</AvatarFallback>
-                                </Avatar>
-                                <div>
-                                    <p className="font-semibold">{user.name}</p>
-                                    <p className="text-sm text-muted-foreground">{user.email}</p>
-                                </div>
+                    {todaysUsers.map(user => (
+                        <div key={user.uid} className="flex items-center gap-4">
+                            <Avatar>
+                                <AvatarImage src={user.photoURL || undefined} alt={user.name} />
+                                <AvatarFallback>{user.name?.charAt(0) || 'U'}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                                <p className="font-semibold">{user.name}</p>
+                                <p className="text-sm text-muted-foreground">{user.email}</p>
                             </div>
-                             <p className="text-sm text-muted-foreground">
-                                {formatDistanceToNow(new Date(user.createdAt), { addSuffix: true })}
-                            </p>
                         </div>
                     ))}
                 </div>
             ) : (
-                 <p className="text-sm text-muted-foreground">No users have signed up yet.</p>
+                 <p className="text-sm text-muted-foreground text-center py-4">No new users today.</p>
             )}
           </CardContent>
         </Card>
-         <Card>
+        <Card>
           <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
-            <CardDescription>An overview of recent events in the app.</CardDescription>
+            <CardTitle className="flex items-center gap-2"><Star/> Today's New Subscriptions</CardTitle>
+            <CardDescription>Users who upgraded to premium today.</CardDescription>
           </CardHeader>
           <CardContent>
-             <p className="text-muted-foreground text-center py-8">Activity feed coming soon...</p>
+            {loading ? (
+                <p className="text-sm text-muted-foreground">Loading today's subscriptions...</p>
+            ) : todaysSubscriptions.length > 0 ? (
+                <div className="space-y-4">
+                    {todaysSubscriptions.map(sub => (
+                        <div key={sub.id} className="flex items-center gap-4">
+                            <Avatar>
+                                <AvatarImage src={sub.user.photoURL || undefined} alt={sub.user.name || 'User'} />
+                                <AvatarFallback>{sub.user.name?.charAt(0) || 'U'}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                                <p className="font-semibold">{sub.user.name}</p>
+                                <p className="text-sm text-muted-foreground">{sub.plan}</p>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            ) : (
+                 <p className="text-sm text-muted-foreground text-center py-4">No new subscriptions today.</p>
+            )}
           </CardContent>
         </Card>
       </div>
