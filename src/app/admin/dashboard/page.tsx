@@ -1,13 +1,14 @@
 
+
 'use client'
 
-import { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Users, DollarSign, Megaphone, Loader2, UserPlus, Star, TrendingUp } from "lucide-react";
 import { collection, onSnapshot, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase-client';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { startOfToday, endOfToday, subDays, subMonths, format, startOfDay, isWithinInterval, getHours, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, eachDayOfInterval, isSameDay } from 'date-fns';
+import { startOfToday, endOfToday, subDays, format, isWithinInterval, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, eachDayOfInterval, isSameDay } from 'date-fns';
 import type { User as UserType, Subscription, AdherenceLog } from '@/lib/types';
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -19,7 +20,7 @@ interface User extends UserType {
 }
 
 type Period = 'daily' | 'weekly' | 'monthly' | 'yearly';
-type SubscriptionPeriod = 'daily' | 'monthly' | 'yearly';
+type SubscriptionPeriod = 'daily' | 'weekly' | 'monthly' | 'yearly';
 
 
 export default function AdminDashboardPage() {
@@ -162,6 +163,8 @@ export default function AdminDashboardPage() {
 
     if (subscriptionPeriod === 'daily') {
       startDate = startOfToday();
+    } else if (subscriptionPeriod === 'weekly') {
+      startDate = subDays(now, 7);
     } else if (subscriptionPeriod === 'monthly') {
       startDate = subDays(now, 30);
     } else { // yearly
@@ -318,8 +321,9 @@ export default function AdminDashboardPage() {
                 <CardHeader>
                     <CardTitle className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2"><Star/> Subscriptions</div>
-                         <TabsList className="grid w-auto grid-cols-3">
+                         <TabsList className="grid w-auto grid-cols-4">
                             <TabsTrigger value="daily">Daily</TabsTrigger>
+                            <TabsTrigger value="weekly">Weekly</TabsTrigger>
                             <TabsTrigger value="monthly">Monthly</TabsTrigger>
                             <TabsTrigger value="yearly">Yearly</TabsTrigger>
                         </TabsList>
