@@ -140,9 +140,12 @@ export default function HealthPage() {
                 const data = doc.data();
                 return {
                     id: doc.id,
-                    symptoms: data.symptoms,
+                    symptoms: data.symptoms || '',
                     createdAt: data.createdAt,
-                    ...data.recommendation,
+                    specialist: data.recommendation?.specialist || 'N/A',
+                    reasoning: data.recommendation?.reasoning || '',
+                    doctorName: data.recommendation?.doctorName,
+                    doctorAddress: data.recommendation?.doctorAddress,
                 } as SavedSuggestion
              }));
         });
