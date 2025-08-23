@@ -69,11 +69,12 @@ export function AdCard() {
 
   if (ad.redirectUrl) {
     return (
-        <Link href={ad.redirectUrl} target="_blank" rel="noopener noreferrer" className="no-underline">
+        <a href={ad.redirectUrl} target="_blank" rel="noopener noreferrer" className="no-underline block">
             {AdContent}
-        </Link>
+        </a>
     )
   }
 
   return AdContent;
 }
+
