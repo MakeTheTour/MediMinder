@@ -108,37 +108,35 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                   </Link>
                 </SidebarMenuItem>
               ))}
-                <Collapsible asChild>
-                    <>
-                        <SidebarMenuItem>
-                            <CollapsibleTrigger asChild>
-                                <SidebarMenuButton tooltip='Payments'>
-                                    <CreditCard/>
-                                    <span>Payments</span>
-                                    <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
-                                </SidebarMenuButton>
-                            </CollapsibleTrigger>
-                        </SidebarMenuItem>
+                <Collapsible>
+                    <SidebarMenuItem>
+                        <CollapsibleTrigger asChild>
+                            <SidebarMenuButton tooltip='Payments'>
+                                <CreditCard/>
+                                <span>Payments</span>
+                                <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
+                            </SidebarMenuButton>
+                        </CollapsibleTrigger>
+                    </SidebarMenuItem>
 
-                        <CollapsibleContent asChild>
-                            <SidebarMenuSub>
-                                <SidebarMenuSubItem>
-                                    <Link href="/admin/subscriptions">
-                                        <SidebarMenuSubButton isActive={pathname === '/admin/subscriptions'}>
-                                            Subscriptions
-                                        </SidebarMenuSubButton>
-                                    </Link>
-                                </SidebarMenuSubItem>
-                                <SidebarMenuSubItem>
-                                    <Link href="/admin/payments">
-                                        <SidebarMenuSubButton isActive={pathname === '/admin/payments'}>
-                                            Gateways Setting
-                                        </SidebarMenuSubButton>
-                                    </Link>
-                                </SidebarMenuSubItem>
-                            </SidebarMenuSub>
-                        </CollapsibleContent>
-                    </>
+                    <CollapsibleContent asChild>
+                        <SidebarMenuSub>
+                            <SidebarMenuSubItem>
+                                <Link href="/admin/subscriptions">
+                                    <SidebarMenuSubButton isActive={pathname === '/admin/subscriptions'}>
+                                        Subscriptions
+                                    </SidebarMenuSubButton>
+                                </Link>
+                            </SidebarMenuSubItem>
+                            <SidebarMenuSubItem>
+                                <Link href="/admin/payments">
+                                    <SidebarMenuSubButton isActive={pathname === '/admin/payments'}>
+                                        Gateways Setting
+                                    </SidebarMenuSubButton>
+                                </Link>
+                            </SidebarMenuSubItem>
+                        </SidebarMenuSub>
+                    </CollapsibleContent>
                 </Collapsible>
             </SidebarMenu>
           </SidebarContent>
@@ -149,7 +147,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             </Button>
           </SidebarFooter>
         </Sidebar>
-        <SidebarInset className="overflow-auto">
+        <SidebarInset className="flex-grow flex flex-col overflow-auto">
              <main className="flex-1 p-4">{children}</main>
         </SidebarInset>
       </div>
