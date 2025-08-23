@@ -117,7 +117,7 @@ export default function ReportsPage() {
             <TrendingUp className="mx-auto h-12 w-12 text-muted-foreground" />
             <h3 className="mt-4 text-lg font-semibold">No Adherence Data</h3>
             <p className="mt-1 text-sm text-muted-foreground">
-                {isGuest ? "Log your medication doses on the Home page to see your report." : "Once you start logging your doses, your report will appear here."}
+                {isGuest ? "Interact with your medication reminders on the Home page to see your report." : "Once you start logging your doses on the Home page, your report will appear here."}
             </p>
         </div>
         )}
