@@ -24,11 +24,11 @@ const FamilyAlertOutputSchema = z.object({
 export type FamilyAlertOutput = z.infer<typeof FamilyAlertOutputSchema>;
 
 export async function generateFamilyAlert(input: FamilyAlertInput): Promise<FamilyAlertOutput> {
-  return familyAlertFlow(input);
+  return generateFamilyAlertFlow(input);
 }
 
 const prompt = ai.definePrompt({
-  name: 'familyAlertPrompt',
+  name: 'generateFamilyAlertPrompt',
   input: {schema: FamilyAlertInputSchema},
   output: {schema: FamilyAlertOutputSchema},
   prompt: `You are an AI assistant for a health app called MediMinder. Your task is to generate a concise, clear, and caring notification message.
@@ -43,7 +43,7 @@ Generate a friendly and supportive message to {{{familyName}}} informing them th
   `,
 });
 
-const familyAlertFlow = ai.defineFlow(
+const generateFamilyAlertFlow = ai.defineFlow(
   {
     name: 'generateFamilyAlertFlow',
     inputSchema: FamilyAlertInputSchema,

@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Medication, Appointment, AdherenceLog, FamilyMember, UserProfile } from '@/lib/types';
 import { MedicationCard } from '@/components/medication-card';
 import { AppointmentCard } from '@/components/appointment-card';
-import { format, parse, isToday, isFuture, differenceInHours, differenceInMinutes, isBefore, startOfDay } from 'date-fns';
+import { format, parse, isToday, isFuture, differenceInHours, isBefore, startOfDay } from 'date-fns';
 import { useAuth } from '@/context/auth-context';
 import { collection, onSnapshot, query, orderBy, doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase-client';
@@ -19,7 +19,7 @@ import { MedicationReminderDialog } from '@/components/medication-reminder-dialo
 import { trackAdherence } from '@/ai/flows/track-adherence-flow';
 import { useToast } from '@/hooks/use-toast';
 import { generateAppointmentReminder } from '@/ai/flows/appointment-reminder-flow';
-import { generateFamilyAlert } from '@/ai/flows/family-alert-flow';
+import { generateFamilyAlert } from '@/ai/flows/generate-family-alert-flow';
 import { GroupedMedicationCard } from '@/components/grouped-medication-card';
 import { AdCard } from '@/components/ad-card';
 
@@ -32,7 +32,6 @@ export default function HomePage() {
   const [localAppointments, setLocalAppointments] = useLocalStorage<Appointment[]>('guest-appointments', []);
   const [localAdherence, setLocalAdherence] = useLocalStorage<AdherenceLog[]>('guest-adherence', []);
   const [sentAppointmentReminders, setSentAppointmentReminders] = useLocalStorage<string[]>('sent-appointment-reminders', []);
-  const [sentNotifications, setSentNotifications] = useLocalStorage<string[]>('sent-notifications', []);
 
   const [firestoreMedications, setFirestoreMedications] = useState<Medication[]>([]);
   const [firestoreAppointments, setFirestoreAppointments] = useState<Appointment[]>([]);
@@ -65,7 +64,7 @@ export default function HomePage() {
       });
       
       const familyUnsub = onSnapshot(collection(db, 'users', user.uid, 'familyMembers'), (snapshot) => {
-          setFamilyMembers(snapshot.docs.map(doc => doc.data() as FamilyMember));
+          setFamilyMembers(snapshot.docs.map(doc => ({id: doc.id, ...doc.data()} as FamilyMember)));
       });
       
       const userProfileUnsub = onSnapshot(doc(db, 'users', user.uid), (doc) => {
@@ -134,7 +133,7 @@ export default function HomePage() {
     }
   }, []);
 
-  const handleReminderAction = useCallback(async (medications: Medication[], scheduledTime: string, status: 'taken' | 'stock_out' | 'missed') => {
+  const handleReminderAction = useCallback(async (medications: Medication[], scheduledTime: string, status: 'taken' | 'stock_out' | 'missed' | 'snoozed') => {
     const notificationId = `${medications[0].id}-${scheduledTime}-${format(new Date(), 'yyyy-MM-dd')}`;
     clearReminderTimers(notificationId);
     
@@ -230,9 +229,13 @@ export default function HomePage() {
       const showReminder = () => {
         if (!reminder) { // only show one popup at a time
           setReminder({ medications, time });
-          new Notification('Time for your medication!', {
-            body: `It's time for your ${format(scheduledTime, 'h:mm a')} dose.`,
-          });
+          try {
+            new Notification('Time for your medication!', {
+                body: `It's time for your ${format(scheduledTime, 'h:mm a')} dose.`,
+            });
+          } catch (e) {
+            console.error("Notification API error: ", e);
+          }
         }
       };
 
@@ -248,8 +251,8 @@ export default function HomePage() {
       const t2 = setTimeout(() => showReminder(), 3 * 60 * 1000);
 
       // After 10 minutes, mark as missed and notify family
-      const t3 = setTimeout(() => {
-        handleReminderAction(medications, time, 'missed');
+      const t3 = setTimeout(async () => {
+        await handleReminderAction(medications, time, 'missed');
         showReminder(); // Show one last time to inform user it was missed
         const t4 = setTimeout(() => setReminder(null), 1 * 60 * 1000);
         reminderTimers.current[notificationId].push(t4);
@@ -389,6 +392,9 @@ export default function HomePage() {
             time={reminder.time}
             onTake={() => handleReminderAction(reminder.medications, reminder.time, 'taken')}
             onStockOut={() => handleReminderAction(reminder.medications, reminder.time, 'stock_out')}
+            onSnooze={() => {
+                handleReminderAction(reminder.medications, reminder.time, 'snoozed');
+            }}
             onClose={() => {
                 const notificationId = `${reminder.medications[0].id}-${reminder.time}-${format(new Date(), 'yyyy-MM-dd')}`;
                 clearReminderTimers(notificationId);

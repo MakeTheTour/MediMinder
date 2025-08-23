@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Medication } from '@/lib/types';
-import { Pill, BellRing, PackageX, Check } from 'lucide-react';
+import { Pill, BellRing, PackageX, Check, Snooze } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { format, parse } from 'date-fns';
 
@@ -21,6 +21,7 @@ interface MedicationReminderDialogProps {
   time: string;
   onTake: () => void;
   onStockOut: () => void;
+  onSnooze: () => void;
   onClose: () => void;
 }
 
@@ -30,6 +31,7 @@ export function MedicationReminderDialog({
   time,
   onTake,
   onStockOut,
+  onSnooze,
   onClose,
 }: MedicationReminderDialogProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -44,6 +46,14 @@ export function MedicationReminderDialog({
     } else if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
+    }
+
+    // Cleanup audio on component unmount
+    return () => {
+        if (audioRef.current) {
+            audioRef.current.pause();
+            audioRef.current.currentTime = 0;
+        }
     }
   }, [isOpen]);
 
@@ -102,6 +112,10 @@ export function MedicationReminderDialog({
           <Button onClick={() => handleAction(onTake)}>
             <Check className="mr-2 h-4 w-4" />
             Taken
+          </Button>
+           <Button variant="secondary" className="col-span-2" onClick={() => handleAction(onSnooze)}>
+            <Snooze className="mr-2 h-4 w-4" />
+            Snooze (10 min)
           </Button>
         </AlertDialogFooter>
       </AlertDialogContent>
