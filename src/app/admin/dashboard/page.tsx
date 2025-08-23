@@ -179,15 +179,25 @@ export default function AdminDashboardPage() {
             ) : todaysSubscriptions.length > 0 ? (
                 <div className="space-y-4">
                     {todaysSubscriptions.map(sub => (
-                        <div key={sub.id} className="flex items-center gap-4">
-                            <Avatar>
-                                <AvatarImage src={sub.user.photoURL || undefined} alt={sub.user.name || 'User'} />
-                                <AvatarFallback>{sub.user.name?.charAt(0) || 'U'}</AvatarFallback>
-                            </Avatar>
-                            <div>
-                                <p className="font-semibold">{sub.user.name}</p>
-                                <p className="text-sm text-muted-foreground">{sub.plan}</p>
-                            </div>
+                        <div key={sub.id} className="flex items-center justify-between gap-4">
+                           <div className="flex items-center gap-4">
+                                <Avatar>
+                                    <AvatarImage src={sub.user.photoURL || undefined} alt={sub.user.name || 'User'} />
+                                    <AvatarFallback>{sub.user.name?.charAt(0) || 'U'}</AvatarFallback>
+                                </Avatar>
+                                <div>
+                                    <p className="font-semibold">{sub.user.name}</p>
+                                    <p className="text-sm text-muted-foreground">{sub.plan}</p>
+                                </div>
+                           </div>
+                           <div className="text-right">
+                                <p className="font-semibold">
+                                    {sub.plan === 'Premium Yearly' ? '$99.99' : '$9.99'}
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                    {sub.paymentMethod}
+                                </p>
+                           </div>
                         </div>
                     ))}
                 </div>
