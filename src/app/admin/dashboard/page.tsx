@@ -4,11 +4,11 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Users, DollarSign, Megaphone, Loader2, UserPlus, Star, TrendingUp } from "lucide-react";
-import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase-client';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { startOfToday, endOfToday, subDays, subMonths, format, startOfDay, isWithinInterval } from 'date-fns';
-import type { User as UserType, Subscription } from '@/lib/types';
+import { startOfToday, endOfToday, subDays, subMonths, format, startOfDay, isWithinInterval, getHours, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, eachDayOfInterval } from 'date-fns';
+import type { User as UserType, Subscription, AdherenceLog } from '@/lib/types';
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -18,7 +18,7 @@ interface User extends UserType {
   premiumCycle?: 'monthly' | 'yearly';
 }
 
-type Period = 'daily' | 'monthly' | 'yearly';
+type Period = 'daily' | 'weekly' | 'monthly' | 'yearly';
 type SubscriptionPeriod = 'daily' | 'monthly' | 'yearly';
 
 
@@ -28,6 +28,7 @@ export default function AdminDashboardPage() {
   const [activeAdsCount, setActiveAdsCount] = useState<number>(0);
   const [todaysUsers, setTodaysUsers] = useState<UserType[]>([]);
   const [allSubscriptions, setAllSubscriptions] = useState<Subscription[]>([]);
+  const [allAdherenceLogs, setAllAdherenceLogs] = useState<AdherenceLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [analyticsPeriod, setAnalyticsPeriod] = useState<Period>('monthly');
   const [subscriptionPeriod, setSubscriptionPeriod] = useState<SubscriptionPeriod>('daily');
@@ -38,7 +39,7 @@ export default function AdminDashboardPage() {
     const todayEnd = endOfToday().toISOString();
 
     const usersQuery = query(collection(db, 'users'));
-    const unsubUsers = onSnapshot(usersQuery, (snapshot) => {
+    const unsubUsers = onSnapshot(usersQuery, async (snapshot) => {
       const users = snapshot.docs.map(doc => doc.data() as User);
       setUserCount(users.length);
 
@@ -53,6 +54,15 @@ export default function AdminDashboardPage() {
         }
       });
       setRevenue(totalRevenue);
+
+      // Fetch adherence logs for all users
+      const adherencePromises = snapshot.docs.map(userDoc =>
+        getDocs(collection(db, 'users', userDoc.id, 'adherenceLogs'))
+      );
+      const adherenceSnapshots = await Promise.all(adherencePromises);
+      const logs = adherenceSnapshots.flatMap(snap => snap.docs.map(doc => doc.data() as AdherenceLog));
+      setAllAdherenceLogs(logs);
+      
       setLoading(false);
     });
 
@@ -84,37 +94,67 @@ export default function AdminDashboardPage() {
   }, []);
   
   const analyticsData = useMemo(() => {
-      // NOTE: This is mock data since no analytics are being tracked.
-      const now = new Date();
-      if (analyticsPeriod === 'daily') {
-          return Array.from({ length: 24 }, (_, i) => ({
-              name: `${i}:00`,
-              views: Math.floor(Math.random() * 200) + 50,
-              visitors: Math.floor(Math.random() * 80) + 20,
-          }));
-      }
-      if (analyticsPeriod === 'monthly') {
-          return Array.from({ length: 30 }, (_, i) => {
-              const date = subDays(now, 29 - i);
-              return {
-                  name: format(date, 'dd/MM'),
-                  views: Math.floor(Math.random() * 5000) + 1000,
-                  visitors: Math.floor(Math.random() * 2000) + 500,
-              };
-          });
-      }
-      if (analyticsPeriod === 'yearly') {
-          return Array.from({ length: 12 }, (_, i) => {
-              const date = subMonths(now, 11 - i);
-              return {
-                  name: format(date, 'MMM'),
-                  views: Math.floor(Math.random() * 60000) + 20000,
-                  visitors: Math.floor(Math.random() * 25000) + 10000,
-              };
-          });
-      }
-      return [];
-  }, [analyticsPeriod]);
+    const now = new Date();
+    
+    if (analyticsPeriod === 'daily') {
+        const todayLogs = allAdherenceLogs.filter(log => isWithinInterval(new Date(log.takenAt), { start: startOfToday(), end: endOfToday() }));
+        return Array.from({ length: 24 }, (_, i) => {
+            const hourStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), i, 0, 0);
+            const hourEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), i, 59, 59);
+            const hourlyLogs = todayLogs.filter(log => isWithinInterval(new Date(log.takenAt), { start: hourStart, end: hourEnd }));
+            return {
+                name: `${i}:00`,
+                views: hourlyLogs.length,
+                visitors: new Set(hourlyLogs.map(l => l.userId)).size,
+            };
+        });
+    }
+
+    if (analyticsPeriod === 'weekly') {
+        const start = startOfWeek(now);
+        const end = endOfWeek(now);
+        const weekDays = eachDayOfInterval({ start, end });
+        return weekDays.map(day => {
+            const dailyLogs = allAdherenceLogs.filter(log => isSameDay(new Date(log.takenAt), day));
+            return {
+                name: format(day, 'eee'),
+                views: dailyLogs.length,
+                visitors: new Set(dailyLogs.map(l => l.userId)).size
+            };
+        });
+    }
+
+    if (analyticsPeriod === 'monthly') {
+        const start = startOfMonth(now);
+        const end = endOfMonth(now);
+        const monthDays = eachDayOfInterval({ start, end });
+        return monthDays.map(day => {
+            const dailyLogs = allAdherenceLogs.filter(log => isSameDay(new Date(log.takenAt), day));
+            return {
+                name: format(day, 'dd'),
+                views: dailyLogs.length,
+                visitors: new Set(dailyLogs.map(l => l.userId)).size,
+            };
+        });
+    }
+
+    if (analyticsPeriod === 'yearly') {
+        const start = startOfYear(now);
+        const end = endOfYear(now);
+        return Array.from({ length: 12 }, (_, i) => {
+            const monthStart = startOfMonth(new Date(now.getFullYear(), i, 1));
+            const monthEnd = endOfMonth(monthStart);
+            const monthlyLogs = allAdherenceLogs.filter(log => isWithinInterval(new Date(log.takenAt), { start: monthStart, end: monthEnd }));
+            return {
+                name: format(monthStart, 'MMM'),
+                views: monthlyLogs.length,
+                visitors: new Set(monthlyLogs.map(l => l.userId)).size,
+            };
+        });
+    }
+    
+    return [];
+  }, [analyticsPeriod, allAdherenceLogs]);
   
   const { filteredSubscriptions, totalAmount } = useMemo(() => {
     const now = new Date();
@@ -144,7 +184,7 @@ export default function AdminDashboardPage() {
     <ResponsiveContainer width="100%" height={300}>
       <BarChart data={analyticsData}>
         <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
-        <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value / 1000}k`} />
+        <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} allowDecimals={false} />
         <Tooltip
             cursor={{ fill: 'hsl(var(--muted))' }}
             contentStyle={{
@@ -225,16 +265,18 @@ export default function AdminDashboardPage() {
        <Card>
         <CardHeader>
             <CardTitle className="flex items-center gap-2"><TrendingUp/> Traffic Analytics</CardTitle>
-            <CardDescription>A look at page views and unique visitors.</CardDescription>
+            <CardDescription>A look at user engagement based on adherence logs.</CardDescription>
         </CardHeader>
         <CardContent>
            <Tabs defaultValue="monthly" onValueChange={(value) => setAnalyticsPeriod(value as Period)} className="space-y-4">
                 <TabsList>
                     <TabsTrigger value="daily">Daily</TabsTrigger>
+                    <TabsTrigger value="weekly">Weekly</TabsTrigger>
                     <TabsTrigger value="monthly">Monthly</TabsTrigger>
                     <TabsTrigger value="yearly">Yearly</TabsTrigger>
                 </TabsList>
                 <TabsContent value="daily"><Chart/></TabsContent>
+                <TabsContent value="weekly"><Chart/></TabsContent>
                 <TabsContent value="monthly"><Chart/></TabsContent>
                 <TabsContent value="yearly"><Chart/></TabsContent>
             </Tabs>
@@ -325,3 +367,5 @@ export default function AdminDashboardPage() {
     </div>
   );
 }
+
+    
