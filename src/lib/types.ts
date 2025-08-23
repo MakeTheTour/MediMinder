@@ -119,3 +119,11 @@ export interface Subscription {
     paymentMethod: 'Stripe' | 'PayPal' | 'Payoneer' | 'Admin Grant';
     transactionId: string;
 }
+
+export const SpecialistRecommendationOutputSchema = z.object({
+  specialist: z.string().describe("The type of medical specialist recommended (e.g., Cardiologist, Neurologist)."),
+  reasoning: z.string().describe("A brief explanation for why this specialist is recommended based on the symptoms."),
+  doctorName: z.string().optional().describe("The name of a top-rated doctor for the suggested specialty in the user's city."),
+  doctorAddress: z.string().optional().describe("The address of the recommended doctor."),
+});
+export type SpecialistRecommendationOutput = z.infer<typeof SpecialistRecommendationOutputSchema>;

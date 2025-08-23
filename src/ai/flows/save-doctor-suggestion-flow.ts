@@ -12,7 +12,7 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import { collection, addDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { SpecialistRecommendationOutputSchema } from './symptom-checker-flow';
+import { SpecialistRecommendationOutputSchema } from '@/lib/types';
 
 
 const SaveDoctorSuggestionInputSchema = z.object({

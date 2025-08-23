@@ -10,6 +10,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { SpecialistRecommendationOutput, SpecialistRecommendationOutputSchema } from '@/lib/types';
 
 const SpecialistRecommendationInputSchema = z.object({
   symptoms: z.string().describe("A description of the user's symptoms."),
@@ -17,13 +18,7 @@ const SpecialistRecommendationInputSchema = z.object({
 });
 export type SpecialistRecommendationInput = z.infer<typeof SpecialistRecommendationInputSchema>;
 
-export const SpecialistRecommendationOutputSchema = z.object({
-  specialist: z.string().describe("The type of medical specialist recommended (e.g., Cardiologist, Neurologist)."),
-  reasoning: z.string().describe("A brief explanation for why this specialist is recommended based on the symptoms."),
-  doctorName: z.string().optional().describe("The name of a top-rated doctor for the suggested specialty in the user's city."),
-  doctorAddress: z.string().optional().describe("The address of the recommended doctor."),
-});
-export type SpecialistRecommendationOutput = z.infer<typeof SpecialistRecommendationOutputSchema>;
+export type { SpecialistRecommendationOutput };
 
 export async function getSpecialistRecommendation(input: SpecialistRecommendationInput): Promise<SpecialistRecommendationOutput> {
   return specialistRecommendationFlow(input);
