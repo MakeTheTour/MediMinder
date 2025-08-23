@@ -22,6 +22,7 @@ import { generateAppointmentReminder } from '@/ai/flows/appointment-reminder-flo
 import { generateFamilyAlert } from '@/ai/flows/generate-family-alert-flow';
 import { GroupedMedicationCard } from '@/components/grouped-medication-card';
 import { AdCard } from '@/components/ad-card';
+import { type ReminderSettings } from '@/app/(main)/settings/reminders/page';
 
 export default function HomePage() {
   const { user, isGuest } = useAuth();
@@ -32,6 +33,11 @@ export default function HomePage() {
   const [localAppointments, setLocalAppointments] = useLocalStorage<Appointment[]>('guest-appointments', []);
   const [localAdherence, setLocalAdherence] = useLocalStorage<AdherenceLog[]>('guest-adherence', []);
   const [sentAppointmentReminders, setSentAppointmentReminders] = useLocalStorage<string[]>('sent-appointment-reminders', []);
+  const [reminderSettings] = useLocalStorage<ReminderSettings>('reminder-settings', { 
+    initialDuration: 1, 
+    secondAlert: 3, 
+    familyAlert: 10 
+  });
 
   const [firestoreMedications, setFirestoreMedications] = useState<Medication[]>([]);
   const [firestoreAppointments, setFirestoreAppointments] = useState<Appointment[]>([]);
@@ -244,27 +250,29 @@ export default function HomePage() {
       // Initial alert
       showReminder();
 
-      // After 1 minute, hide popup
-      const t1 = setTimeout(() => setReminder(null), 1 * 60 * 1000);
+      const { initialDuration, secondAlert, familyAlert } = reminderSettings;
 
-      // After 3 minutes, show again for 1 minute
+      // After initial duration, hide popup
+      const t1 = setTimeout(() => setReminder(null), initialDuration * 60 * 1000);
+
+      // After second alert time, show again for 1 minute
       const t2 = setTimeout(() => {
         showReminder();
         const t3 = setTimeout(() => setReminder(null), 1 * 60 * 1000);
         reminderTimers.current[notificationId].push(t3);
-      }, 3 * 60 * 1000);
+      }, secondAlert * 60 * 1000);
 
-      // After 10 minutes, mark as missed and notify family
+      // After family alert time, mark as missed and notify family
       const t4 = setTimeout(async () => {
         await handleReminderAction(medications, time, 'missed');
         showReminder(); // Show one last time to inform user it was missed
         const t5 = setTimeout(() => setReminder(null), 1 * 60 * 1000);
         reminderTimers.current[notificationId].push(t5);
-      }, 10 * 60 * 1000);
+      }, familyAlert * 60 * 1000);
 
       reminderTimers.current[notificationId].push(t1, t2, t4);
     }
-  }, [todaysMedicationsByTime, adherenceLogs, reminder, handleReminderAction]);
+  }, [todaysMedicationsByTime, adherenceLogs, reminder, handleReminderAction, reminderSettings]);
 
 
   const checkMissedDosesOnLoad = useCallback(async () => {
