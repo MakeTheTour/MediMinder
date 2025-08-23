@@ -150,15 +150,19 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             </Button>
           </SidebarFooter>
         </Sidebar>
-        <SidebarInset className="flex-grow flex flex-col ml-0 overflow-y-auto">
+        <div className="flex-grow flex flex-col overflow-hidden">
              <header className="p-4 border-b md:hidden sticky top-0 bg-background z-10">
                 <div className="flex items-center justify-between">
                     <h1 className="text-xl font-bold">Admin</h1>
-                    <SidebarTrigger />
+                    <SidebarTrigger/>
                 </div>
              </header>
-             <main className="flex-1 p-4">{children}</main>
-        </SidebarInset>
+             <main className="flex-1 overflow-y-auto">
+                <SidebarInset>
+                    {children}
+                </SidebarInset>
+             </main>
+        </div>
       </div>
     </SidebarProvider>
   );

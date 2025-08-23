@@ -141,107 +141,109 @@ export default function AdminUsersPage() {
             {loading ? 'Loading...' : `Found ${users.length} users.`}
           </CardDescription>
         </CardHeader>
-        <CardContent className="flex-grow overflow-y-auto">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>User</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Joined At</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Plan</TableHead>
-                  <TableHead>Plan Expires</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={7} className="h-24 text-center">
-                      Loading users...
-                    </TableCell>
-                  </TableRow>
-                ) : users.length > 0 ? (
-                  users.map((user) => (
-                    <TableRow key={user.uid}>
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <Avatar>
-                            <AvatarImage src={user.photoURL || undefined} alt={user.name} />
-                            <AvatarFallback>{user.name?.charAt(0) || 'U'}</AvatarFallback>
-                          </Avatar>
-                          <span className="font-medium whitespace-nowrap">{user.name}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>{user.email}</TableCell>
-                      <TableCell>
-                        {user.createdAt ? format(new Date(user.createdAt), 'dd/MM/yy') : 'N/A'}
-                      </TableCell>
-                      <TableCell>
-                         <Badge variant={getStatusVariant(user.status)} className="capitalize">
-                           {user.status || 'Active'}
-                          </Badge>
-                      </TableCell>
-                       <TableCell>
-                         <Badge variant={user.isPremium ? 'default' : 'outline'}>
-                           {user.isPremium ? 'Premium' : 'Free'}
-                          </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {user.premiumEndDate ? format(new Date(user.premiumEndDate), 'dd/MM/yy') : 'N/A'}
-                      </TableCell>
-                      <TableCell className="text-right">
-                          {user.email !== 'admin@mediminder.com' && (
-                              <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                      <Button variant="ghost" size="icon">
-                                          <MoreVertical className="h-4 w-4" />
-                                      </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end">
-                                      <DropdownMenuLabel>Manage User</DropdownMenuLabel>
-                                      <DropdownMenuSeparator />
-                                      <DropdownMenuItem onClick={() => updateUserStatus(user.uid, 'active')}>
-                                          <UserCheck className="mr-2 h-4 w-4" />
-                                          <span>Set Active</span>
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem onClick={() => updateUserStatus(user.uid, 'suspended')}>
-                                          <UserX className="mr-2 h-4 w-4" />
-                                          <span>Set Suspended</span>
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem onClick={() => updateUserStatus(user.uid, 'deactivated')} className="text-destructive">
-                                          <CircleSlash className="mr-2 h-4 w-4" />
-                                          <span>Set Deactivated</span>
-                                      </DropdownMenuItem>
-                                      <DropdownMenuSeparator />
-                                      {user.isPremium ? (
-                                          <DropdownMenuItem onClick={() => togglePremium(user)}>
-                                              <ShieldOff className="mr-2 h-4 w-4" />
-                                              <span>Downgrade to Free</span>
-                                          </DropdownMenuItem>
-                                      ) : (
-                                          <DropdownMenuItem onClick={() => togglePremium(user)}>
-                                              <Star className="mr-2 h-4 w-4" />
-                                              <span>Upgrade to Premium</span>
-                                          </DropdownMenuItem>
-                                      )}
-                                  </DropdownMenuContent>
-                              </DropdownMenu>
-                          )}
-                      </TableCell>
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={7} className="h-24 text-center">
-                      No users found.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
+        <CardContent className="flex-grow overflow-hidden">
+            <div className="relative h-full overflow-y-auto">
+                <div className="overflow-x-auto">
+                    <Table>
+                    <TableHeader>
+                        <TableRow>
+                        <TableHead>User</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Joined At</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Plan</TableHead>
+                        <TableHead>Plan Expires</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {loading ? (
+                        <TableRow>
+                            <TableCell colSpan={7} className="h-24 text-center">
+                            Loading users...
+                            </TableCell>
+                        </TableRow>
+                        ) : users.length > 0 ? (
+                        users.map((user) => (
+                            <TableRow key={user.uid}>
+                            <TableCell>
+                                <div className="flex items-center gap-3">
+                                <Avatar>
+                                    <AvatarImage src={user.photoURL || undefined} alt={user.name} />
+                                    <AvatarFallback>{user.name?.charAt(0) || 'U'}</AvatarFallback>
+                                </Avatar>
+                                <span className="font-medium whitespace-nowrap">{user.name}</span>
+                                </div>
+                            </TableCell>
+                            <TableCell>{user.email}</TableCell>
+                            <TableCell>
+                                {user.createdAt ? format(new Date(user.createdAt), 'dd/MM/yy') : 'N/A'}
+                            </TableCell>
+                            <TableCell>
+                                <Badge variant={getStatusVariant(user.status)} className="capitalize">
+                                {user.status || 'Active'}
+                                </Badge>
+                            </TableCell>
+                            <TableCell>
+                                <Badge variant={user.isPremium ? 'default' : 'outline'}>
+                                {user.isPremium ? 'Premium' : 'Free'}
+                                </Badge>
+                            </TableCell>
+                            <TableCell>
+                                {user.premiumEndDate ? format(new Date(user.premiumEndDate), 'dd/MM/yy') : 'N/A'}
+                            </TableCell>
+                            <TableCell className="text-right">
+                                {user.email !== 'admin@mediminder.com' && (
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button variant="ghost" size="icon">
+                                                <MoreVertical className="h-4 w-4" />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                            <DropdownMenuLabel>Manage User</DropdownMenuLabel>
+                                            <DropdownMenuSeparator />
+                                            <DropdownMenuItem onClick={() => updateUserStatus(user.uid, 'active')}>
+                                                <UserCheck className="mr-2 h-4 w-4" />
+                                                <span>Set Active</span>
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem onClick={() => updateUserStatus(user.uid, 'suspended')}>
+                                                <UserX className="mr-2 h-4 w-4" />
+                                                <span>Set Suspended</span>
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem onClick={() => updateUserStatus(user.uid, 'deactivated')} className="text-destructive">
+                                                <CircleSlash className="mr-2 h-4 w-4" />
+                                                <span>Set Deactivated</span>
+                                            </DropdownMenuItem>
+                                            <DropdownMenuSeparator />
+                                            {user.isPremium ? (
+                                                <DropdownMenuItem onClick={() => togglePremium(user)}>
+                                                    <ShieldOff className="mr-2 h-4 w-4" />
+                                                    <span>Downgrade to Free</span>
+                                                </DropdownMenuItem>
+                                            ) : (
+                                                <DropdownMenuItem onClick={() => togglePremium(user)}>
+                                                    <Star className="mr-2 h-4 w-4" />
+                                                    <span>Upgrade to Premium</span>
+                                                </DropdownMenuItem>
+                                            )}
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                )}
+                            </TableCell>
+                            </TableRow>
+                        ))
+                        ) : (
+                        <TableRow>
+                            <TableCell colSpan={7} className="h-24 text-center">
+                            No users found.
+                            </TableCell>
+                        </TableRow>
+                        )}
+                    </TableBody>
+                    </Table>
+                </div>
+            </div>
         </CardContent>
       </Card>
     </div>

@@ -59,61 +59,63 @@ export default function AdminSubscriptionsPage() {
             {loading ? 'Loading...' : `Found ${subscriptions.length} subscriptions.`}
           </CardDescription>
         </CardHeader>
-        <CardContent className="flex-grow overflow-y-auto">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>User</TableHead>
-                  <TableHead>Plan</TableHead>
-                  <TableHead>Payment Method</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Subscription Date</TableHead>
-                  <TableHead>Transaction ID</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center">
-                      Loading subscriptions...
-                    </TableCell>
-                  </TableRow>
-                ) : subscriptions.length > 0 ? (
-                  subscriptions.map((sub) => (
-                    <TableRow key={sub.id}>
-                      <TableCell>
-                         <div className="flex items-center gap-3">
-                           <Avatar>
-                             <AvatarImage src={sub.user.photoURL || undefined} alt={sub.user.name} />
-                             <AvatarFallback>{sub.user.name?.charAt(0) || 'U'}</AvatarFallback>
-                           </Avatar>
-                           <div>
-                              <p className="font-medium whitespace-nowrap">{sub.user.name}</p>
-                              <p className="text-xs text-muted-foreground">{sub.user.email}</p>
-                           </div>
-                         </div>
-                      </TableCell>
-                      <TableCell>{sub.plan}</TableCell>
-                      <TableCell>{sub.paymentMethod}</TableCell>
-                      <TableCell>
-                          <Badge variant={getStatusVariant(sub.status)} className="capitalize">{sub.status}</Badge>
-                      </TableCell>
-                       <TableCell>
-                        {sub.startDate ? format(new Date(sub.startDate), 'dd/MM/yy') : 'N/A'} - {sub.endDate ? format(new Date(sub.endDate), 'dd/MM/yy') : 'N/A'}
-                      </TableCell>
-                      <TableCell className="font-mono text-xs">{sub.transactionId}</TableCell>
+        <CardContent className="flex-grow overflow-hidden">
+          <div className="relative h-full overflow-y-auto">
+            <div className="overflow-x-auto">
+                <Table>
+                <TableHeader>
+                    <TableRow>
+                    <TableHead>User</TableHead>
+                    <TableHead>Plan</TableHead>
+                    <TableHead>Payment Method</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Subscription Date</TableHead>
+                    <TableHead>Transaction ID</TableHead>
                     </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center">
-                      No subscriptions found.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                    {loading ? (
+                    <TableRow>
+                        <TableCell colSpan={6} className="h-24 text-center">
+                        Loading subscriptions...
+                        </TableCell>
+                    </TableRow>
+                    ) : subscriptions.length > 0 ? (
+                    subscriptions.map((sub) => (
+                        <TableRow key={sub.id}>
+                        <TableCell>
+                            <div className="flex items-center gap-3">
+                            <Avatar>
+                                <AvatarImage src={sub.user.photoURL || undefined} alt={sub.user.name} />
+                                <AvatarFallback>{sub.user.name?.charAt(0) || 'U'}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                                <p className="font-medium whitespace-nowrap">{sub.user.name}</p>
+                                <p className="text-xs text-muted-foreground">{sub.user.email}</p>
+                            </div>
+                            </div>
+                        </TableCell>
+                        <TableCell>{sub.plan}</TableCell>
+                        <TableCell>{sub.paymentMethod}</TableCell>
+                        <TableCell>
+                            <Badge variant={getStatusVariant(sub.status)} className="capitalize">{sub.status}</Badge>
+                        </TableCell>
+                        <TableCell>
+                            {sub.startDate ? format(new Date(sub.startDate), 'dd/MM/yy') : 'N/A'} - {sub.endDate ? format(new Date(sub.endDate), 'dd/MM/yy') : 'N/A'}
+                        </TableCell>
+                        <TableCell className="font-mono text-xs">{sub.transactionId}</TableCell>
+                        </TableRow>
+                    ))
+                    ) : (
+                    <TableRow>
+                        <TableCell colSpan={6} className="h-24 text-center">
+                        No subscriptions found.
+                        </TableCell>
+                    </TableRow>
+                    )}
+                </TableBody>
+                </Table>
+            </div>
           </div>
         </CardContent>
       </Card>

@@ -2,10 +2,13 @@
 'use client'
 
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Users, DollarSign, Megaphone, Loader2 } from "lucide-react";
-import { collection, onSnapshot } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase-client';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { formatDistanceToNow } from 'date-fns';
+import type { User as UserType } from '@/lib/types';
 
 interface User {
   isPremium?: boolean;
@@ -15,10 +18,12 @@ interface User {
 export default function AdminDashboardPage() {
   const [userCount, setUserCount] = useState<number>(0);
   const [revenue, setRevenue] = useState<number>(0);
+  const [recentUsers, setRecentUsers] = useState<UserType[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, 'users'), (snapshot) => {
+    const usersQuery = query(collection(db, 'users'));
+    const unsubUsers = onSnapshot(usersQuery, (snapshot) => {
       const users = snapshot.docs.map(doc => doc.data() as User);
       setUserCount(users.length);
 
@@ -36,12 +41,21 @@ export default function AdminDashboardPage() {
       setLoading(false);
     });
 
-    return () => unsub();
+    const recentUsersQuery = query(collection(db, 'users'), orderBy('createdAt', 'desc'), limit(5));
+    const unsubRecentUsers = onSnapshot(recentUsersQuery, (snapshot) => {
+      setRecentUsers(snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserType)));
+    });
+
+
+    return () => {
+        unsubUsers();
+        unsubRecentUsers();
+    }
   }, []);
 
   return (
-    <div className="container mx-auto p-4">
-       <header className="mb-6">
+    <div className="container mx-auto p-4 space-y-6">
+       <header>
         <h1 className="text-3xl font-bold">Admin Dashboard</h1>
         <p className="text-muted-foreground">Welcome back, Admin!</p>
       </header>
@@ -97,13 +111,47 @@ export default function AdminDashboardPage() {
         </Card>
       </div>
 
-       <div className="mt-8">
+       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
+            <CardTitle>Recent Signups</CardTitle>
+            <CardDescription>The latest users to join MediMinder.</CardDescription>
           </CardHeader>
           <CardContent>
-             <p className="text-muted-foreground">Activity feed coming soon...</p>
+            {loading ? (
+                <p className="text-sm text-muted-foreground">Loading recent users...</p>
+            ) : recentUsers.length > 0 ? (
+                <div className="space-y-4">
+                    {recentUsers.map(user => (
+                        <div key={user.uid} className="flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                                <Avatar>
+                                    <AvatarImage src={user.photoURL || undefined} alt={user.name} />
+                                    <AvatarFallback>{user.name?.charAt(0) || 'U'}</AvatarFallback>
+                                </Avatar>
+                                <div>
+                                    <p className="font-semibold">{user.name}</p>
+                                    <p className="text-sm text-muted-foreground">{user.email}</p>
+                                </div>
+                            </div>
+                             <p className="text-sm text-muted-foreground">
+                                {formatDistanceToNow(new Date(user.createdAt), { addSuffix: true })}
+                            </p>
+                        </div>
+                    ))}
+                </div>
+            ) : (
+                 <p className="text-sm text-muted-foreground">No users have signed up yet.</p>
+            )}
+          </CardContent>
+        </Card>
+         <Card>
+          <CardHeader>
+            <CardTitle>Recent Activity</CardTitle>
+            <CardDescription>An overview of recent events in the app.</CardDescription>
+          </CardHeader>
+          <CardContent>
+             <p className="text-muted-foreground text-center py-8">Activity feed coming soon...</p>
           </CardContent>
         </Card>
       </div>
