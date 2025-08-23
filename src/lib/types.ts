@@ -99,3 +99,14 @@ export interface User {
   isPremium?: boolean;
   status?: 'active' | 'suspended' | 'deactivated';
 }
+
+export interface Subscription {
+    id: string;
+    user: User;
+    plan: 'Free' | 'Premium Monthly' | 'Premium Yearly';
+    status: 'active' | 'cancelled' | 'expired';
+    startDate: string;
+    endDate: string;
+    paymentMethod: 'Stripe' | 'PayPal' | 'Payoneer' | 'N/A';
+    transactionId: string;
+}

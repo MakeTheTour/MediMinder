@@ -1,3 +1,4 @@
+
 'use client';
 
 import { ReactNode, useEffect, useState } from 'react';
@@ -12,13 +13,16 @@ import {
   SidebarTrigger,
   SidebarInset,
   SidebarFooter,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
 } from '@/components/ui/sidebar';
 import { usePathname, useRouter } from 'next/navigation';
-import { Users, LayoutDashboard, DollarSign, Megaphone, CreditCard, User, LogOut, Mail } from 'lucide-react';
+import { Users, LayoutDashboard, DollarSign, Megaphone, CreditCard, User, LogOut, Mail, ChevronDown } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/context/auth-context';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 
 const adminNavItems = [
@@ -26,7 +30,6 @@ const adminNavItems = [
   { href: '/admin/users', label: 'Live Users', icon: Users },
   { href: '/admin/ads', label: 'Custom Ads', icon: Megaphone },
   { href: '/admin/premium', label: 'Premium Plan', icon: DollarSign },
-  { href: '/admin/payments', label: 'Payments', icon: CreditCard },
   { href: '/admin/email', label: 'Email Settings', icon: Mail },
   { href: '/admin/profile', label: 'Profile', icon: User },
 ];
@@ -104,6 +107,38 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                   </Link>
                 </SidebarMenuItem>
               ))}
+                <Collapsible asChild>
+                    <>
+                        <SidebarMenuItem>
+                            <CollapsibleTrigger asChild>
+                                <SidebarMenuButton tooltip='Payments'>
+                                    <CreditCard/>
+                                    <span>Payments</span>
+                                    <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
+                                </SidebarMenuButton>
+                            </CollapsibleTrigger>
+                        </SidebarMenuItem>
+
+                        <CollapsibleContent asChild>
+                            <SidebarMenuSub>
+                                <SidebarMenuSubItem>
+                                    <Link href="/admin/subscriptions">
+                                        <SidebarMenuSubButton isActive={pathname === '/admin/subscriptions'}>
+                                            Subscriptions
+                                        </SidebarMenuSubButton>
+                                    </Link>
+                                </SidebarMenuSubItem>
+                                <SidebarMenuSubItem>
+                                    <Link href="/admin/payments">
+                                        <SidebarMenuSubButton isActive={pathname === '/admin/payments'}>
+                                            Gateways Setting
+                                        </SidebarMenuSubButton>
+                                    </Link>
+                                </SidebarMenuSubItem>
+                            </SidebarMenuSub>
+                        </CollapsibleContent>
+                    </>
+                </Collapsible>
             </SidebarMenu>
           </SidebarContent>
            <SidebarFooter>
