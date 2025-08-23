@@ -15,6 +15,7 @@ import {
   SidebarFooter,
   SidebarMenuSub,
   SidebarMenuSubButton,
+  SidebarMenuSubItem,
 } from '@/components/ui/sidebar';
 import { usePathname, useRouter } from 'next/navigation';
 import { Users, LayoutDashboard, DollarSign, Megaphone, CreditCard, User, LogOut, Mail, ChevronDown } from 'lucide-react';
