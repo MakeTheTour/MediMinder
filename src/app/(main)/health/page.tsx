@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Plus, HeartPulse, BrainCircuit, Activity, Utensils, Dumbbell, Pill, AlertCircle, Trash2, Pencil, MoreVertical, Sparkles, User, MapPin, History, Save, Leaf } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -121,6 +121,30 @@ export default function HealthPage() {
     const [loadingInsights, setLoadingInsights] = useState(false);
     const [loadingProfile, setLoadingProfile] = useState(true);
 
+    const handleGetInsights = useCallback(async () => {
+        if (healthMetrics.length === 0 && savedSuggestions.length === 0) {
+            toast({ title: "Not Enough Data", description: "Log some health data or save a suggestion first to get insights."});
+            return;
+        }
+        if (!userProfile) {
+            toast({ title: "Profile Needed", description: "Please complete your profile to generate insights."});
+            return;
+        }
+
+        setLoadingInsights(true);
+        try {
+            const result = await generateHealthInsights({
+                healthMetrics: healthMetrics.slice(0, 10), // Send last 10 records
+                savedSuggestions: savedSuggestions.map(s => ({symptoms: s.symptoms, recommendation: s})),
+                userProfile: userProfile,
+            });
+            setInsights(result);
+        } catch (e) {
+            toast({ title: "Error Generating Insights", variant: "destructive"});
+        }
+        setLoadingInsights(false);
+    }, [healthMetrics, savedSuggestions, userProfile, toast]);
+
     useEffect(() => {
         if (!user || isGuest) {
             setHealthMetrics([]);
@@ -168,29 +192,11 @@ export default function HealthPage() {
         }
     }, [user, isGuest]);
     
-    const handleGetInsights = async () => {
-        if (healthMetrics.length === 0 && savedSuggestions.length === 0) {
-            toast({ title: "Not Enough Data", description: "Log some health data or save a suggestion first to get insights."});
-            return;
+    useEffect(() => {
+        if (userProfile && (healthMetrics.length > 0 || savedSuggestions.length > 0)) {
+            handleGetInsights();
         }
-        if (!userProfile) {
-            toast({ title: "Profile Needed", description: "Please complete your profile to generate insights."});
-            return;
-        }
-
-        setLoadingInsights(true);
-        try {
-            const result = await generateHealthInsights({
-                healthMetrics: healthMetrics.slice(0, 10), // Send last 10 records
-                savedSuggestions: savedSuggestions.map(s => ({symptoms: s.symptoms, recommendation: s})),
-                userProfile: userProfile,
-            });
-            setInsights(result);
-        } catch (e) {
-            toast({ title: "Error Generating Insights", variant: "destructive"});
-        }
-        setLoadingInsights(false);
-    }
+    }, [healthMetrics, savedSuggestions, userProfile, handleGetInsights]);
     
     const handleEditHealthMetric = (id: string) => {
         router.push(`/health/edit/${id}`);
@@ -294,9 +300,9 @@ export default function HealthPage() {
                                 </div>
                                 </div>
                                 <div className="flex items-start gap-3">
-                                <Pill className="h-5 w-5 text-primary mt-1 shrink-0" />
+                                <Leaf className="h-5 w-5 text-primary mt-1 shrink-0" />
                                 <div>
-                                    <h4 className="font-semibold text-foreground">Medication Observation</h4>
+                                    <h4 className="font-semibold text-foreground">Holistic Observation</h4>
                                     <p className="text-sm">{insights.medicationObservation}</p>
                                 </div>
                                 </div>
