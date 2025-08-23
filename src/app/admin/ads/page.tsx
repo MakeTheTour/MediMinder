@@ -172,7 +172,7 @@ export default function AdminAdsPage() {
                 <div className="grid gap-4 md:grid-cols-2">
                     {ads.map(ad => (
                         <Card key={ad.id} className="overflow-hidden">
-                            <Image src={ad.imageUrl} alt={ad.title} width={600} height={400} className="w-full h-32 object-cover"/>
+                            <img src={ad.imageUrl} alt={ad.title} className="w-full h-32 object-cover"/>
                             <CardHeader>
                                 <CardTitle>{ad.title}</CardTitle>
                                 <CardDescription>{ad.content}</CardDescription>
