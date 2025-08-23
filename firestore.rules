@@ -1,42 +1,37 @@
-
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Admin has full access
-    function isAdmin() {
-      return request.auth != null && request.auth.token.email == 'admin@mediminder.com';
+    // Users can only read and write to their own documents and subcollections.
+    match /users/{userId}/{documents=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Users can only access their own data
-    match /users/{userId}/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId || isAdmin();
-    }
-
-    // Invitations
-    match /invitations/{invitationId} {
-      // Allow create by any authenticated user
+    // Allow users to create their own user document during sign-up
+    match /users/{userId} {
       allow create: if request.auth != null;
-
-      // Allow read only by inviter or invitee
-      // This rule also implicitly allows the client to `list` (query) invitations
-      // as long as the query constrains `inviterId` or `inviteeEmail` accordingly.
-      allow read: if (request.auth != null && (resource.data.inviterId == request.auth.uid || resource.data.inviteeEmail == request.auth.token.email)) || isAdmin();
-
-      // Allow update/delete only by inviter or invitee
-      allow update, delete: if (request.auth != null && (resource.data.inviterId == request.auth.uid || resource.data.inviteeEmail == request.auth.token.email)) || isAdmin();
     }
     
-    // Subscriptions
+    // Rules for invitations
+    // Users can create invitations.
+    // Users can read invitations if they are the inviter or the invitee.
+    // Users can update/delete invitations if they are the inviter.
+    match /invitations/{invitationId} {
+      allow create: if request.auth != null;
+      allow read: if request.auth != null && (resource.data.inviterId == request.auth.uid || resource.data.inviteeEmail == request.auth.token.email);
+      allow update, delete: if request.auth != null && request.auth.uid == resource.data.inviterId;
+    }
+
+    // Admins can manage subscriptions.
     match /subscriptions/{subscriptionId} {
-        allow read, list: if isAdmin();
-        allow create, update, delete: if request.auth != null || isAdmin(); // User creates, admin can manage
+      allow read, write: if request.auth != null && request.auth.token.email == 'admin@mediminder.com';
     }
-    
-    // Ads
+
+    // Anyone can read ads. Only admins can write them.
     match /ads/{adId} {
-      allow read: if true; // Everyone can read ads
-      allow write: if isAdmin(); // Only admin can create/update/delete ads
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.token.email == 'admin@mediminder.com';
     }
   }
 }
