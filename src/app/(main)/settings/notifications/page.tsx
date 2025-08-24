@@ -138,7 +138,7 @@ export default function NotificationsPage() {
                                     <Input type="number" {...field} />
                                 </FormControl>
                                 <FormDescription>
-                                    Total time until a dose is marked 'missed' and family is alerted.
+                                    The total time before a dose is marked 'missed' and family members are alerted to check in.
                                 </FormDescription>
                                 <FormMessage />
                             </FormItem>
