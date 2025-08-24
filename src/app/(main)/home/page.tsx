@@ -10,7 +10,7 @@ import { Medication, Appointment, AdherenceLog, FamilyMember, UserProfile, Famil
 import { AppointmentCard } from '@/components/appointment-card';
 import { format, parse, isToday, isFuture, differenceInHours, isBefore, startOfDay } from 'date-fns';
 import { useAuth } from '@/context/auth-context';
-import { collection, onSnapshot, query, orderBy, doc, getDoc, where, deleteDoc, limit } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, doc, getDoc, where, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase-client';
 import { useRouter } from 'next/navigation';
 import { useLocalStorage } from '@/hooks/use-local-storage';
@@ -84,11 +84,13 @@ export default function HomePage() {
         }
       });
       
-      const familyAlertQuery = query(collection(db, 'familyAlerts'), where('familyMemberId', '==', user.uid), orderBy('createdAt', 'desc'), limit(1));
+      const familyAlertQuery = query(collection(db, 'familyAlerts'), where('familyMemberId', '==', user.uid));
       const familyAlertUnsub = onSnapshot(familyAlertQuery, (snapshot) => {
           if (!snapshot.empty) {
-              const alert = snapshot.docs[0].data() as Omit<FamilyAlert, 'id'>;
-              setActiveFamilyAlert({ id: snapshot.docs[0].id, ...alert });
+              const latestAlert = snapshot.docs
+                .map(doc => ({ id: doc.id, ...doc.data() } as FamilyAlert))
+                .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+              setActiveFamilyAlert(latestAlert);
           } else {
               setActiveFamilyAlert(null);
           }
@@ -591,4 +593,5 @@ export default function HomePage() {
   );
 }
 
+    
     
