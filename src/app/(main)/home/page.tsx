@@ -21,7 +21,7 @@ import { generateAppointmentReminder } from '@/ai/flows/appointment-reminder-flo
 import { generateFamilyAlert } from '@/ai/flows/generate-family-alert-flow';
 import { GroupedMedicationCard } from '@/components/grouped-medication-card';
 import { AdCard } from '@/components/ad-card';
-import { type ReminderSettings } from '@/app/(main)/settings/reminders/page';
+import { type ReminderSettings } from '@/app/(main)/settings/notifications/page';
 
 export default function HomePage() {
   const { user, isGuest } = useAuth();
@@ -43,11 +43,14 @@ export default function HomePage() {
   const [firestoreAdherence, setFirestoreAdherence] = useState<AdherenceLog[]>([]);
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [adherenceLoading, setAdherenceLoading] = useState(true);
+
 
   const [reminder, setReminder] = useState<{ medications: Medication[]; time: string } | null>(null);
   const [greeting, setGreeting] = useState('');
   
   const reminderTimers = useRef<Record<string, NodeJS.Timeout[]>>({});
+  const initialLoadCheckDone = useRef(false);
 
   useEffect(() => {
     if (user && !isGuest) {
@@ -66,6 +69,7 @@ export default function HomePage() {
 
       const adherenceUnsub = onSnapshot(collection(db, 'users', user.uid, 'adherenceLogs'), (snapshot) => {
         setFirestoreAdherence(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AdherenceLog)));
+        setAdherenceLoading(false);
       });
       
       const familyUnsub = onSnapshot(collection(db, 'users', user.uid, 'familyMembers'), (snapshot) => {
@@ -92,6 +96,7 @@ export default function HomePage() {
       setFirestoreAdherence([]);
       setFamilyMembers([]);
       setUserProfile(null);
+      setAdherenceLoading(false);
     }
   }, [user, isGuest, setLocalAdherence, setLocalAppointments, setLocalMedications]);
 
@@ -277,6 +282,9 @@ export default function HomePage() {
 
 
   const checkMissedDosesOnLoad = useCallback(async () => {
+    if (adherenceLoading || initialLoadCheckDone.current) return;
+    initialLoadCheckDone.current = true; // Mark as run
+
     const now = new Date();
     let missedCount = 0;
   
@@ -320,7 +328,7 @@ export default function HomePage() {
             duration: 10000,
         });
     }
-  }, [todaysMedicationsByTime, adherenceLogs, toast, user, isGuest, setLocalAdherence]);
+  }, [todaysMedicationsByTime, adherenceLogs, toast, user, isGuest, setLocalAdherence, adherenceLoading]);
 
 
   const checkAppointmentReminders = useCallback(async () => {
@@ -371,29 +379,20 @@ export default function HomePage() {
 
   // Run on first load
   useEffect(() => {
-    const handleOnLoad = async () => {
-        await checkMissedDosesOnLoad();
-        
-        // Now start the live checkers
-        const reminderInterval = setInterval(checkReminders, 5000); // Check every 5 seconds for more responsive initial alert
-        const appointmentReminderInterval = setInterval(checkAppointmentReminders, 60000 * 5); // check every 5 mins
-
-        checkReminders();
-        checkAppointmentReminders();
-
-        return () => {
-            clearInterval(reminderInterval);
-            clearInterval(appointmentReminderInterval);
-            Object.values(reminderTimers.current).forEach(timers => timers.forEach(clearTimeout));
-        };
-    }
-    
-    const cleanupPromise = handleOnLoad();
+    checkMissedDosesOnLoad();
+  }, [checkMissedDosesOnLoad]);
+  
+  // Run checkers on an interval
+  useEffect(() => {
+    const reminderInterval = setInterval(checkReminders, 5000); // Check every 5 seconds for more responsive initial alert
+    const appointmentReminderInterval = setInterval(checkAppointmentReminders, 60000 * 5); // check every 5 mins
 
     return () => {
-        cleanupPromise.then(cleanup => cleanup && cleanup());
+        clearInterval(reminderInterval);
+        clearInterval(appointmentReminderInterval);
+        Object.values(reminderTimers.current).forEach(timers => timers.forEach(clearTimeout));
     };
-  }, [checkReminders, checkAppointmentReminders, checkMissedDosesOnLoad]);
+  }, [checkReminders, checkAppointmentReminders]);
 
 
   const todaysAppointments = useMemo(() => {
