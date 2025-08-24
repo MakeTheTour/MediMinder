@@ -10,7 +10,7 @@ import { Medication, Appointment, AdherenceLog, FamilyMember, UserProfile, Famil
 import { AppointmentCard } from '@/components/appointment-card';
 import { format, parse, isToday, isFuture, differenceInHours, isBefore, startOfDay } from 'date-fns';
 import { useAuth } from '@/context/auth-context';
-import { collection, onSnapshot, query, orderBy, doc, getDoc, where, deleteDoc } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, doc, getDoc, where, deleteDoc, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase-client';
 import { useRouter } from 'next/navigation';
 import { useLocalStorage } from '@/hooks/use-local-storage';
@@ -590,3 +590,5 @@ export default function HomePage() {
     </>
   );
 }
+
+    
