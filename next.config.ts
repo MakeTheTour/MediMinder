@@ -4,7 +4,8 @@ import type {NextConfig} from 'next';
 const nextConfig: NextConfig = {
   /* config options here */
   devIndicators: {
-    buildActivity: false,
+    buildActivity: true,
+    buildActivityPosition: 'bottom-right',
   },
   typescript: {
     ignoreBuildErrors: true,
