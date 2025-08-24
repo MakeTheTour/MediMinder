@@ -44,7 +44,7 @@ export default function FamilyPage() {
             try {
                 const q = query(
                     collection(db, 'users', member.uid, 'adherenceLogs'),
-                    where('status', '==', 'missed'),
+                    where('status', 'in', ['missed', 'stock_out']),
                     where('takenAt', '>=', sevenDaysAgo)
                 );
                 const querySnapshot = await getDocs(q);
