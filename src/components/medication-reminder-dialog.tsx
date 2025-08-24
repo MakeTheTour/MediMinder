@@ -38,41 +38,25 @@ export function MedicationReminderDialog({
   onClose,
 }: MedicationReminderDialogProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [reminderSettings] = useLocalStorage<ReminderSettings>('reminder-settings', { 
-    initialDuration: 1, 
-    secondAlertDelay: 3,
-    familyAlert: 10 
-  });
 
   useEffect(() => {
-    let audioTimeout: NodeJS.Timeout;
     if (isOpen) {
       if (!audioRef.current) {
         audioRef.current = new Audio('/notification.mp3');
       }
       audioRef.current.play().catch(e => console.error("Audio play failed:", e));
-      // Stop the audio after the configured duration
-      audioTimeout = setTimeout(() => {
-        if(audioRef.current) {
-            audioRef.current.pause();
-            audioRef.current.currentTime = 0;
-        }
-      }, reminderSettings.initialDuration * 60 * 1000)
-
     } else if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
     }
 
-    // Cleanup audio on component unmount
     return () => {
-        clearTimeout(audioTimeout);
-        if (audioRef.current) {
-            audioRef.current.pause();
-            audioRef.current.currentTime = 0;
-        }
-    }
-  }, [isOpen, reminderSettings.initialDuration]);
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
+    };
+  }, [isOpen]);
 
   const handleAction = (action: () => void) => {
     if (audioRef.current) {
