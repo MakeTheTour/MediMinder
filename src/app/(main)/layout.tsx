@@ -6,7 +6,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { BottomNavbar } from '@/components/bottom-navbar';
 import { useAuth } from '@/context/auth-context';
 import { Loader2 } from 'lucide-react';
-import { doc, getDoc, updateDoc, collection, onSnapshot, query, orderBy, where, deleteDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, collection, onSnapshot, query, where, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase-client';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { Medication, Appointment, AdherenceLog, FamilyMember, UserProfile, FamilyAlert } from '@/lib/types';
@@ -20,13 +20,13 @@ import { trackAdherence } from '@/ai/flows/track-adherence-flow';
 import { type ReminderSettings } from '@/app/(main)/settings/notifications/page';
 
 export default function MainLayout({ children }: { children: ReactNode }) {
-  const { user, loading, isGuest } = useAuth();
+  const { user, loading, isGuest, setFamilyMissedDoseCount } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const { toast } = useToast();
 
-  const [localMedications, setLocalMedications] = useLocalStorage<Medication[]>('guest-medications', []);
-  const [localAppointments, setLocalAppointments] = useLocalStorage<Appointment[]>('guest-appointments', []);
+  const [localMedications] = useLocalStorage<Medication[]>('guest-medications', []);
+  const [localAppointments] = useLocalStorage<Appointment[]>('guest-appointments', []);
   const [localAdherence, setLocalAdherence] = useLocalStorage<AdherenceLog[]>('guest-adherence', []);
   const [sentAppointmentReminders, setSentAppointmentReminders] = useLocalStorage<string[]>('sent-appointment-reminders', []);
   const [reminderSettings] = useLocalStorage<ReminderSettings>('reminder-settings', { 
@@ -57,8 +57,7 @@ export default function MainLayout({ children }: { children: ReactNode }) {
         setFirestoreMedications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Medication)));
       });
 
-      const apptQuery = query(collection(db, 'users', user.uid, 'appointments'), orderBy('date', 'asc'));
-      const apptUnsub = onSnapshot(apptQuery, (snapshot) => {
+      const apptUnsub = onSnapshot(collection(db, 'users', user.uid, 'appointments'), (snapshot) => {
         setFirestoreAppointments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Appointment)));
       });
 
@@ -174,7 +173,7 @@ export default function MainLayout({ children }: { children: ReactNode }) {
     });
     await Promise.all(logPromises);
     setReminder(null);
-  }, [user, isGuest, setLocalAdherence, clearReminderTimers, familyMembers, userProfile]);
+  }, [user, isGuest, setLocalAdherence, clearReminderTimers, familyMembers, userProfile?.isPremium]);
   
   const logMissedDoseAndAlertFamily = useCallback(async (medications: Medication[], scheduledTime: string) => {
     handleReminderAction(medications, scheduledTime, 'missed');
@@ -184,20 +183,18 @@ export default function MainLayout({ children }: { children: ReactNode }) {
     const now = new Date();
     for (const time in todaysMedicationsByTime) {
       const medications = todaysMedicationsByTime[time];
-      const scheduledTime = parse(time, 'HH:mm', new Date());
+      const scheduledTime = parse(time, 'HH:mm', startOfDay(now));
       const notificationId = `${medications[0].id}-${time}-${format(now, 'yyyy-MM-dd')}`;
       
-      const isHandled = medications.some(med => 
-        adherenceLogs.some(log => 
-          log.reminderId === med.id && isToday(new Date(log.takenAt)) && log.scheduledTime === time
-        )
+      const isHandled = adherenceLogs.some(log => 
+        log.reminderId === medications[0].id && isToday(new Date(log.takenAt)) && log.scheduledTime === time
       );
 
       if (isBefore(now, scheduledTime) || isHandled || reminderTimers.current[notificationId]) continue;
       
       const showReminder = () => {
           setReminder({ medications, time });
-           try {
+          try {
               if (typeof window !== "undefined" && "Notification" in window && "serviceWorker" in navigator) {
                 if (Notification.permission === "granted") {
                     navigator.serviceWorker.getRegistration().then(reg => {
@@ -280,15 +277,15 @@ export default function MainLayout({ children }: { children: ReactNode }) {
           setSentAppointmentReminders(prev => [...prev, reminderId]);
         }
       };
-      if (hoursUntil > 23 && hoursUntil <= 24) await checkAndSend('24h');
-      if (hoursUntil > 2 && hoursUntil <= 3) await checkAndSend('3h');
+      if (isFuture(apptDateTime) && hoursUntil > 23 && hoursUntil <= 24) await checkAndSend('24h');
+      if (isFuture(apptDateTime) && hoursUntil > 2 && hoursUntil <= 3) await checkAndSend('3h');
     }
   }, [isGuest, user, activeAppointments, sentAppointmentReminders, setSentAppointmentReminders, toast, familyMembers, userProfile]);
 
   useEffect(() => { checkMissedDosesOnLoad(); }, [checkMissedDosesOnLoad]);
   useEffect(() => {
     const reminderInterval = setInterval(checkReminders, 5000);
-    const appointmentReminderInterval = setInterval(checkAppointmentReminders, 60000 * 5);
+    const appointmentReminderInterval = setInterval(checkAppointmentReminders, 60000 * 5); // Check every 5 minutes
     return () => {
         clearInterval(reminderInterval);
         clearInterval(appointmentReminderInterval);
@@ -302,10 +299,10 @@ export default function MainLayout({ children }: { children: ReactNode }) {
   }, [user, loading, router, isGuest, pathname]);
 
   useEffect(() => {
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/sw.js')
-          .then(reg => console.log('Service Worker Registered', reg))
-          .catch(err => console.error('SW registration failed', err));
+    if (typeof window !== "undefined" && "serviceWorker" in navigator) {
+        navigator.serviceWorker.register("/sw.js")
+          .then(reg => console.log("Service Worker Registered", reg))
+          .catch(err => console.error("SW registration failed", err));
     }
     if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "default") {
         Notification.requestPermission();
@@ -331,6 +328,7 @@ export default function MainLayout({ children }: { children: ReactNode }) {
   
   const handleAlertClose = async (alertId: string) => {
     try {
+        if (isGuest || !user) return;
         await deleteDoc(doc(db, 'familyAlerts', alertId));
         setActiveFamilyAlert(null);
     } catch (e) {
@@ -367,3 +365,5 @@ export default function MainLayout({ children }: { children: ReactNode }) {
     </>
   );
 }
+
+    

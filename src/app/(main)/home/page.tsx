@@ -2,27 +2,25 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { Plus, ShieldAlert, Stethoscope, Pill as PillIcon, CalendarDays } from 'lucide-react';
+import { Plus, Stethoscope, Pill as PillIcon, CalendarDays } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Medication, Appointment, AdherenceLog, UserProfile } from '@/lib/types';
+import { Medication, Appointment, UserProfile } from '@/lib/types';
 import { AppointmentCard } from '@/components/appointment-card';
 import { format, parse, isToday, isFuture } from 'date-fns';
 import { useAuth } from '@/context/auth-context';
-import { collection, onSnapshot, query, orderBy, doc, getDoc } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase-client';
-import { useRouter } from 'next/navigation';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { GroupedMedicationCard } from '@/components/grouped-medication-card';
 import { AdCard } from '@/components/ad-card';
 
 export default function HomePage() {
   const { user, isGuest } = useAuth();
-  const router = useRouter();
 
-  const [localMedications, setLocalMedications] = useLocalStorage<Medication[]>('guest-medications', []);
-  const [localAppointments, setLocalAppointments] = useLocalStorage<Appointment[]>('guest-appointments', []);
+  const [localMedications] = useLocalStorage<Medication[]>('guest-medications', []);
+  const [localAppointments] = useLocalStorage<Appointment[]>('guest-appointments', []);
 
   const [firestoreMedications, setFirestoreMedications] = useState<Medication[]>([]);
   const [firestoreAppointments, setFirestoreAppointments] = useState<Appointment[]>([]);
@@ -96,7 +94,7 @@ export default function HomePage() {
 
   const todaysAppointments = useMemo(() => {
     return activeAppointments
-      .filter(app => isToday(new Date(`${app.date}T00:00:00`)))
+      .filter(app => isToday(parse(app.date, 'yyyy-MM-dd', new Date())))
       .sort((a,b) => a.time.localeCompare(b.time));
   }, [activeAppointments]);
 
@@ -118,7 +116,7 @@ export default function HomePage() {
     <div className="container mx-auto max-w-2xl p-4 space-y-6">
       <header className="mb-6">
         <h1 className="text-3xl font-bold text-foreground">{greeting}, {user?.displayName || 'Guest'}!</h1>
-        <p className="text-muted-foreground">{format(new Date(), 'EEEE, dd/MM/yy')}</p>
+        <p className="text-muted-foreground">{format(new Date(), 'EEEE, dd MMMM yyyy')}</p>
       </header>
       
       {!userProfile?.isPremium && (
@@ -198,8 +196,17 @@ export default function HomePage() {
       
        <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2"><CalendarDays/> Today's Appointments</CardTitle>
-          <CardDescription>Your appointments for today.</CardDescription>
+          <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2"><CalendarDays/> Today's Appointments</CardTitle>
+                <CardDescription>Your appointments for today.</CardDescription>
+              </div>
+              <Button asChild size="sm" variant="outline">
+                  <Link href="/appointments/add">
+                    <Plus className="mr-2 h-4 w-4" /> Add Appointment
+                  </Link>
+              </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {todaysAppointments.length > 0 ? (
@@ -228,3 +235,5 @@ export default function HomePage() {
     </div>
   );
 }
+
+    
