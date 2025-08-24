@@ -42,20 +42,29 @@ export default function FamilyPage() {
         for (const member of members) {
             if (member.status !== 'accepted' || !member.uid) continue;
             try {
+                // This query might require a composite index on (status, takenAt).
+                // If it fails, the index must be created in the Firebase console.
+                // The error message from Firebase will provide a direct link to create it.
                 const q = query(
                     collection(db, 'users', member.uid, 'adherenceLogs'),
-                    where('status', 'in', ['missed', 'stock_out']),
-                    where('takenAt', '>=', sevenDaysAgo)
+                    where('status', 'in', ['missed', 'stock_out'])
+                    // The 'where' clause for the date is handled client-side to avoid complex queries.
                 );
                 const querySnapshot = await getDocs(q);
-                reports[member.uid] = querySnapshot.size;
+                const recentMisses = querySnapshot.docs.filter(doc => new Date(doc.data().takenAt) >= new Date(sevenDaysAgo)).length;
+                reports[member.uid] = recentMisses;
             } catch (error) {
                 console.error(`Failed to fetch missed report for ${member.name}:`, error);
                 reports[member.uid] = 0;
+                 toast({
+                    title: "Reporting Error",
+                    description: "Could not fetch missed dose reports. This may be due to missing database indexes.",
+                    variant: "destructive"
+                });
             }
         }
         setMissedReports(reports);
-    }, []);
+    }, [toast]);
 
     useEffect(() => {
       if (!user || isGuest) {
