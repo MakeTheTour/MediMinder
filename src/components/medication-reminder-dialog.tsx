@@ -15,7 +15,7 @@ import { Pill, BellRing, PackageX, Check, X } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { format, parse } from 'date-fns';
 import { useLocalStorage } from '@/hooks/use-local-storage';
-import { type ReminderSettings } from '@/app/(main)/settings/reminders/page';
+import { type ReminderSettings } from '@/app/(main)/settings/notifications/page';
 
 
 interface MedicationReminderDialogProps {
