@@ -63,7 +63,7 @@ export function MedicationReminderDialog({
       audioRef.current.currentTime = 0;
     }
     action();
-  }
+  };
 
   const formatTime = (time24h: string) => {
     try {
