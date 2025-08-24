@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/alert-dialog"
 
 export default function FamilyPage() {
-    const { user, isGuest, setInvitationsAsViewed } = useAuth();
+    const { user, isGuest, setInvitationsAsViewed, setFamilyMissedDoseCount } = useAuth();
     const { toast } = useToast();
     const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
     const [sentInvitations, setSentInvitations] = useState<Invitation[]>([]);
@@ -45,6 +45,11 @@ export default function FamilyPage() {
     useEffect(() => {
         setInvitationsAsViewed();
     }, [setInvitationsAsViewed]);
+    
+    useEffect(() => {
+        const missedCount = Object.values(missedReports).filter(count => count > 0).length;
+        setFamilyMissedDoseCount(missedCount);
+    }, [missedReports, setFamilyMissedDoseCount]);
 
     const fetchMissedReports = useCallback(async (members: FamilyMember[]) => {
         const reports: Record<string, number> = {};

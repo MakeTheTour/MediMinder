@@ -14,6 +14,8 @@ interface AuthContextType {
   logout: () => void;
   pendingInvitationCount: number;
   setInvitationsAsViewed: () => void;
+  familyMissedDoseCount: number;
+  setFamilyMissedDoseCount: (count: number) => void;
 }
 
 const AuthContext = createContext<AuthContextType>({ 
@@ -24,6 +26,8 @@ const AuthContext = createContext<AuthContextType>({
     logout: () => {}, 
     pendingInvitationCount: 0,
     setInvitationsAsViewed: () => {},
+    familyMissedDoseCount: 0,
+    setFamilyMissedDoseCount: () => {},
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -31,6 +35,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [isGuest, setIsGuestState] = useState(false);
   const [pendingInvitationCount, setPendingInvitationCount] = useState(0);
+  const [familyMissedDoseCount, setFamilyMissedDoseCount] = useState(0);
+
 
    useEffect(() => {
     const storedIsGuest = typeof window !== 'undefined' && window.sessionStorage.getItem('isGuest') === 'true';
@@ -116,6 +122,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       logout,
       pendingInvitationCount,
       setInvitationsAsViewed,
+      familyMissedDoseCount,
+      setFamilyMissedDoseCount,
   }
 
   return (

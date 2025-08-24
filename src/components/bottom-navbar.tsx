@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Pill, Settings, HeartPulse, Users } from 'lucide-react';
+import { Home, Pill, Settings, HeartPulse, Users, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/auth-context';
 import { Badge } from './ui/badge';
@@ -18,7 +18,7 @@ const navItems = [
 
 export function BottomNavbar() {
   const pathname = usePathname();
-  const { pendingInvitationCount } = useAuth();
+  const { pendingInvitationCount, familyMissedDoseCount } = useAuth();
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background/95 backdrop-blur-sm shadow-[0_-1px_3px_rgba(0,0,0,0.05)]">
@@ -26,7 +26,8 @@ export function BottomNavbar() {
         {navItems.map((item) => {
           const isActive = pathname.startsWith(item.href);
           const isFamilyItem = item.label === 'Family';
-          const showBadge = isFamilyItem && pendingInvitationCount > 0;
+          const showBadge = isFamilyItem && (pendingInvitationCount > 0 || familyMissedDoseCount > 0);
+          const totalAlerts = pendingInvitationCount + familyMissedDoseCount;
 
           return (
             <Link
@@ -40,7 +41,9 @@ export function BottomNavbar() {
               <item.icon className="h-6 w-6" />
               <span className="text-xs font-medium">{item.label}</span>
                {showBadge && (
-                <Badge variant="destructive" className="absolute top-1 right-0 h-5 w-5 justify-center p-0">{pendingInvitationCount}</Badge>
+                 <Badge variant="destructive" className="absolute top-0 right-0 h-5 w-5 justify-center p-0">
+                    {totalAlerts > 9 ? '9+' : totalAlerts}
+                </Badge>
               )}
             </Link>
           );
