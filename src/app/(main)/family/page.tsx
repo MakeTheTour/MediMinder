@@ -40,7 +40,7 @@ export default function FamilyPage() {
         const sevenDaysAgo = startOfDay(subDays(new Date(), 7)).toISOString();
 
         for (const member of members) {
-            if (member.status !== 'accepted') continue;
+            if (member.status !== 'accepted' || !member.uid) continue;
             try {
                 const q = query(
                     collection(db, 'users', member.uid, 'adherenceLogs'),
@@ -80,7 +80,9 @@ export default function FamilyPage() {
       fetchUserProfile();
 
       const membersUnsub = onSnapshot(collection(db, 'users', user.uid, 'familyMembers'), (snapshot) => {
-          const members = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as FamilyMember));
+          const members = snapshot.docs
+            .map(doc => ({ id: doc.id, ...doc.data() } as FamilyMember))
+            .filter(member => member.uid && member.name); // Ensure essential data exists
           setFamilyMembers(members);
           if (members.length > 0) {
               fetchMissedReports(members);
