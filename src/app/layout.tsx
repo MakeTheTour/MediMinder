@@ -6,6 +6,7 @@ import { AuthProvider } from '@/context/auth-context';
 export const metadata: Metadata = {
   title: 'MediMinder',
   description: 'Your personal medication and appointment assistant.',
+  manifest: '/manifest.json',
 };
 
 export default function RootLayout({
