@@ -260,6 +260,7 @@ export default function HomePage() {
         showReminder();
       }, 0);
       
+      // Stop initial alert after user-defined duration
       const t2 = setTimeout(() => {
         setReminder(null);
       }, reminderSettings.initialDuration * 60 * 1000);
@@ -269,9 +270,10 @@ export default function HomePage() {
         showReminder();
       }, reminderSettings.secondAlert * 60 * 1000);
 
+      // Stop second alert after 1 minute by default
       const t4 = setTimeout(() => {
         setReminder(null);
-      }, (reminderSettings.secondAlert + 1) * 60 * 1000); // Ring for 1 minute
+      }, (reminderSettings.secondAlert + 1) * 60 * 1000);
 
       // Final Missed Alert + Family Alert
       const t5 = setTimeout(async () => {
