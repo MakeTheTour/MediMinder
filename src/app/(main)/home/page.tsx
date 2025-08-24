@@ -35,7 +35,6 @@ export default function HomePage() {
   const [sentAppointmentReminders, setSentAppointmentReminders] = useLocalStorage<string[]>('sent-appointment-reminders', []);
   const [reminderSettings] = useLocalStorage<ReminderSettings>('reminder-settings', { 
     initialDuration: 1, 
-    secondAlert: 3, 
     familyAlert: 10 
   });
 
@@ -265,22 +264,12 @@ export default function HomePage() {
         setReminder(null);
       }, reminderSettings.initialDuration * 60 * 1000);
 
-      // Second Alert
-      const t3 = setTimeout(() => {
-        showReminder();
-      }, reminderSettings.secondAlert * 60 * 1000);
-
-      // Stop second alert after 1 minute by default
-      const t4 = setTimeout(() => {
-        setReminder(null);
-      }, (reminderSettings.secondAlert + 1) * 60 * 1000);
-
       // Final Missed Alert + Family Alert
-      const t5 = setTimeout(async () => {
+      const t3 = setTimeout(async () => {
         await logMissedDoseAndAlertFamily(medications, time);
       }, reminderSettings.familyAlert * 60 * 1000);
 
-      reminderTimers.current[notificationId].push(t1, t2, t3, t4, t5);
+      reminderTimers.current[notificationId].push(t1, t2, t3);
     }
   }, [todaysMedicationsByTime, adherenceLogs, reminderSettings, logMissedDoseAndAlertFamily]);
 
@@ -556,3 +545,5 @@ export default function HomePage() {
     </>
   );
 }
+
+    

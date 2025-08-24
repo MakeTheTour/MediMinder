@@ -13,13 +13,11 @@ import { useToast } from '@/hooks/use-toast';
 
 const reminderSettingsSchema = z.object({
   initialDuration: z.coerce.number().min(1, 'Duration must be at least 1 minute.'),
-  secondAlert: z.coerce.number().min(1, 'Time must be at least 1 minute.'),
   familyAlert: z.coerce.number().min(1, 'Time must be at least 1 minute.'),
 });
 
 export interface ReminderSettings {
   initialDuration: number;
-  secondAlert: number;
   familyAlert: number;
 }
 
@@ -27,7 +25,6 @@ export default function ReminderSettingsPage() {
     const { toast } = useToast();
     const [settings, setSettings] = useLocalStorage<ReminderSettings>('reminder-settings', { 
         initialDuration: 1, 
-        secondAlert: 3, 
         familyAlert: 10 
     });
 
@@ -76,22 +73,6 @@ export default function ReminderSettingsPage() {
                             </FormItem>
                         )}
                     />
-                    <FormField
-                        control={form.control}
-                        name="secondAlert"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Second Alert Time</FormLabel>
-                                <FormControl>
-                                    <Input type="number" {...field} />
-                                </FormControl>
-                                <FormDescription>
-                                    Time until the second reminder appears if no action is taken.
-                                </FormDescription>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
                      <FormField
                         control={form.control}
                         name="familyAlert"
@@ -116,3 +97,5 @@ export default function ReminderSettingsPage() {
     </div>
   );
 }
+
+    
