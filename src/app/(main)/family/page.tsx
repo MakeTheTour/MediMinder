@@ -43,6 +43,7 @@ export default function FamilyPage() {
     const router = useRouter();
 
     useEffect(() => {
+        // When the user visits this page, clear any pending invitation/alert badges.
         setInvitationsAsViewed();
     }, [setInvitationsAsViewed]);
     

@@ -6,7 +6,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { BottomNavbar } from '@/components/bottom-navbar';
 import { useAuth } from '@/context/auth-context';
 import { Loader2 } from 'lucide-react';
-import { doc, getDoc, updateDoc, collection, onSnapshot, query, where, deleteDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, collection, onSnapshot, query, where, deleteDoc, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase-client';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { Medication, Appointment, AdherenceLog, FamilyMember, UserProfile, FamilyAlert } from '@/lib/types';
@@ -20,7 +20,7 @@ import { trackAdherence } from '@/ai/flows/track-adherence-flow';
 import { type ReminderSettings } from '@/app/(main)/settings/notifications/page';
 
 export default function MainLayout({ children }: { children: ReactNode }) {
-  const { user, loading, isGuest, setFamilyMissedDoseCount } = useAuth();
+  const { user, loading, isGuest, setFamilyMissedDoseCount, setPendingInvitationCount, setFamilyAlertCount } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const { toast } = useToast();
@@ -76,8 +76,9 @@ export default function MainLayout({ children }: { children: ReactNode }) {
         }
       });
       
-      const familyAlertQuery = query(collection(db, 'familyAlerts'), where('familyMemberId', '==', user.uid));
-      const familyAlertUnsub = onSnapshot(familyAlertQuery, (snapshot) => {
+       const familyAlertQuery = query(collection(db, 'familyAlerts'), where('familyMemberId', '==', user.uid));
+       const familyAlertUnsub = onSnapshot(familyAlertQuery, (snapshot) => {
+          setFamilyAlertCount(snapshot.size);
           if (!snapshot.empty) {
               const latestAlert = snapshot.docs
                 .map(doc => ({ id: doc.id, ...doc.data() } as FamilyAlert))
@@ -87,6 +88,15 @@ export default function MainLayout({ children }: { children: ReactNode }) {
               setActiveFamilyAlert(null);
           }
       });
+       const invitationQuery = query(
+        collection(db, 'invitations'),
+        where('inviteeEmail', '==', user.email),
+        where('status', '==', 'pending')
+      );
+      const invitationUnsub = onSnapshot(invitationQuery, (snapshot) => {
+        setPendingInvitationCount(snapshot.size);
+      });
+
 
       return () => {
         medUnsub();
@@ -95,6 +105,7 @@ export default function MainLayout({ children }: { children: ReactNode }) {
         familyUnsub();
         userProfileUnsub();
         familyAlertUnsub();
+        invitationUnsub();
         Object.values(reminderTimers.current).forEach(timers => timers.forEach(clearTimeout));
       };
     } else {
@@ -105,7 +116,7 @@ export default function MainLayout({ children }: { children: ReactNode }) {
       setUserProfile(null);
       setAdherenceLoading(false);
     }
-  }, [user, isGuest]);
+  }, [user, isGuest, setFamilyAlertCount, setPendingInvitationCount]);
 
   const activeMedications = isGuest ? localMedications : firestoreMedications;
   const activeAppointments = isGuest ? localAppointments : firestoreAppointments;
@@ -365,5 +376,3 @@ export default function MainLayout({ children }: { children: ReactNode }) {
     </>
   );
 }
-
-    

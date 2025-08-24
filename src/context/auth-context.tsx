@@ -13,9 +13,12 @@ interface AuthContextType {
   setGuest: (isGuest: boolean) => void;
   logout: () => void;
   pendingInvitationCount: number;
+  setPendingInvitationCount: (count: number) => void;
   setInvitationsAsViewed: () => void;
   familyMissedDoseCount: number;
   setFamilyMissedDoseCount: (count: number) => void;
+  familyAlertCount: number;
+  setFamilyAlertCount: (count: number) => void;
 }
 
 const AuthContext = createContext<AuthContextType>({ 
@@ -25,9 +28,12 @@ const AuthContext = createContext<AuthContextType>({
     setGuest: () => {}, 
     logout: () => {}, 
     pendingInvitationCount: 0,
+    setPendingInvitationCount: () => {},
     setInvitationsAsViewed: () => {},
     familyMissedDoseCount: 0,
     setFamilyMissedDoseCount: () => {},
+    familyAlertCount: 0,
+    setFamilyAlertCount: () => {},
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -36,6 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isGuest, setIsGuestState] = useState(false);
   const [pendingInvitationCount, setPendingInvitationCount] = useState(0);
   const [familyMissedDoseCount, setFamilyMissedDoseCount] = useState(0);
+  const [familyAlertCount, setFamilyAlertCount] = useState(0);
 
 
    useEffect(() => {
@@ -63,28 +70,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => unsubscribe();
   }, []);
-
-  useEffect(() => {
-    if (user?.email) {
-      const q = query(
-        collection(db, 'invitations'),
-        where('inviteeEmail', '==', user.email),
-        where('status', '==', 'pending')
-      );
-      
-      const unsub = onSnapshot(q, (snapshot) => {
-        setPendingInvitationCount(snapshot.size);
-      });
-
-      return () => unsub();
-    } else {
-      setPendingInvitationCount(0);
-    }
-  }, [user]);
   
   const setInvitationsAsViewed = () => {
-    // This function can be used in the future if we want to hide the badge after viewing,
-    // but for now we will always show it if there are pending invitations.
+    // This function clears the badges on the family tab.
+    setPendingInvitationCount(0);
+    setFamilyAlertCount(0);
   };
 
   const setGuest = (isGuestMode: boolean) => {
@@ -121,9 +111,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setGuest,
       logout,
       pendingInvitationCount,
+      setPendingInvitationCount,
       setInvitationsAsViewed,
       familyMissedDoseCount,
       setFamilyMissedDoseCount,
+      familyAlertCount,
+      setFamilyAlertCount,
   }
 
   return (
