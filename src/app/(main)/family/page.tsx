@@ -37,28 +37,32 @@ export default function FamilyPage() {
 
     const fetchMissedReports = useCallback(async (members: FamilyMember[]) => {
         const reports: Record<string, number> = {};
-        const sevenDaysAgo = startOfDay(subDays(new Date(), 7)).toISOString();
+        const sevenDaysAgo = startOfDay(subDays(new Date(), 7));
 
         for (const member of members) {
             if (member.status !== 'accepted' || !member.uid) continue;
             try {
-                // This query might require a composite index on (status, takenAt).
-                // If it fails, the index must be created in the Firebase console.
-                // The error message from Firebase will provide a direct link to create it.
+                // Simplified query to fetch all logs in the last 7 days.
+                // Filtering by status is now done on the client side.
                 const q = query(
                     collection(db, 'users', member.uid, 'adherenceLogs'),
-                    where('status', 'in', ['missed', 'stock_out'])
-                    // The 'where' clause for the date is handled client-side to avoid complex queries.
+                    where('takenAt', '>=', sevenDaysAgo.toISOString())
                 );
                 const querySnapshot = await getDocs(q);
-                const recentMisses = querySnapshot.docs.filter(doc => new Date(doc.data().takenAt) >= new Date(sevenDaysAgo)).length;
+                
+                // Perform filtering on the client
+                const recentMisses = querySnapshot.docs.filter(doc => {
+                    const data = doc.data();
+                    return data.status === 'missed' || data.status === 'stock_out';
+                }).length;
+
                 reports[member.uid] = recentMisses;
             } catch (error) {
                 console.error(`Failed to fetch missed report for ${member.name}:`, error);
                 reports[member.uid] = 0;
                  toast({
                     title: "Reporting Error",
-                    description: "Could not fetch missed dose reports. This may be due to missing database indexes.",
+                    description: "Could not fetch missed dose reports for some members.",
                     variant: "destructive"
                 });
             }
