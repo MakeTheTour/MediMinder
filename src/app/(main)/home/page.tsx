@@ -10,7 +10,7 @@ import { Medication, Appointment, AdherenceLog, FamilyMember, UserProfile, Famil
 import { AppointmentCard } from '@/components/appointment-card';
 import { format, parse, isToday, isFuture, differenceInHours, isBefore, startOfDay } from 'date-fns';
 import { useAuth } from '@/context/auth-context';
-import { collection, onSnapshot, query, orderBy, doc, getDoc, where, deleteDoc } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, doc, getDoc, where, deleteDoc, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase-client';
 import { useRouter } from 'next/navigation';
 import { useLocalStorage } from '@/hooks/use-local-storage';
@@ -272,11 +272,18 @@ export default function HomePage() {
       const showReminder = () => {
           setReminder({ medications, time });
            try {
-            if ('Notification' in window && Notification.permission === 'granted') {
-                new Notification('Time for your medication!', {
-                    body: `It's time for your ${format(scheduledTime, 'h:mm a')} dose.`,
-                });
-            }
+              if (typeof window !== "undefined" && "Notification" in window && "serviceWorker" in navigator) {
+                if (Notification.permission === "granted") {
+                    navigator.serviceWorker.getRegistration().then(reg => {
+                        if (reg) {
+                            reg.showNotification("Time for your medication!", {
+                                body: `It's time for your ${format(scheduledTime, 'h:mm a')} dose.`,
+                                icon: "/icons/icon-192x192.png"
+                            });
+                        }
+                    });
+                }
+              }
           } catch (e) {
             console.error("Notification API error: ", e);
           }

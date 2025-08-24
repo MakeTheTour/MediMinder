@@ -28,6 +28,13 @@ export default function MainLayout({ children }: { children: ReactNode }) {
   }, [user, loading, router, isGuest, pathname]);
 
   useEffect(() => {
+    // Register service worker
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js')
+          .then(reg => console.log('Service Worker Registered', reg))
+          .catch(err => console.error('SW registration failed', err));
+    }
+    
     // Request notification permission on component mount
     if (typeof window !== "undefined" && "Notification" in window) {
       if (Notification.permission === "default") {
