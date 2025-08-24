@@ -13,11 +13,13 @@ import { useToast } from '@/hooks/use-toast';
 
 const reminderSettingsSchema = z.object({
   initialDuration: z.coerce.number().min(1, 'Duration must be at least 1 minute.'),
+  secondAlertDelay: z.coerce.number().min(1, 'Delay must be at least 1 minute.'),
   familyAlert: z.coerce.number().min(1, 'Time must be at least 1 minute.'),
 });
 
 export interface ReminderSettings {
   initialDuration: number;
+  secondAlertDelay: number;
   familyAlert: number;
 }
 
@@ -25,6 +27,7 @@ export default function ReminderSettingsPage() {
     const { toast } = useToast();
     const [settings, setSettings] = useLocalStorage<ReminderSettings>('reminder-settings', { 
         initialDuration: 1, 
+        secondAlertDelay: 3,
         familyAlert: 10 
     });
 
@@ -67,7 +70,23 @@ export default function ReminderSettingsPage() {
                                     <Input type="number" {...field} />
                                 </FormControl>
                                 <FormDescription>
-                                    How long the first reminder popup stays visible.
+                                    How long the first reminder popup and ringtone stay active.
+                                </FormDescription>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                     <FormField
+                        control={form.control}
+                        name="secondAlertDelay"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Second Alert Delay</FormLabel>
+                                <FormControl>
+                                    <Input type="number" {...field} />
+                                </FormControl>
+                                <FormDescription>
+                                    Time between the first alert and the second alert.
                                 </FormDescription>
                                 <FormMessage />
                             </FormItem>
@@ -83,7 +102,7 @@ export default function ReminderSettingsPage() {
                                     <Input type="number" {...field} />
                                 </FormControl>
                                 <FormDescription>
-                                    Time until a dose is marked 'missed' and family is alerted.
+                                    Total time until a dose is marked 'missed' and family is alerted.
                                 </FormDescription>
                                 <FormMessage />
                             </FormItem>
@@ -97,5 +116,3 @@ export default function ReminderSettingsPage() {
     </div>
   );
 }
-
-    

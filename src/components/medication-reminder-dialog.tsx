@@ -11,9 +11,12 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Medication } from '@/lib/types';
-import { Pill, BellRing, PackageX, Check, BellOff } from 'lucide-react';
+import { Pill, BellRing, PackageX, Check, X } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { format, parse } from 'date-fns';
+import { useLocalStorage } from '@/hooks/use-local-storage';
+import { type ReminderSettings } from '@/app/(main)/settings/reminders/page';
+
 
 interface MedicationReminderDialogProps {
   isOpen: boolean;
@@ -35,14 +38,27 @@ export function MedicationReminderDialog({
   onClose,
 }: MedicationReminderDialogProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [reminderSettings] = useLocalStorage<ReminderSettings>('reminder-settings', { 
+    initialDuration: 1, 
+    secondAlertDelay: 3,
+    familyAlert: 10 
+  });
 
   useEffect(() => {
+    let audioTimeout: NodeJS.Timeout;
     if (isOpen) {
       if (!audioRef.current) {
         audioRef.current = new Audio('/notification.mp3');
-        audioRef.current.loop = true;
       }
       audioRef.current.play().catch(e => console.error("Audio play failed:", e));
+      // Stop the audio after the configured duration
+      audioTimeout = setTimeout(() => {
+        if(audioRef.current) {
+            audioRef.current.pause();
+            audioRef.current.currentTime = 0;
+        }
+      }, reminderSettings.initialDuration * 60 * 1000)
+
     } else if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
@@ -50,12 +66,13 @@ export function MedicationReminderDialog({
 
     // Cleanup audio on component unmount
     return () => {
+        clearTimeout(audioTimeout);
         if (audioRef.current) {
             audioRef.current.pause();
             audioRef.current.currentTime = 0;
         }
     }
-  }, [isOpen]);
+  }, [isOpen, reminderSettings.initialDuration]);
 
   const handleAction = (action: () => void) => {
     if (audioRef.current) {
@@ -113,9 +130,9 @@ export function MedicationReminderDialog({
             <Check className="mr-2 h-4 w-4" />
             Taken
           </Button>
-           <Button variant="secondary" className="col-span-2" onClick={() => handleAction(onMiss)}>
-            <BellOff className="mr-2 h-4 w-4" />
-            View and Missed
+           <Button variant="destructive" className="col-span-2" onClick={() => handleAction(onMiss)}>
+            <X className="mr-2 h-4 w-4" />
+            Missed
           </Button>
         </AlertDialogFooter>
       </AlertDialogContent>

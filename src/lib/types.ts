@@ -61,8 +61,9 @@ export type UserProfile = z.infer<typeof UserProfileSchema>;
 
 export interface AdherenceLog {
     id?: string;
-    medicationId: string;
-    medicationName: string;
+    reminderId: string;
+    reminderType: 'medicine' | 'doctor_visit' | 'health_checkup';
+    reminderContent: string;
     takenAt: string; // ISO string
     status: 'taken' | 'skipped' | 'missed' | 'stock_out' | 'muted' | 'snoozed';
     userId: string;

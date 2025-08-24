@@ -4,7 +4,7 @@
 import { Pill, Clock, Trash2, MoreVertical, ShieldAlert, Pencil, CalendarDays, Utensils } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Medication } from '@/lib/types';
-import { differenceInDays, formatDistanceToNowStrict, parse, format } from 'date-fns';
+import { differenceInDays, formatDistanceToNowStrict, parse, format, isAfter } from 'date-fns';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Button } from './ui/button';
 import { cn } from '@/lib/utils';
+import { Badge } from './ui/badge';
 
 interface MedicationCardProps {
   medication: Medication;
@@ -22,9 +23,10 @@ interface MedicationCardProps {
   onEdit?: (id: string) => void;
   specificTime?: string;
   hideTime?: boolean;
+  status?: 'Upcoming' | 'Ongoing' | 'Missed';
 }
 
-export function MedicationCard({ medication, onDelete, onFamilyAlert, specificTime, onEdit, hideTime = false }: MedicationCardProps) {
+export function MedicationCard({ medication, onDelete, onFamilyAlert, specificTime, onEdit, hideTime = false, status }: MedicationCardProps) {
 
   const formatTime = (time24h: string) => {
     try {
@@ -32,6 +34,25 @@ export function MedicationCard({ medication, onDelete, onFamilyAlert, specificTi
     } catch {
       return time24h; // Fallback to original if parsing fails
     }
+  }
+  
+  const isOngoing = () => {
+    if (!specificTime) return false;
+    const now = new Date();
+    const scheduleTime = parse(specificTime, 'HH:mm', now);
+    return isAfter(now, scheduleTime);
+  };
+  
+  const getStatus = () => {
+      if (status) return status;
+      return isOngoing() ? "Ongoing" : "Upcoming";
+  }
+  
+  const getStatusColor = () => {
+      const currentStatus = getStatus();
+      if(currentStatus === 'Missed') return 'destructive';
+      if(currentStatus === 'Ongoing') return 'secondary';
+      return 'default';
   }
 
   const displayTimes = specificTime ? [specificTime] : medication.times;
@@ -44,7 +65,6 @@ export function MedicationCard({ medication, onDelete, onFamilyAlert, specificTi
         const endDate = new Date(medication.end_date);
         const today = new Date();
         
-        // Ensure we don't show negative days if start date is in the future
         if (today < startDate) {
             const daysUntilStart = formatDistanceToNowStrict(startDate, { unit: 'day', roundingMethod: 'ceil'});
             return `Starts in ${daysUntilStart}`;
@@ -88,7 +108,9 @@ export function MedicationCard({ medication, onDelete, onFamilyAlert, specificTi
               <p className="text-sm text-muted-foreground">{medication.intake_qty} {medication.dosage}</p>
             </div>
           </div>
-          {(onDelete || onFamilyAlert || onEdit) && (
+           <div className="flex items-center gap-2">
+            <Badge variant={getStatusColor()}>{getStatus()}</Badge>
+            {(onDelete || onFamilyAlert || onEdit) && (
              <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
@@ -118,7 +140,8 @@ export function MedicationCard({ medication, onDelete, onFamilyAlert, specificTi
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
-          )}
+            )}
+           </div>
         </div>
         <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-y-2 gap-x-4 text-sm text-muted-foreground">
           {!hideTime && (

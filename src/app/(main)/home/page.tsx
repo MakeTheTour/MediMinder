@@ -7,7 +7,6 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Medication, Appointment, AdherenceLog, FamilyMember, UserProfile } from '@/lib/types';
-import { MedicationCard } from '@/components/medication-card';
 import { AppointmentCard } from '@/components/appointment-card';
 import { format, parse, isToday, isFuture, differenceInHours, isBefore, startOfDay } from 'date-fns';
 import { useAuth } from '@/context/auth-context';
@@ -35,6 +34,7 @@ export default function HomePage() {
   const [sentAppointmentReminders, setSentAppointmentReminders] = useLocalStorage<string[]>('sent-appointment-reminders', []);
   const [reminderSettings] = useLocalStorage<ReminderSettings>('reminder-settings', { 
     initialDuration: 1, 
+    secondAlertDelay: 3,
     familyAlert: 10 
   });
 
@@ -144,8 +144,9 @@ export default function HomePage() {
 
     const logPromises = medications.map(medication => {
       const logEntry: Omit<AdherenceLog, 'id'> = {
-        medicationId: medication.id,
-        medicationName: medication.name,
+        reminderId: medication.id,
+        reminderType: 'medicine',
+        reminderContent: medication.name,
         takenAt: new Date().toISOString(),
         status: status,
         userId: user?.uid || 'guest',
@@ -173,8 +174,9 @@ export default function HomePage() {
 
     for (const medication of medications) {
         const logEntry: Omit<AdherenceLog, 'id'> = {
-          medicationId: medication.id,
-          medicationName: medication.name,
+          reminderId: medication.id,
+          reminderType: 'medicine',
+          reminderContent: medication.name,
           takenAt: new Date().toISOString(),
           status: 'missed',
           userId: user?.uid || 'guest',
@@ -214,9 +216,7 @@ export default function HomePage() {
         }
     }
     
-    // Show reminder one last time to inform user it was missed, then close it.
-    setReminder({ medications, time: scheduledTime });
-    setTimeout(() => setReminder(null), 60 * 1000);
+    setReminder(null);
 
   }, [user, isGuest, setLocalAdherence, toast, familyMembers, userProfile, clearReminderTimers]);
 
@@ -231,7 +231,7 @@ export default function HomePage() {
       
       const isHandled = medications.some(med => 
         adherenceLogs.some(log => 
-          log.medicationId === med.id &&
+          log.reminderId === med.id &&
           isToday(new Date(log.takenAt)) &&
           log.scheduledTime === time
         )
@@ -255,21 +255,23 @@ export default function HomePage() {
       reminderTimers.current[notificationId] = [];
 
       // Initial Alert
-      const t1 = setTimeout(() => {
-        showReminder();
-      }, 0);
+      const t1 = setTimeout(showReminder, 0); 
       
-      // Stop initial alert after user-defined duration
-      const t2 = setTimeout(() => {
-        setReminder(null);
-      }, reminderSettings.initialDuration * 60 * 1000);
+      // Stop initial alert
+      const t2 = setTimeout(() => setReminder(null), reminderSettings.initialDuration * 60 * 1000);
+
+      // Second Alert
+      const t3 = setTimeout(showReminder, reminderSettings.secondAlertDelay * 60 * 1000);
+
+      // Stop second alert
+      const t4 = setTimeout(() => setReminder(null), (reminderSettings.secondAlertDelay + reminderSettings.initialDuration) * 60 * 1000);
 
       // Final Missed Alert + Family Alert
-      const t3 = setTimeout(async () => {
+      const t5 = setTimeout(async () => {
         await logMissedDoseAndAlertFamily(medications, time);
       }, reminderSettings.familyAlert * 60 * 1000);
 
-      reminderTimers.current[notificationId].push(t1, t2, t3);
+      reminderTimers.current[notificationId].push(t1, t2, t3, t4, t5);
     }
   }, [todaysMedicationsByTime, adherenceLogs, reminderSettings, logMissedDoseAndAlertFamily]);
 
@@ -285,7 +287,7 @@ export default function HomePage() {
       if (isBefore(scheduledTime, now)) {
         for(const med of medications) {
             const isHandled = adherenceLogs.some(log =>
-                log.medicationId === med.id &&
+                log.reminderId === med.id &&
                 isToday(new Date(log.takenAt)) &&
                 log.scheduledTime === time
             );
@@ -293,8 +295,9 @@ export default function HomePage() {
             if (!isHandled) {
                 missedCount++;
                 const logEntry: Omit<AdherenceLog, 'id'> = {
-                  medicationId: med.id,
-                  medicationName: med.name,
+                  reminderId: med.id,
+                  reminderType: 'medicine',
+                  reminderContent: med.name,
                   takenAt: new Date().toISOString(),
                   status: 'missed',
                   userId: user?.uid || 'guest',
@@ -545,5 +548,3 @@ export default function HomePage() {
     </>
   );
 }
-
-    

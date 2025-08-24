@@ -1,9 +1,9 @@
 
 'use server';
 /**
- * @fileOverview Tracks user medication adherence.
+ * @fileOverview Tracks user adherence to reminders (medication, appointments, etc.).
  *
- * - trackAdherence - A function that logs when a user takes or skips a medication dose.
+ * - trackAdherence - A function that logs when a user takes or skips a dose/event.
  * - AdherenceInput - The input type for the trackAdherence function.
  * - AdherenceOutput - The return type for the trackAdherence function.
  */
@@ -16,8 +16,9 @@ import { db } from '@/lib/firebase';
 
 
 const AdherenceInputSchema = z.object({
-    medicationId: z.string(),
-    medicationName: z.string(),
+    reminderId: z.string(),
+    reminderType: z.enum(['medicine', 'doctor_visit', 'health_checkup']),
+    reminderContent: z.string(), // e.g., Medication name or Appointment details
     takenAt: z.string().datetime(),
     status: z.enum(['taken', 'skipped', 'missed', 'stock_out', 'muted', 'snoozed']),
     userId: z.string(),
@@ -67,7 +68,3 @@ const trackAdherenceFlow = ai.defineFlow(
     }
   }
 );
-
-    
-
-    
