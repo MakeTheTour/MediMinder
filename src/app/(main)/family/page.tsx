@@ -106,7 +106,7 @@ export default function FamilyPage() {
       const membersUnsub = onSnapshot(collection(db, 'users', user.uid, 'familyMembers'), (snapshot) => {
           const members = snapshot.docs
             .map(doc => ({ id: doc.id, ...doc.data() } as FamilyMember))
-            .filter(member => member.uid && member.name); // Ensure essential data exists
+            .filter(member => member.uid && member.name && member.status); // Ensure essential data exists
           setFamilyMembers(members);
           if (members.length > 0) {
               fetchMissedReports(members);
