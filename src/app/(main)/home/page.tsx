@@ -249,9 +249,11 @@ export default function HomePage() {
       const showReminder = () => {
           setReminder({ medications, time });
            try {
-            new Notification('Time for your medication!', {
-                body: `It's time for your ${format(scheduledTime, 'h:mm a')} dose.`,
-            });
+            if ('Notification' in window && Notification.permission === 'granted') {
+                new Notification('Time for your medication!', {
+                    body: `It's time for your ${format(scheduledTime, 'h:mm a')} dose.`,
+                });
+            }
           } catch (e) {
             console.error("Notification API error: ", e);
           }
@@ -547,3 +549,5 @@ export default function HomePage() {
     </>
   );
 }
+
+    
