@@ -6,15 +6,16 @@ import { Plus, ShieldAlert, Stethoscope, Pill as PillIcon, CalendarDays } from '
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Medication, Appointment, AdherenceLog, FamilyMember, UserProfile } from '@/lib/types';
+import { Medication, Appointment, AdherenceLog, FamilyMember, UserProfile, FamilyAlert } from '@/lib/types';
 import { AppointmentCard } from '@/components/appointment-card';
 import { format, parse, isToday, isFuture, differenceInHours, isBefore, startOfDay } from 'date-fns';
 import { useAuth } from '@/context/auth-context';
-import { collection, onSnapshot, query, orderBy, doc, getDoc } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, doc, getDoc, where, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase-client';
 import { useRouter } from 'next/navigation';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { MedicationReminderDialog } from '@/components/medication-reminder-dialog';
+import { FamilyAlertDialog } from '@/components/family-alert-dialog';
 import { trackAdherence } from '@/ai/flows/track-adherence-flow';
 import { useToast } from '@/hooks/use-toast';
 import { generateAppointmentReminder } from '@/ai/flows/appointment-reminder-flow';
@@ -47,6 +48,7 @@ export default function HomePage() {
 
 
   const [reminder, setReminder] = useState<{ medications: Medication[]; time: string } | null>(null);
+  const [activeFamilyAlert, setActiveFamilyAlert] = useState<FamilyAlert | null>(null);
   const [greeting, setGreeting] = useState('');
   
   const reminderTimers = useRef<Record<string, NodeJS.Timeout[]>>({});
@@ -81,6 +83,16 @@ export default function HomePage() {
             setUserProfile(doc.data() as UserProfile);
         }
       });
+      
+      const familyAlertQuery = query(collection(db, 'familyAlerts'), where('familyMemberId', '==', user.uid), orderBy('createdAt', 'desc'), limit(1));
+      const familyAlertUnsub = onSnapshot(familyAlertQuery, (snapshot) => {
+          if (!snapshot.empty) {
+              const alert = snapshot.docs[0].data() as Omit<FamilyAlert, 'id'>;
+              setActiveFamilyAlert({ id: snapshot.docs[0].id, ...alert });
+          } else {
+              setActiveFamilyAlert(null);
+          }
+      });
 
       return () => {
         medUnsub();
@@ -88,6 +100,7 @@ export default function HomePage() {
         adherenceUnsub();
         familyUnsub();
         userProfileUnsub();
+        familyAlertUnsub();
         Object.values(reminderTimers.current).forEach(timers => timers.forEach(clearTimeout));
       };
     } else {
@@ -206,16 +219,24 @@ export default function HomePage() {
         if (familyMembers.length > 0 && userProfile?.isPremium) {
             for (const member of familyMembers) {
                 if (member.status === 'accepted') {
-                    const alert = await generateFamilyAlert({
+                    const result = await generateFamilyAlert({
                         patientName: user?.displayName || 'A user',
                         medicationName: medication.name,
                         familyName: member.name,
+                        familyMemberId: member.uid,
                     });
-                    console.log(`Sending alert to ${member.name}: ${alert.alertMessage}`);
-                    toast({
-                        title: 'Family Alert Sent',
-                        description: `Notified ${member.name} about missed dose of ${medication.name}.`,
-                    });
+                    if (result.success) {
+                        toast({
+                            title: 'Family Alert Sent',
+                            description: `Notified ${member.name} about missed dose of ${medication.name}.`,
+                        });
+                    } else {
+                         toast({
+                            title: 'Family Alert Failed',
+                            description: `Could not notify ${member.name}.`,
+                            variant: 'destructive',
+                        });
+                    }
                 }
             }
         }
@@ -418,6 +439,19 @@ export default function HomePage() {
     else setGreeting('Good Evening');
   }, []);
 
+  const handleAlertClose = async (alertId: string) => {
+    try {
+        await deleteDoc(doc(db, 'familyAlerts', alertId));
+        setActiveFamilyAlert(null);
+    } catch (e) {
+        toast({
+            title: 'Error',
+            description: 'Could not dismiss the alert. It may reappear.',
+            variant: 'destructive',
+        });
+    }
+  }
+
   return (
     <>
     {reminder && (
@@ -433,6 +467,13 @@ export default function HomePage() {
                 clearReminderTimers(notificationId);
                 setReminder(null);
             }}
+        />
+    )}
+    {activeFamilyAlert && (
+        <FamilyAlertDialog
+            isOpen={!!activeFamilyAlert}
+            alert={activeFamilyAlert}
+            onClose={() => handleAlertClose(activeFamilyAlert.id)}
         />
     )}
     <div className="container mx-auto max-w-2xl p-4 space-y-6">
@@ -549,5 +590,3 @@ export default function HomePage() {
     </>
   );
 }
-
-    

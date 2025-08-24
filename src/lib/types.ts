@@ -128,3 +128,12 @@ export const SpecialistRecommendationOutputSchema = z.object({
   doctorAddress: z.string().optional().describe("The address of the recommended doctor."),
 });
 export type SpecialistRecommendationOutput = z.infer<typeof SpecialistRecommendationOutputSchema>;
+
+export interface FamilyAlert {
+    id: string;
+    familyMemberId: string;
+    patientName: string;
+    medicationName: string;
+    alertMessage: string;
+    createdAt: string;
+}
