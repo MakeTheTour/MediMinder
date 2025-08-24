@@ -18,6 +18,7 @@ const FamilyAlertInputSchema = z.object({
   medicationName: z.string().describe("The name of the medication that was missed."),
   familyName: z.string().describe("The name of the family member to be notified."),
   familyMemberId: z.string().describe("The UID of the family member to be notified."),
+  reason: z.enum(['missed', 'stock_out']).describe("The reason for the alert."),
 });
 export type FamilyAlertInput = z.infer<typeof FamilyAlertInputSchema>;
 
@@ -34,18 +35,21 @@ export async function generateFamilyAlert(input: FamilyAlertInput): Promise<Fami
 
 const prompt = ai.definePrompt({
   name: 'generateFamilyAlertPrompt',
-  input: {schema: z.object({ patientName: z.string(), familyName: z.string(), medicationName: z.string() })},
+  input: {schema: z.object({ patientName: z.string(), familyName: z.string(), medicationName: z.string(), reason: z.enum(['missed', 'stock_out']) })},
   output: {schema: z.object({ alertMessage: z.string() })},
   prompt: `You are an AI assistant for a health app called MediMinder. Your task is to generate a concise, clear, and caring notification message.
 
-This message will be sent to a family member because the user has missed a dose of their medication.
+This message will be sent to {{{familyName}}} because {{{patientName}}} has not taken their medication.
 
 The user's name is {{{patientName}}}.
 The family member's name is {{{familyName}}}.
-The medication missed is {{{medicationName}}}.
+The medication is {{{medicationName}}}.
+The reason is: {{{reason}}}
 
-Generate a friendly and supportive message to {{{familyName}}} informing them that {{{patientName}}} has missed their dose of {{{medicationName}}}. Encourage them to check in with {{{patientName}}}.
-  `,
+Based on the reason, generate a supportive message for {{{familyName}}}.
+- If the reason is 'missed', inform them that {{{patientName}}} has missed their dose of {{{medicationName}}} and encourage them to check in.
+- If the reason is 'stock_out', inform them that {{{patientName}}} could not take their {{{medicationName}}} because it is out of stock. Suggest they help {{{patientName}}} refill the prescription.
+`,
 });
 
 const generateFamilyAlertFlow = ai.defineFlow(
@@ -54,9 +58,9 @@ const generateFamilyAlertFlow = ai.defineFlow(
     inputSchema: FamilyAlertInputSchema,
     outputSchema: FamilyAlertOutputSchema,
   },
-  async ({ patientName, medicationName, familyName, familyMemberId }) => {
+  async ({ patientName, medicationName, familyName, familyMemberId, reason }) => {
     try {
-        const {output} = await prompt({ patientName, medicationName, familyName });
+        const {output} = await prompt({ patientName, medicationName, familyName, reason });
         if (!output) {
             throw new Error("Failed to generate alert message.");
         }

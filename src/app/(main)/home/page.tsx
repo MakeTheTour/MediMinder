@@ -10,7 +10,7 @@ import { Medication, Appointment, AdherenceLog, FamilyMember, UserProfile, Famil
 import { AppointmentCard } from '@/components/appointment-card';
 import { format, parse, isToday, isFuture, differenceInHours, isBefore, startOfDay } from 'date-fns';
 import { useAuth } from '@/context/auth-context';
-import { collection, onSnapshot, query, orderBy, doc, getDoc, where, deleteDoc } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, doc, getDoc, where, deleteDoc, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase-client';
 import { useRouter } from 'next/navigation';
 import { useLocalStorage } from '@/hooks/use-local-storage';
@@ -177,6 +177,20 @@ export default function HomePage() {
         setLocalAdherence(prev => [...prev, { ...logEntry, id: new Date().toISOString() }]);
         return Promise.resolve();
       } else {
+        // If missed or stock out, alert family
+        if ((status === 'missed' || status === 'stock_out') && familyMembers.length > 0 && userProfile?.isPremium) {
+            familyMembers.forEach(member => {
+                if (member.status === 'accepted') {
+                     generateFamilyAlert({
+                        patientName: user?.displayName || 'A user',
+                        medicationName: medication.name,
+                        familyName: member.name,
+                        familyMemberId: member.uid,
+                        reason: status,
+                    });
+                }
+            });
+        }
         return trackAdherence({
             ...logEntry,
             userId: user.uid,
@@ -186,7 +200,7 @@ export default function HomePage() {
 
     await Promise.all(logPromises);
     setReminder(null);
-  }, [user, isGuest, setLocalAdherence, clearReminderTimers]);
+  }, [user, isGuest, setLocalAdherence, clearReminderTimers, familyMembers, userProfile]);
   
   const logMissedDoseAndAlertFamily = useCallback(async (medications: Medication[], scheduledTime: string) => {
     const notificationId = `${medications[0].id}-${scheduledTime}-${format(new Date(), 'yyyy-MM-dd')}`;
@@ -226,6 +240,7 @@ export default function HomePage() {
                         medicationName: medication.name,
                         familyName: member.name,
                         familyMemberId: member.uid,
+                        reason: 'missed',
                     });
                     if (result.success) {
                         toast({
