@@ -18,6 +18,16 @@ import { declineInvitation } from '@/ai/flows/decline-invitation-flow';
 import { AddParentDialog } from '@/components/add-parent-dialog';
 import { removeFamilyMember } from '@/ai/flows/remove-family-member-flow';
 import { subDays, startOfDay } from 'date-fns';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 export default function FamilyPage() {
     const { user, isGuest, setInvitationsAsViewed } = useAuth();
@@ -29,6 +39,7 @@ export default function FamilyPage() {
     const [loading, setLoading] = useState(true);
     const [isAddParentDialogOpen, setIsAddParentDialogOpen] = useState(false);
     const [missedReports, setMissedReports] = useState<Record<string, number>>({});
+    const [removingMember, setRemovingMember] = useState<FamilyMember | null>(null);
     const router = useRouter();
 
     useEffect(() => {
@@ -134,8 +145,8 @@ export default function FamilyPage() {
         }
     };
     
-    const handleRemoveLinkedMember = async (member: FamilyMember) => {
-        if (!user) return;
+    const handleRemoveLinkedMember = async (member: FamilyMember | null) => {
+        if (!user || !member) return;
         try {
             const result = await removeFamilyMember({
                 removerId: user.uid,
@@ -150,6 +161,8 @@ export default function FamilyPage() {
             console.error("Error removing linked member:", error);
             const errorMessage = error instanceof Error ? error.message : 'Could not remove parent.';
             toast({ title: 'Error', description: errorMessage, variant: 'destructive'});
+        } finally {
+            setRemovingMember(null);
         }
     }
 
@@ -215,6 +228,21 @@ export default function FamilyPage() {
 
   return (
     <>
+      <AlertDialog open={!!removingMember} onOpenChange={() => setRemovingMember(null)}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+                This will remove <span className="font-bold">{removingMember?.name}</span> from your linked accounts. This action cannot be undone.
+            </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => handleRemoveLinkedMember(removingMember)}>Confirm</AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <AddParentDialog
         open={isAddParentDialogOpen}
         onOpenChange={setIsAddParentDialogOpen}
@@ -298,7 +326,7 @@ export default function FamilyPage() {
                                 {missedReports[member.uid] > 0 ? 'Needs Attention' : 'Linked'}
                              </Badge>
                         )}
-                        <Button variant="ghost" size="sm" onClick={() => member.status === 'pending' ? handleCancelSentInvitation(member.id) : handleRemoveLinkedMember(member as FamilyMember)}>
+                        <Button variant="ghost" size="sm" onClick={() => member.status === 'pending' ? handleCancelSentInvitation(member.id) : setRemovingMember(member as FamilyMember)}>
                             {member.status === 'pending' ? 'Cancel' : 'Remove'}
                         </Button>
                     </div>
