@@ -243,7 +243,6 @@ export default function HomePage() {
       }
       
       const showReminder = () => {
-        if (!reminder) {
           setReminder({ medications, time });
            try {
             new Notification('Time for your medication!', {
@@ -252,7 +251,6 @@ export default function HomePage() {
           } catch (e) {
             console.error("Notification API error: ", e);
           }
-        }
       };
 
       reminderTimers.current[notificationId] = [];
@@ -260,28 +258,29 @@ export default function HomePage() {
       // Initial Alert
       const t1 = setTimeout(() => {
         showReminder();
-        // Automatically close the first alert after its duration
-        const t2 = setTimeout(() => setReminder(null), reminderSettings.initialDuration * 60 * 1000);
-        reminderTimers.current[notificationId].push(t2);
-      }, 0); // Show immediately
+      }, 0);
       
+      const t2 = setTimeout(() => {
+        setReminder(null);
+      }, reminderSettings.initialDuration * 60 * 1000);
 
       // Second Alert
       const t3 = setTimeout(() => {
         showReminder();
-        // Ring for 1 minute then close
-        const t4 = setTimeout(() => setReminder(null), 1 * 60 * 1000); 
-        reminderTimers.current[notificationId].push(t4);
       }, reminderSettings.secondAlert * 60 * 1000);
+
+      const t4 = setTimeout(() => {
+        setReminder(null);
+      }, (reminderSettings.secondAlert + 1) * 60 * 1000); // Ring for 1 minute
 
       // Final Missed Alert + Family Alert
       const t5 = setTimeout(async () => {
         await logMissedDoseAndAlertFamily(medications, time);
       }, reminderSettings.familyAlert * 60 * 1000);
 
-      reminderTimers.current[notificationId].push(t1, t3, t5);
+      reminderTimers.current[notificationId].push(t1, t2, t3, t4, t5);
     }
-  }, [todaysMedicationsByTime, adherenceLogs, reminder, reminderSettings, logMissedDoseAndAlertFamily]);
+  }, [todaysMedicationsByTime, adherenceLogs, reminderSettings, logMissedDoseAndAlertFamily]);
 
 
   const checkMissedDosesOnLoad = useCallback(async () => {
@@ -555,3 +554,5 @@ export default function HomePage() {
     </>
   );
 }
+
+    
