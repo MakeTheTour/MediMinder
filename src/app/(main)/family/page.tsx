@@ -1,15 +1,15 @@
 
 'use client';
 
-import { Users2, Plus, Check, X } from 'lucide-react';
+import { Users2, Plus, Check, X, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { FamilyMember, Invitation, UserProfile } from '@/lib/types';
+import { FamilyMember, Invitation, UserProfile, AdherenceLog } from '@/lib/types';
 import { useAuth } from '@/context/auth-context';
-import { useState, useEffect } from 'react';
-import { collection, onSnapshot, doc, deleteDoc, query, where, getDoc } from 'firebase/firestore';
+import { useState, useEffect, useCallback } from 'react';
+import { collection, onSnapshot, doc, deleteDoc, query, where, getDoc, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase-client';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
@@ -17,6 +17,7 @@ import { acceptInvitation } from '@/ai/flows/accept-invitation-flow';
 import { declineInvitation } from '@/ai/flows/decline-invitation-flow';
 import { AddParentDialog } from '@/components/add-parent-dialog';
 import { removeFamilyMember } from '@/ai/flows/remove-family-member-flow';
+import { subDays, startOfDay } from 'date-fns';
 
 export default function FamilyPage() {
     const { user, isGuest, setInvitationsAsViewed } = useAuth();
@@ -27,12 +28,34 @@ export default function FamilyPage() {
     const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
     const [loading, setLoading] = useState(true);
     const [isAddParentDialogOpen, setIsAddParentDialogOpen] = useState(false);
+    const [missedReports, setMissedReports] = useState<Record<string, number>>({});
     const router = useRouter();
 
     useEffect(() => {
-        // When the user visits this page, mark the invitations as viewed for this session.
         setInvitationsAsViewed();
     }, [setInvitationsAsViewed]);
+
+    const fetchMissedReports = useCallback(async (members: FamilyMember[]) => {
+        const reports: Record<string, number> = {};
+        const sevenDaysAgo = startOfDay(subDays(new Date(), 7)).toISOString();
+
+        for (const member of members) {
+            if (member.status !== 'accepted') continue;
+            try {
+                const q = query(
+                    collection(db, 'users', member.uid, 'adherenceLogs'),
+                    where('status', '==', 'missed'),
+                    where('takenAt', '>=', sevenDaysAgo)
+                );
+                const querySnapshot = await getDocs(q);
+                reports[member.uid] = querySnapshot.size;
+            } catch (error) {
+                console.error(`Failed to fetch missed report for ${member.name}:`, error);
+                reports[member.uid] = 0;
+            }
+        }
+        setMissedReports(reports);
+    }, []);
 
     useEffect(() => {
       if (!user || isGuest) {
@@ -56,23 +79,23 @@ export default function FamilyPage() {
       
       fetchUserProfile();
 
-      // Listen for family members (accepted parents)
       const membersUnsub = onSnapshot(collection(db, 'users', user.uid, 'familyMembers'), (snapshot) => {
-          setFamilyMembers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as FamilyMember)));
+          const members = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as FamilyMember));
+          setFamilyMembers(members);
+          if (members.length > 0) {
+              fetchMissedReports(members);
+          }
           setLoading(false);
       }, (error) => {
           console.error("Error fetching family members:", error);
           setLoading(false);
       });
 
-      // Listen for invitations sent BY this user that are still pending
       const sentQuery = query(collection(db, 'invitations'), where('inviterId', '==', user.uid));
       const sentUnsub = onSnapshot(sentQuery, (snapshot) => {
          setSentInvitations(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Invitation)));
       }, (error) => console.error("Error fetching sent invitations:", error));
 
-
-      // Listen for invitations sent TO this user's email
       const receivedQuery = query(collection(db, 'invitations'), where('inviteeEmail', '==', user.email));
       const receivedUnsub = onSnapshot(receivedQuery, (snapshot) => {
           setReceivedInvitations(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Invitation)));
@@ -83,7 +106,7 @@ export default function FamilyPage() {
         sentUnsub();
         receivedUnsub();
       };
-    }, [user, isGuest]);
+    }, [user, isGuest, fetchMissedReports]);
 
     const handleCancelSentInvitation = async (invitationId: string) => {
         if (!user) return;
@@ -163,7 +186,7 @@ export default function FamilyPage() {
     }
 
     const allLinkedAccounts = [
-        ...familyMembers.filter(m => m.status === 'accepted'),
+        ...familyMembers,
         ...sentInvitations.filter(inv => inv.status === 'pending').map(inv => ({
             id: inv.id,
             uid: '', // Pending invitations don't have a confirmed user ID yet
@@ -230,7 +253,7 @@ export default function FamilyPage() {
         <Card>
             <CardHeader>
             <CardTitle>My Linked Accounts</CardTitle>
-            <CardDescription>Accounts you are linked with.</CardDescription>
+            <CardDescription>Accounts you are linked with. Missed doses are from the last 7 days.</CardDescription>
             </CardHeader>
             <CardContent>
             <div className="space-y-4">
@@ -241,16 +264,24 @@ export default function FamilyPage() {
                         <AvatarImage src={member.photoURL || `https://placehold.co/40x40.png`} alt={member.name} />
                         <AvatarFallback>{member.name.charAt(0)}</AvatarFallback>
                     </Avatar>
-                    <div>
+                    <div className="flex-grow">
                         <p className="font-semibold">{member.name}</p>
                         <p className="text-sm text-muted-foreground">{member.relation}</p>
+                         {member.status === 'accepted' && missedReports[member.uid] > 0 && (
+                            <div className="flex items-center text-destructive text-xs mt-1 font-semibold">
+                                <AlertCircle className="h-4 w-4 mr-1" />
+                                {missedReports[member.uid]} Missed Doses
+                            </div>
+                        )}
                     </div>
                     </div>
                     <div className="flex items-center gap-2">
                         {member.status === 'pending' ? (
                             <Badge variant="secondary">Pending</Badge>
                         ) : (
-                            <Badge variant="default">Linked</Badge>
+                             <Badge variant={missedReports[member.uid] > 0 ? "destructive" : "default"}>
+                                {missedReports[member.uid] > 0 ? 'Needs Attention' : 'Linked'}
+                             </Badge>
                         )}
                         <Button variant="ghost" size="sm" onClick={() => member.status === 'pending' ? handleCancelSentInvitation(member.id) : handleRemoveLinkedMember(member as FamilyMember)}>
                             {member.status === 'pending' ? 'Cancel' : 'Remove'}
