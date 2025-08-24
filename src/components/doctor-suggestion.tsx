@@ -121,7 +121,10 @@ export function DoctorSuggestion() {
           </CardHeader>
           <CardContent className="space-y-4">
              {loadingProfile ? (
-                 <p className="text-sm text-muted-foreground">Loading profile...</p>
+                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin"/>
+                    Loading profile...
+                 </div>
              ) : (!userCity && !isGuest) && (
                 <Alert>
                     <AlertCircle className="h-4 w-4" />
@@ -143,7 +146,7 @@ export function DoctorSuggestion() {
                       placeholder="e.g., I've been feeling dizzy and having chest pains..."
                       {...field}
                       rows={4}
-                      disabled={isGuest}
+                      disabled={isGuest || loadingProfile}
                     />
                   </FormControl>
                   <FormMessage />
@@ -200,7 +203,7 @@ export function DoctorSuggestion() {
             )}
           </CardContent>
           <CardFooter>
-            <Button type="submit" className="w-full" disabled={isLoading || isGuest}>
+            <Button type="submit" className="w-full" disabled={isLoading || isGuest || loadingProfile}>
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

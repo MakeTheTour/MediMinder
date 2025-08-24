@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, HeartPulse, BrainCircuit, Activity, Utensils, Dumbbell, Pill, AlertCircle, Trash2, Pencil, MoreVertical, Sparkles, User, MapPin, History, Save, Leaf } from 'lucide-react';
+import { Plus, HeartPulse, BrainCircuit, Activity, Utensils, Dumbbell, Pill, AlertCircle, Trash2, Pencil, MoreVertical, Sparkles, User, MapPin, History, Save, Leaf, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -163,7 +163,6 @@ export default function HealthPage() {
         const unsubSuggestions = onSnapshot(suggestionQuery, (snapshot) => {
              setSavedSuggestions(snapshot.docs.map(doc => {
                 const data = doc.data();
-                // Safe mapping to prevent internal errors if recommendation object is missing
                 const recommendation = data.recommendation || {};
                 return {
                     id: doc.id,
@@ -195,7 +194,6 @@ export default function HealthPage() {
     }, [user, isGuest]);
     
     useEffect(() => {
-        // Automatically generate insights when data changes, but only if not already loading.
         if (!loadingInsights && userProfile && (healthMetrics.length > 0 || savedSuggestions.length > 0)) {
             handleGetInsights();
         }
@@ -275,7 +273,11 @@ export default function HealthPage() {
                 <TabsContent value="insights" className="pt-4">
                     {loadingProfile ? (
                         <p className="text-sm text-muted-foreground">Loading profile to generate insights...</p>
-                    ) : healthMetrics.length === 0 && savedSuggestions.length === 0 && !isGuest && (
+                    ) : loadingInsights ? (
+                        <div className="flex justify-center items-center p-8">
+                            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                        </div>
+                    ) : healthMetrics.length === 0 && savedSuggestions.length === 0 && !isGuest ? (
                         <Alert variant="default" className="my-4">
                             <AlertCircle className="h-4 w-4" />
                             <AlertTitle>Get Your Insights!</AlertTitle>
@@ -283,8 +285,7 @@ export default function HealthPage() {
                                 To get your AI insights, please log some of your recent health data.
                             </AlertDescription>
                         </Alert>
-                    )}
-                    {insights ? (
+                    ) : insights ? (
                         <div className="space-y-4 p-4 bg-primary/10 rounded-lg">
                             <p className="font-semibold text-foreground">Insight:</p>
                             <p className="italic">"{insights.insight}"</p>
@@ -312,7 +313,7 @@ export default function HealthPage() {
                                 </div>
                             </div>
                         </div>
-                    ): (
+                    ) : (
                         <p className="text-muted-foreground text-sm">Click the button to generate insights from your logged data.</p>
                     )}
                     <Button onClick={handleGetInsights} disabled={loadingInsights || isGuest || loadingProfile} className="mt-4">
