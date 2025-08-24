@@ -2,7 +2,7 @@
 'use client'
 
 import Link from 'next/link';
-import { User, Bell, Mic, ChevronRight, LogOut, Star, LineChart, KeyRound, BellRing } from 'lucide-react';
+import { User, Bell, Mic, ChevronRight, LogOut, Star, LineChart, KeyRound } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -30,13 +30,7 @@ const settingsItems = [
     href: '/settings/notifications',
     icon: Bell,
     title: 'Notifications',
-    description: 'Manage alert preferences.',
-  },
-    {
-    href: '/settings/reminders',
-    icon: BellRing,
-    title: 'Reminder Settings',
-    description: 'Customize reminder timings.',
+    description: 'Manage alert preferences and timings.',
   },
   {
     href: '/settings/reports',
