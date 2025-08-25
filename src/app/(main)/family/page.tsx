@@ -28,6 +28,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import Link from 'next/link';
 
 export default function FamilyPage() {
     const { user, isGuest, setInvitationsAsViewed, setFamilyMissedDoseCount } = useAuth();
@@ -231,6 +232,51 @@ export default function FamilyPage() {
             photoURL: '',
         }))
     ];
+    
+     const MemberCard = ({ member }: { member: FamilyMember | (Invitation & { status: 'pending' }) }) => {
+        const content = (
+            <div className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50 w-full">
+                <div className="flex items-center gap-4 flex-grow">
+                    <Avatar>
+                        <AvatarImage src={member.photoURL || `https://placehold.co/40x40.png`} alt={member.name} />
+                        <AvatarFallback>{member.name.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-grow">
+                        <p className="font-semibold">{member.name}</p>
+                        <p className="text-sm text-muted-foreground">{member.relation}</p>
+                        {member.status === 'accepted' && missedReports[member.uid] > 0 && (
+                            <div className="flex items-center text-destructive text-xs mt-1 font-semibold">
+                                <AlertCircle className="h-4 w-4 mr-1" />
+                                {missedReports[member.uid]} Missed Doses
+                            </div>
+                        )}
+                    </div>
+                </div>
+                <div className="flex items-center gap-2">
+                    {member.status === 'pending' ? (
+                        <Badge variant="secondary">Pending</Badge>
+                    ) : (
+                        <Badge variant={missedReports[member.uid] > 0 ? "destructive" : "default"}>
+                            {missedReports[member.uid] > 0 ? 'Needs Attention' : 'Linked'}
+                        </Badge>
+                    )}
+                    <Button variant="ghost" size="sm" onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        member.status === 'pending' ? handleCancelSentInvitation(member.id) : setRemovingMember(member as FamilyMember)
+                    }}>
+                        {member.status === 'pending' ? 'Cancel' : 'Remove'}
+                    </Button>
+                </div>
+            </div>
+        );
+
+        if (member.status === 'accepted') {
+            return <Link href={`/family/${member.uid}/report`} className="block">{content}</Link>;
+        }
+        return content;
+    };
+
 
   return (
     <>
@@ -307,36 +353,7 @@ export default function FamilyPage() {
             <CardContent>
             <div className="space-y-4">
                 {(!isGuest && allLinkedAccounts.length > 0) ? allLinkedAccounts.map(member => (
-                <div key={member.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50">
-                    <div className="flex items-center gap-4">
-                    <Avatar>
-                        <AvatarImage src={member.photoURL || `https://placehold.co/40x40.png`} alt={member.name} />
-                        <AvatarFallback>{member.name.charAt(0)}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-grow">
-                        <p className="font-semibold">{member.name}</p>
-                        <p className="text-sm text-muted-foreground">{member.relation}</p>
-                         {member.status === 'accepted' && missedReports[member.uid] > 0 && (
-                            <div className="flex items-center text-destructive text-xs mt-1 font-semibold">
-                                <AlertCircle className="h-4 w-4 mr-1" />
-                                {missedReports[member.uid]} Missed Doses
-                            </div>
-                        )}
-                    </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        {member.status === 'pending' ? (
-                            <Badge variant="secondary">Pending</Badge>
-                        ) : (
-                             <Badge variant={missedReports[member.uid] > 0 ? "destructive" : "default"}>
-                                {missedReports[member.uid] > 0 ? 'Needs Attention' : 'Linked'}
-                             </Badge>
-                        )}
-                        <Button variant="ghost" size="sm" onClick={() => member.status === 'pending' ? handleCancelSentInvitation(member.id) : setRemovingMember(member as FamilyMember)}>
-                            {member.status === 'pending' ? 'Cancel' : 'Remove'}
-                        </Button>
-                    </div>
-                </div>
+                    <MemberCard key={member.id} member={member as FamilyMember | (Invitation & { status: 'pending' })} />
                 )) : (
                     <div className="text-center py-10">
                         <Users2 className="mx-auto h-12 w-12 text-muted-foreground" />
