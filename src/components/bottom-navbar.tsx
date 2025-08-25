@@ -13,7 +13,7 @@ const navItems = [
   { href: '/medicine', label: 'Medicine', icon: Pill },
   { href: '/health', label: 'Health', icon: HeartPulse },
   { href: '/family', label: 'Family', icon: Users },
-  { href: '/settings', label: 'Settings', icon: Settings },
+  { href: '/settings', label: 'You', icon: Settings },
 ];
 
 export function BottomNavbar() {
