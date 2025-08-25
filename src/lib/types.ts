@@ -138,14 +138,17 @@ export interface FamilyAlert {
     createdAt: string;
 }
 
+export const SymptomAnalysisOutputSchema = z.object({
+  specialistSuggestion: z.string().describe("Advice on which specialist doctor to see. (e.g., 'Consult a General Physician.')"),
+  diseaseConcept: z.string().describe("Provide a concept of the potential illness based on the symptoms. (e.g., 'Your symptoms may indicate a common viral fever.')"),
+  foodForDisease: z.string().describe("Provide food suggestions that may help with the symptoms of the potential illness. (e.g., 'For a fever, it's good to eat light, easily digestible foods like soups and boiled vegetables.')"),
+  activitySuggestion: z.string().describe("Advice on what kind of activities or exercises can be done to stay healthy. (e.g., 'Get adequate rest and you can do light exercises.')"),
+});
+export type SymptomAnalysisOutput = z.infer<typeof SymptomAnalysisOutputSchema>;
+
 export interface SymptomAnalysis {
     id: string;
     symptoms: string;
     createdAt: string;
-    analysis: {
-        specialistSuggestion: string;
-        diseaseConcept: string;
-        foodForDisease: string;
-        activitySuggestion: string;
-    }
+    analysis: SymptomAnalysisOutput
 }
