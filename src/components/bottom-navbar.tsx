@@ -30,6 +30,11 @@ export function BottomNavbar() {
           const totalAlerts = pendingInvitationCount + familyAlertCount;
           const showBadge = isFamilyItem && totalAlerts > 0;
           const isYouItem = item.label === 'You';
+          
+          let IconComponent = item.icon;
+          if (isYouItem && isGuest) {
+            IconComponent = User;
+          }
 
           return (
             <Link
@@ -48,7 +53,7 @@ export function BottomNavbar() {
                     </AvatarFallback>
                  </Avatar>
               ) : (
-                 <item.icon className="h-6 w-6" />
+                 <IconComponent className="h-6 w-6" />
               )}
               <span className="text-xs font-medium">{item.label}</span>
                {showBadge && (
