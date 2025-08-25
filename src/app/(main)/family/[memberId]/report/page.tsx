@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Pill, PackageX, Calendar } from 'lucide-react';
-import { format, subDays, startOfDay } from 'date-fns';
+import { format, subDays, startOfDay, parse } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 
@@ -19,6 +19,15 @@ function ReportItem({ log }: { log: AdherenceLog }) {
     const statusVariant = log.status === 'missed' ? 'destructive' : 'secondary';
     const statusText = log.status === 'missed' ? 'Missed Dose' : 'Stock Out';
     const StatusIcon = log.status === 'missed' ? Pill : PackageX;
+
+    const formatTime = (time24h: string | undefined) => {
+        if (!time24h) return 'N/A';
+        try {
+            return format(parse(time24h, 'HH:mm', new Date()), 'h:mm a');
+        } catch {
+            return time24h;
+        }
+    }
 
     return (
         <div className="flex items-start gap-4 p-4 border-b">
@@ -31,7 +40,7 @@ function ReportItem({ log }: { log: AdherenceLog }) {
                     <Badge variant={statusVariant}>{statusText}</Badge>
                 </div>
                  <p className="text-sm text-muted-foreground">
-                    Scheduled for {format(new Date(log.takenAt), 'MMMM d, yyyy')} at {log.scheduledTime}
+                    <span className="font-medium text-foreground">{format(new Date(log.takenAt), 'EEEE, MMMM d')}</span> at {formatTime(log.scheduledTime)}
                 </p>
             </div>
         </div>
