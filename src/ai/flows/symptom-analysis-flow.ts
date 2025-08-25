@@ -17,7 +17,7 @@ const SymptomAnalysisInputSchema = z.object({
 export type SymptomAnalysisInput = z.infer<typeof SymptomAnalysisInputSchema>;
 
 
-const SymptomAnalysisOutputSchema = z.object({
+export const SymptomAnalysisOutputSchema = z.object({
   specialistSuggestion: z.string().describe("Advice on which specialist doctor to see. (e.g., 'Consult a General Physician.')"),
   diseaseConcept: z.string().describe("Provide a concept of the potential illness based on the symptoms. (e.g., 'Your symptoms may indicate a common viral fever.')"),
   foodForDisease: z.string().describe("Provide food suggestions that may help with the symptoms of the potential illness. (e.g., 'For a fever, it's good to eat light, easily digestible foods like soups and boiled vegetables.')"),
@@ -40,10 +40,10 @@ User's Symptoms: "{{{symptoms}}}"
 
 Your response must be divided into four parts:
 
-1. Specialist Suggestion: Advise on what type of specialist doctor is needed based on the symptoms.
-2. Disease Concept: Provide an idea of what common illness the symptoms might indicate. This is not a final decision, just a possibility.
-3. Food for Disease: Suggest specific foods that can help alleviate the described symptoms or are beneficial for the potential illness.
-4. Activity Suggestion: Advise on what activities should be done or what kind of rest is needed for the patient's quick recovery.
+1.  Specialist Suggestion: Advise on what type of specialist doctor is needed based on the symptoms.
+2.  Disease Concept: Provide an idea of what common illness the symptoms might indicate. This is not a final decision, just a possibility.
+3.  Food for Disease: Suggest specific foods that can help alleviate the described symptoms or are beneficial for the potential illness.
+4.  Activity Suggestion: Advise on what activities should be done or what kind of rest is needed for the patient's quick recovery.
 
 Each answer must be concise, easy to understand, and positive.
 `,
@@ -60,5 +60,3 @@ const symptomAnalysisFlow = ai.defineFlow(
     return output!;
   }
 );
-
-
