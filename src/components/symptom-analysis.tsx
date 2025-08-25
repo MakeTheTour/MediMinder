@@ -120,7 +120,7 @@ export function SymptomAnalysis() {
         <div className="space-y-4 mt-6">
             <ResultCard icon={HeartPulse} title="Specialist Suggestion" content={analysis.specialistSuggestion} />
             <ResultCard icon={BrainCircuit} title="Disease Concept" content={analysis.diseaseConcept} />
-            <ResultCard icon={Leaf} title="Holistic Insight" content={analysis.holisticInsight} />
+            <ResultCard icon={Utensils} title="Food for Disease" content={analysis.foodForDisease} />
             <ResultCard icon={Activity} title="Activity Suggestion" content={analysis.activitySuggestion} />
         </div>
     )}
