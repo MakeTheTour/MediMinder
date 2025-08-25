@@ -70,8 +70,6 @@ export default function FamilyMemberReportPage() {
         fetchMemberProfile();
 
         const sevenDaysAgo = startOfDay(subDays(new Date(), 7));
-        // Simplified query to fetch all logs in the last 7 days.
-        // Filtering by status will be done on the client side to avoid composite index requirements.
         const logsQuery = query(
             collection(db, 'users', memberId, 'adherenceLogs'),
             where('takenAt', '>=', sevenDaysAgo.toISOString()),
@@ -81,7 +79,7 @@ export default function FamilyMemberReportPage() {
         const unsubscribe = onSnapshot(logsQuery, (snapshot) => {
             const logs = snapshot.docs
                 .map(doc => ({ id: doc.id, ...doc.data() } as AdherenceLog))
-                .filter(log => log.status === 'missed' || log.status === 'stock_out'); // Filter on the client
+                .filter(log => log.status === 'missed' || log.status === 'stock_out');
             setReportLogs(logs);
             setLoading(false);
         }, (error) => {
