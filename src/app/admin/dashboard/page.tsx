@@ -319,16 +319,18 @@ export default function AdminDashboardPage() {
         <Card>
             <Tabs defaultValue="daily" onValueChange={(value) => setSubscriptionPeriod(value as SubscriptionPeriod)}>
                 <CardHeader>
-                    <CardTitle className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2"><Star/> Subscriptions</div>
-                         <TabsList className="grid w-auto grid-cols-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <div>
+                            <CardTitle className="flex items-center gap-2"><Star/> Subscriptions</CardTitle>
+                            <CardDescription className="mt-1.5">Users who upgraded to premium.</CardDescription>
+                        </div>
+                         <TabsList className="grid w-full sm:w-auto grid-cols-4">
                             <TabsTrigger value="daily">Daily</TabsTrigger>
                             <TabsTrigger value="weekly">Weekly</TabsTrigger>
                             <TabsTrigger value="monthly">Monthly</TabsTrigger>
                             <TabsTrigger value="yearly">Yearly</TabsTrigger>
                         </TabsList>
-                    </CardTitle>
-                     <CardDescription>Users who upgraded to premium.</CardDescription>
+                    </div>
                 </CardHeader>
                 <CardContent>
                      {loading ? (
