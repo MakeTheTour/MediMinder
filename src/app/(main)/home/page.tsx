@@ -157,14 +157,15 @@ export default function HomePage() {
 
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex-1">
               <CardTitle className="flex items-center gap-2"><PillIcon/> Today's Medications</CardTitle>
               <CardDescription>Your medication schedule for today.</CardDescription>
             </div>
-            <Button asChild size="sm" variant="outline">
+            <Button asChild size="sm" variant="outline" className="shrink-0">
               <Link href="/medicine/add">
-                <Plus className="mr-2 h-4 w-4" /> Add Medicine
+                <Plus className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Add Medicine</span>
               </Link>
             </Button>
           </div>
@@ -196,14 +197,15 @@ export default function HomePage() {
       
        <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-              <div>
+          <div className="flex items-center justify-between gap-2">
+              <div className="flex-1">
                 <CardTitle className="flex items-center gap-2"><CalendarDays/> Today's Appointments</CardTitle>
                 <CardDescription>Your appointments for today.</CardDescription>
               </div>
-              <Button asChild size="sm" variant="outline">
+              <Button asChild size="sm" variant="outline" className="shrink-0">
                   <Link href="/appointments/add">
-                    <Plus className="mr-2 h-4 w-4" /> Add Appointment
+                    <Plus className="h-4 w-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Add Appointment</span>
                   </Link>
               </Button>
           </div>
@@ -235,5 +237,3 @@ export default function HomePage() {
     </div>
   );
 }
-
-    
