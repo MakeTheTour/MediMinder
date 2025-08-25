@@ -74,7 +74,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const setInvitationsAsViewed = () => {
     // This function clears the badges on the family tab.
     setPendingInvitationCount(0);
-    setFamilyAlertCount(0);
   };
 
   const setGuest = (isGuestMode: boolean) => {

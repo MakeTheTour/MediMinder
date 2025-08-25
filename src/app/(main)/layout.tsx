@@ -4,6 +4,7 @@
 import { ReactNode, useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { BottomNavbar } from '@/components/bottom-navbar';
+import { TopNavbar } from '@/components/top-navbar';
 import { useAuth } from '@/context/auth-context';
 import { Loader2 } from 'lucide-react';
 import { doc, getDoc, updateDoc, collection, onSnapshot, query, where, deleteDoc, limit } from 'firebase/firestore';
@@ -85,12 +86,12 @@ export default function MainLayout({ children }: { children: ReactNode }) {
       
        const familyAlertQuery = query(collection(db, 'familyAlerts'), where('familyMemberId', '==', user.uid));
        const familyAlertUnsub = onSnapshot(familyAlertQuery, (snapshot) => {
-          setFamilyAlertCount(snapshot.size);
-          if (!snapshot.empty) {
-              const latestAlert = snapshot.docs
+          const alerts = snapshot.docs
                 .map(doc => ({ id: doc.id, ...doc.data() } as FamilyAlert))
-                .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
-              setActiveFamilyAlert(latestAlert);
+                .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+          setFamilyAlertCount(alerts.length);
+          if (alerts.length > 0) {
+              setActiveFamilyAlert(alerts[0]);
           } else {
               setActiveFamilyAlert(null);
           }
@@ -377,7 +378,8 @@ export default function MainLayout({ children }: { children: ReactNode }) {
       )}
       {activeFamilyAlert && <FamilyAlertDialog isOpen={!!activeFamilyAlert} alert={activeFamilyAlert} onClose={() => handleAlertClose(activeFamilyAlert.id)} />}
       <div className="flex min-h-screen flex-col">
-        <main className="flex-1 pb-24">{children}</main>
+        {showNav && <TopNavbar />}
+        <main className="flex-1 pt-16 pb-24">{children}</main>
         {showNav && <BottomNavbar />}
       </div>
     </>
