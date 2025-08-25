@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/context/auth-context';
 import { db } from '@/lib/firebase-client';
-import { collection, query, where, onSnapshot, doc, getDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, getDoc, orderBy, limit } from 'firebase/firestore';
 import { AdherenceLog, UserProfile } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -70,15 +70,18 @@ export default function FamilyMemberReportPage() {
         fetchMemberProfile();
 
         const sevenDaysAgo = startOfDay(subDays(new Date(), 7));
+        // Simplified query to fetch all logs in the last 7 days.
+        // Filtering by status will be done on the client side to avoid composite index requirements.
         const logsQuery = query(
             collection(db, 'users', memberId, 'adherenceLogs'),
             where('takenAt', '>=', sevenDaysAgo.toISOString()),
-            where('status', 'in', ['missed', 'stock_out'])
+            orderBy('takenAt', 'desc')
         );
         
         const unsubscribe = onSnapshot(logsQuery, (snapshot) => {
-            const logs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AdherenceLog))
-                .sort((a, b) => new Date(b.takenAt).getTime() - new Date(a.createdAt).getTime());
+            const logs = snapshot.docs
+                .map(doc => ({ id: doc.id, ...doc.data() } as AdherenceLog))
+                .filter(log => log.status === 'missed' || log.status === 'stock_out'); // Filter on the client
             setReportLogs(logs);
             setLoading(false);
         }, (error) => {
