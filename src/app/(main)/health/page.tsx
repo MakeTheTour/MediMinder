@@ -2,11 +2,11 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, HeartPulse, BrainCircuit, Activity, Utensils, Pill, AlertCircle, Trash2, Pencil, MoreVertical, Sparkles, User, MapPin, History, Save, Leaf, Loader2 } from 'lucide-react';
+import { Plus, HeartPulse, BrainCircuit, Activity, Utensils, Pill, AlertCircle, Trash2, Pencil, MoreVertical, Sparkles, User, MapPin, History, Save, Leaf, Loader2, ClipboardList } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { HealthMetric, UserProfile, SpecialistRecommendationOutput } from '@/lib/types';
+import { HealthMetric, UserProfile, SpecialistRecommendationOutput, SymptomAnalysis as SavedSymptomAnalysisType } from '@/lib/types';
 import { useAuth } from '@/context/auth-context';
 import { collection, onSnapshot, query, orderBy, getDoc, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase-client';
@@ -23,6 +23,12 @@ import {
 import { deleteDoctorSuggestion } from '@/ai/flows/delete-doctor-suggestion-flow';
 import { SymptomAnalysis } from '@/components/symptom-analysis';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
 
 interface SavedSuggestion extends SpecialistRecommendationOutput {
     id: string;
@@ -108,6 +114,56 @@ function SavedSuggestionCard({ suggestion, onDelete }: { suggestion: SavedSugges
     )
 }
 
+function SavedAnalysisCard({ item }: { item: SavedSymptomAnalysisType }) {
+    const { analysis, symptoms, createdAt } = item;
+    return (
+        <Card className="bg-muted/50 overflow-hidden">
+            <Accordion type="single" collapsible>
+                <AccordionItem value="item-1" className="border-b-0">
+                    <AccordionTrigger className="p-4 hover:no-underline">
+                        <div className="text-left">
+                            <p className="text-sm text-muted-foreground">{format(new Date(createdAt), 'MMMM d, yyyy')}</p>
+                            <p className="font-semibold text-foreground">Analysis for: "{symptoms}"</p>
+                        </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="px-4 pb-4">
+                        <div className="space-y-3 pt-2">
+                             <div className="flex items-start gap-3">
+                                <HeartPulse className="h-5 w-5 text-primary mt-1 shrink-0" />
+                                <div>
+                                    <h4 className="font-semibold text-foreground">Specialist Suggestion</h4>
+                                    <p className="text-sm">{analysis.specialistSuggestion}</p>
+                                </div>
+                            </div>
+                             <div className="flex items-start gap-3">
+                                <BrainCircuit className="h-5 w-5 text-primary mt-1 shrink-0" />
+                                <div>
+                                    <h4 className="font-semibold text-foreground">Disease Concept</h4>
+                                    <p className="text-sm">{analysis.diseaseConcept}</p>
+                                </div>
+                            </div>
+                             <div className="flex items-start gap-3">
+                                <Utensils className="h-5 w-5 text-primary mt-1 shrink-0" />
+                                <div>
+                                    <h4 className="font-semibold text-foreground">Food for Disease</h4>
+                                    <p className="text-sm">{analysis.foodForDisease}</p>
+                                </div>
+                            </div>
+                             <div className="flex items-start gap-3">
+                                <Activity className="h-5 w-5 text-primary mt-1 shrink-0" />
+                                <div>
+                                    <h4 className="font-semibold text-foreground">Activity Suggestion</h4>
+                                    <p className="text-sm">{analysis.activitySuggestion}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </AccordionContent>
+                </AccordionItem>
+            </Accordion>
+        </Card>
+    );
+}
+
 export default function HealthPage() {
     const { user, isGuest } = useAuth();
     const router = useRouter();
@@ -115,11 +171,14 @@ export default function HealthPage() {
     
     const [healthMetrics, setHealthMetrics] = useState<HealthMetric[]>([]);
     const [savedSuggestions, setSavedSuggestions] = useState<SavedSuggestion[]>([]);
+    const [savedAnalyses, setSavedAnalyses] = useState<SavedSymptomAnalysisType[]>([]);
+
 
     useEffect(() => {
         if (!user || isGuest) {
             setHealthMetrics([]);
             setSavedSuggestions([]);
+            setSavedAnalyses([]);
             return;
         };
 
@@ -145,9 +204,15 @@ export default function HealthPage() {
              }));
         });
         
+        const analysesQuery = query(collection(db, 'users', user.uid, 'symptomAnalyses'), orderBy('createdAt', 'desc'));
+        const unsubAnalyses = onSnapshot(analysesQuery, (snapshot) => {
+            setSavedAnalyses(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SavedSymptomAnalysisType)));
+        });
+        
         return () => {
           unsubHealth();
           unsubSuggestions();
+          unsubAnalyses();
         }
     }, [user, isGuest]);
     
@@ -215,8 +280,9 @@ export default function HealthPage() {
         </CardHeader>
         <CardContent>
             <Tabs defaultValue="history">
-                <TabsList className="grid w-full grid-cols-2">
+                <TabsList className="grid w-full grid-cols-3">
                     <TabsTrigger value="history"><History className="mr-2 h-4 w-4" /> History Log</TabsTrigger>
+                    <TabsTrigger value="analyses"><ClipboardList className="mr-2 h-4 w-4" /> Saved Analyses</TabsTrigger>
                     <TabsTrigger value="suggestions"><Save className="mr-2 h-4 w-4" /> Saved Suggestions</TabsTrigger>
                 </TabsList>
                 <TabsContent value="history" className="pt-4">
@@ -237,7 +303,21 @@ export default function HealthPage() {
                         </div>
                     )}
                 </TabsContent>
-
+                 <TabsContent value="analyses" className="pt-4">
+                    {savedAnalyses.length > 0 ? (
+                        <div className="space-y-4">
+                        {savedAnalyses.map((item) => (
+                            <SavedAnalysisCard key={item.id} item={item} />
+                        ))}
+                        </div>
+                    ) : (
+                        <div className="text-center py-10">
+                            <BrainCircuit className="mx-auto h-12 w-12 text-muted-foreground" />
+                            <h3 className="mt-4 text-lg font-semibold">{isGuest ? "Sign in to save analyses" : "No Saved Analyses"}</h3>
+                            <p className="mt-1 text-sm text-muted-foreground">{isGuest ? "Create an account or sign in to get and save AI analyses." : "Use the symptom analysis tool to get an analysis and save it."}</p>
+                        </div>
+                    )}
+                </TabsContent>
                 <TabsContent value="suggestions" className="pt-4">
                     {savedSuggestions.length > 0 ? (
                         <div className="space-y-4">

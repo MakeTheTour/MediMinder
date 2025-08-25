@@ -4,7 +4,7 @@ config();
 
 import '@/ai/flows/customize-voice-prompts.ts';
 import '@/ai/flows/intelligent-snooze.ts';
-import '@/ai/flows/send-premium-confirmation-email.ts';
+import '@/aiflows/send-premium-confirmation-email.ts';
 import '@/ai/flows/track-adherence-flow.ts';
 import '@/ai/flows/health-insights-flow.ts';
 import '@/ai/flows/symptom-checker-flow.ts';
@@ -15,3 +15,4 @@ import '@/ai/flows/save-doctor-suggestion-flow.ts';
 import '@/ai/flows/delete-doctor-suggestion-flow.ts';
 import '@/ai/flows/cleanup-flow.ts';
 import '@/ai/flows/symptom-analysis-flow.ts';
+import '@/ai/flows/save-symptom-analysis-flow.ts';

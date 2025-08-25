@@ -137,3 +137,15 @@ export interface FamilyAlert {
     alertMessage: string;
     createdAt: string;
 }
+
+export interface SymptomAnalysis {
+    id: string;
+    symptoms: string;
+    createdAt: string;
+    analysis: {
+        specialistSuggestion: string;
+        diseaseConcept: string;
+        foodForDisease: string;
+        activitySuggestion: string;
+    }
+}

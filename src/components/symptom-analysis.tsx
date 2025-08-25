@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Stethoscope, Loader2, Sparkles, Activity, Utensils, BrainCircuit, HeartPulse, Leaf } from 'lucide-react';
+import { Stethoscope, Loader2, Sparkles, Activity, Utensils, BrainCircuit, HeartPulse, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Textarea } from '@/components/ui/textarea';
@@ -13,6 +13,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/auth-context';
 import { analyzeSymptoms, SymptomAnalysisOutput } from '@/ai/flows/symptom-analysis-flow';
+import { saveSymptomAnalysis } from '@/ai/flows/save-symptom-analysis-flow';
 
 const symptomSchema = z.object({
   symptoms: z.string().min(10, 'Please describe your symptoms in at least 10 characters.'),
@@ -36,7 +37,10 @@ export function SymptomAnalysis() {
   const { toast } = useToast();
   const { user, isGuest } = useAuth();
   const [analysis, setAnalysis] = useState<SymptomAnalysisOutput | null>(null);
+  const [symptoms, setSymptoms] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [hasSaved, setHasSaved] = useState(false);
 
   const form = useForm<z.infer<typeof symptomSchema>>({
     resolver: zodResolver(symptomSchema),
@@ -48,6 +52,8 @@ export function SymptomAnalysis() {
   async function onSubmit(values: z.infer<typeof symptomSchema>) {
     setIsLoading(true);
     setAnalysis(null);
+    setHasSaved(false);
+    setSymptoms(values.symptoms);
     try {
       const result = await analyzeSymptoms(values);
       setAnalysis(result);
@@ -60,6 +66,37 @@ export function SymptomAnalysis() {
       });
     } finally {
       setIsLoading(false);
+    }
+  }
+
+  async function handleSaveAnalysis() {
+    if (!analysis || !user) return;
+    setIsSaving(true);
+    try {
+        const result = await saveSymptomAnalysis({
+            userId: user.uid,
+            symptoms: symptoms,
+            analysis: analysis,
+        });
+
+        if (result.success) {
+            toast({
+                title: 'Analysis Saved',
+                description: 'Your symptom analysis has been saved to your history.',
+            });
+            setHasSaved(true);
+        } else {
+            throw new Error(result.message);
+        }
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
+        toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: `Failed to save analysis: ${errorMessage}`,
+        });
+    } finally {
+        setIsSaving(false);
     }
   }
 
@@ -122,6 +159,14 @@ export function SymptomAnalysis() {
             <ResultCard icon={BrainCircuit} title="Disease Concept" content={analysis.diseaseConcept} />
             <ResultCard icon={Utensils} title="Food for Disease" content={analysis.foodForDisease} />
             <ResultCard icon={Activity} title="Activity Suggestion" content={analysis.activitySuggestion} />
+            
+            <Button onClick={handleSaveAnalysis} className="w-full" disabled={isSaving || hasSaved || isGuest}>
+              {isSaving ? (
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</>
+              ) : hasSaved ? 'Saved' : (
+                <><Save className="mr-2 h-4 w-4" /> Save Analysis</>
+              )}
+            </Button>
         </div>
     )}
     </>
