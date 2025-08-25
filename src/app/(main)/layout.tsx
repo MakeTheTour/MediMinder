@@ -20,7 +20,7 @@ import { trackAdherence } from '@/ai/flows/track-adherence-flow';
 import { type ReminderSettings } from '@/app/(main)/settings/notifications/page';
 
 export default function MainLayout({ children }: { children: ReactNode }) {
-  const { user, loading, isGuest, setFamilyMissedDoseCount, setPendingInvitationCount, setFamilyAlertCount } = useAuth();
+  const { user, loading, isGuest, setFamilyMissedDoseCount, setPendingInvitationCount, setFamilyAlertCount, setInvitationsAsViewed } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const { toast } = useToast();
@@ -50,6 +50,13 @@ export default function MainLayout({ children }: { children: ReactNode }) {
 
   const noNavPaths = ['/login', '/signup', '/'];
   const showNav = !noNavPaths.includes(pathname) && !pathname.startsWith('/admin');
+
+  useEffect(() => {
+    if (pathname === '/family') {
+        setInvitationsAsViewed();
+    }
+  }, [pathname, setInvitationsAsViewed]);
+
 
   useEffect(() => {
     if (user && !isGuest) {
