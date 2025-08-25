@@ -216,13 +216,11 @@ export default function MainLayout({ children }: { children: ReactNode }) {
           try {
               if (typeof window !== "undefined" && "Notification" in window && "serviceWorker" in navigator) {
                 if (Notification.permission === "granted") {
-                    navigator.serviceWorker.getRegistration().then(reg => {
-                        if (reg) {
-                            reg.showNotification("Time for your medication!", {
-                                body: `It's time for your ${format(scheduledTime, 'h:mm a')} dose.`,
-                                icon: "/icons/icon-192x192.png"
-                            });
-                        }
+                    navigator.serviceWorker.ready.then(reg => {
+                        reg.showNotification("Time for your medication!", {
+                            body: `It's time for your ${format(scheduledTime, 'h:mm a')} dose.`,
+                            icon: "/icon-192x192.png"
+                        });
                     });
                 }
               }
@@ -318,13 +316,13 @@ export default function MainLayout({ children }: { children: ReactNode }) {
   }, [user, loading, router, isGuest, pathname]);
 
   useEffect(() => {
-    if (typeof window !== "undefined" && "serviceWorker" in navigator) {
-        navigator.serviceWorker.register("/sw.js")
-          .then(reg => console.log("Service Worker Registered", reg))
-          .catch(err => console.error("SW registration failed", err));
-    }
-    if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "default") {
-        Notification.requestPermission();
+    if (typeof window !== "undefined" && "serviceWorker" in navigator && window.workbox !== undefined) {
+        navigator.serviceWorker.ready.then(reg => {
+            console.log("Service Worker ready.");
+             if (Notification.permission === "default") {
+                Notification.requestPermission();
+            }
+        });
     }
   }, []);
 
