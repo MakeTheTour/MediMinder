@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Stethoscope, Loader2, Sparkles, Activity, Utensils, BrainCircuit, HeartPulse } from 'lucide-react';
+import { Stethoscope, Loader2, Sparkles, Activity, Utensils, BrainCircuit, HeartPulse, Leaf } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Textarea } from '@/components/ui/textarea';
@@ -120,7 +120,7 @@ export function SymptomAnalysis() {
         <div className="space-y-4 mt-6">
             <ResultCard icon={HeartPulse} title="Specialist Suggestion" content={analysis.specialistSuggestion} />
             <ResultCard icon={BrainCircuit} title="Disease Concept" content={analysis.diseaseConcept} />
-            <ResultCard icon={Utensils} title="Food Suggestion" content={analysis.foodSuggestion} />
+            <ResultCard icon={Leaf} title="Holistic Insight" content={analysis.holisticInsight} />
             <ResultCard icon={Activity} title="Activity Suggestion" content={analysis.activitySuggestion} />
         </div>
     )}
