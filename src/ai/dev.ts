@@ -16,3 +16,4 @@ import '@/ai/flows/delete-doctor-suggestion-flow.ts';
 import '@/ai/flows/cleanup-flow.ts';
 import '@/ai/flows/symptom-analysis-flow.ts';
 import '@/ai/flows/save-symptom-analysis-flow.ts';
+import '@/ai/flows/delete-symptom-analysis-flow.ts';

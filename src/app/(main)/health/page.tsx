@@ -29,6 +29,8 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion"
+import { deleteSymptomAnalysis } from '@/ai/flows/delete-symptom-analysis-flow';
+
 
 interface SavedSuggestion extends SpecialistRecommendationOutput {
     id: string;
@@ -70,18 +72,35 @@ function HealthHistoryItem({ metric, onDelete, onEdit }: { metric: HealthMetric,
     )
 }
 
-function SavedAnalysisCard({ item }: { item: SavedSymptomAnalysisType }) {
-    const { analysis, symptoms, createdAt } = item;
+function SavedAnalysisCard({ item, onDelete }: { item: SavedSymptomAnalysisType, onDelete: (id: string) => void }) {
+    const { id, analysis, symptoms, createdAt } = item;
     return (
-        <Card className="bg-muted/50 overflow-hidden">
+        <Card className="bg-muted/50 overflow-hidden group">
             <Accordion type="single" collapsible>
                 <AccordionItem value="item-1" className="border-b-0">
-                    <AccordionTrigger className="p-4 hover:no-underline">
-                        <div className="text-left">
-                            <p className="text-sm text-muted-foreground">{format(new Date(createdAt), 'MMMM d, yyyy')}</p>
-                            <p className="font-semibold text-foreground">Analysis for: "{symptoms}"</p>
-                        </div>
-                    </AccordionTrigger>
+                    <div className="flex items-center justify-between p-4 pr-2">
+                        <AccordionTrigger className="p-0 hover:no-underline flex-1">
+                            <div className="text-left">
+                                <p className="text-sm text-muted-foreground">{format(new Date(createdAt), 'MMMM d, yyyy')}</p>
+                                <p className="font-semibold text-foreground">Analysis for: "{symptoms}"</p>
+                            </div>
+                        </AccordionTrigger>
+                         <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                                    <MoreVertical className="h-4 w-4" />
+                                    <span className="sr-only">More options</span>
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => onDelete(id)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Delete
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
+
                     <AccordionContent className="px-4 pb-4">
                         <div className="space-y-3 pt-2">
                              <div className="flex items-start gap-3">
@@ -168,6 +187,24 @@ export default function HealthPage() {
             toast({ title: "Error", description: "Could not delete the reading. Please try again.", variant: 'destructive' });
         }
     };
+
+    const handleDeleteAnalysis = async (id: string) => {
+        if (isGuest || !user) {
+            toast({ title: "Cannot Delete", description: "You must be signed in to delete an analysis." });
+            return;
+        }
+        try {
+            const result = await deleteSymptomAnalysis({ userId: user.uid, analysisId: id });
+            if (result.success) {
+                toast({ title: "Analysis Deleted", description: "The saved analysis has been removed." });
+            } else {
+                throw new Error(result.message);
+            }
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
+            toast({ title: "Error", description: `Could not delete the analysis: ${errorMessage}`, variant: 'destructive' });
+        }
+    };
     
     const handleAddClick = () => {
         if (isGuest || !user) {
@@ -224,7 +261,7 @@ export default function HealthPage() {
                     {savedAnalyses.length > 0 ? (
                         <div className="space-y-4">
                         {savedAnalyses.map((item) => (
-                            <SavedAnalysisCard key={item.id} item={item} />
+                            <SavedAnalysisCard key={item.id} item={item} onDelete={handleDeleteAnalysis} />
                         ))}
                         </div>
                     ) : (
