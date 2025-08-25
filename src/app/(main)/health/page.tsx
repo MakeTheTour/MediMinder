@@ -70,50 +70,6 @@ function HealthHistoryItem({ metric, onDelete, onEdit }: { metric: HealthMetric,
     )
 }
 
-function SavedSuggestionCard({ suggestion, onDelete }: { suggestion: SavedSuggestion, onDelete: (id: string) => void }) {
-    return (
-        <div className="p-4 rounded-lg bg-muted/50">
-            <div className="flex justify-between items-start">
-                 <div>
-                    <p className="text-sm text-muted-foreground">{format(new Date(suggestion.createdAt), 'MMMM d, yyyy')}</p>
-                    <p className="font-semibold text-foreground">For: "{suggestion.symptoms}"</p>
-                 </div>
-                 <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => onDelete(suggestion.id)}>
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                    <span className="sr-only">Delete suggestion</span>
-                </Button>
-            </div>
-            <div className="p-3 mt-2 bg-primary/10 rounded-lg border border-primary/20 space-y-3">
-                 <div className="flex items-start gap-3">
-                  <Sparkles className="h-5 w-5 text-primary mt-1 shrink-0" />
-                  <div>
-                    <h4 className="font-semibold text-foreground">{suggestion.specialist}</h4>
-                    <p className="text-sm">{suggestion.reasoning}</p>
-                  </div>
-                </div>
-                {suggestion.doctorName && (
-                     <div className="border-t border-primary/20 pt-3 space-y-3">
-                         <div className="flex items-start gap-3">
-                             <User className="h-5 w-5 text-primary mt-1 shrink-0" />
-                            <div>
-                                <h4 className="font-semibold text-foreground">Suggested Doctor</h4>
-                                <p>{suggestion.doctorName}</p>
-                            </div>
-                        </div>
-                         <div className="flex items-start gap-3">
-                            <MapPin className="h-5 w-5 text-primary mt-1 shrink-0" />
-                            <div>
-                                <h4 className="font-semibold text-foreground">Location</h4>
-                                <p className="text-muted-foreground">{suggestion.doctorAddress}</p>
-                            </div>
-                        </div>
-                    </div>
-                )}
-            </div>
-        </div>
-    )
-}
-
 function SavedAnalysisCard({ item }: { item: SavedSymptomAnalysisType }) {
     const { analysis, symptoms, createdAt } = item;
     return (
@@ -170,14 +126,12 @@ export default function HealthPage() {
     const { toast } = useToast();
     
     const [healthMetrics, setHealthMetrics] = useState<HealthMetric[]>([]);
-    const [savedSuggestions, setSavedSuggestions] = useState<SavedSuggestion[]>([]);
     const [savedAnalyses, setSavedAnalyses] = useState<SavedSymptomAnalysisType[]>([]);
 
 
     useEffect(() => {
         if (!user || isGuest) {
             setHealthMetrics([]);
-            setSavedSuggestions([]);
             setSavedAnalyses([]);
             return;
         };
@@ -187,23 +141,6 @@ export default function HealthPage() {
             setHealthMetrics(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as HealthMetric)));
         });
         
-        const suggestionQuery = query(collection(db, 'users', user.uid, 'doctorSuggestions'), orderBy('createdAt', 'desc'));
-        const unsubSuggestions = onSnapshot(suggestionQuery, (snapshot) => {
-             setSavedSuggestions(snapshot.docs.map(doc => {
-                const data = doc.data();
-                const recommendation = data.recommendation || {};
-                return {
-                    id: doc.id,
-                    symptoms: data.symptoms || '',
-                    createdAt: data.createdAt,
-                    specialist: recommendation.specialist || 'N/A',
-                    reasoning: recommendation.reasoning || '',
-                    doctorName: recommendation.doctorName,
-                    doctorAddress: recommendation.doctorAddress,
-                } as SavedSuggestion
-             }));
-        });
-        
         const analysesQuery = query(collection(db, 'users', user.uid, 'symptomAnalyses'), orderBy('createdAt', 'desc'));
         const unsubAnalyses = onSnapshot(analysesQuery, (snapshot) => {
             setSavedAnalyses(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SavedSymptomAnalysisType)));
@@ -211,7 +148,6 @@ export default function HealthPage() {
         
         return () => {
           unsubHealth();
-          unsubSuggestions();
           unsubAnalyses();
         }
     }, [user, isGuest]);
@@ -230,24 +166,6 @@ export default function HealthPage() {
             toast({ title: "History Deleted", description: "The health reading has been removed." });
         } catch (error) {
             toast({ title: "Error", description: "Could not delete the reading. Please try again.", variant: 'destructive' });
-        }
-    };
-
-    const handleDeleteSuggestion = async (id: string) => {
-        if (isGuest || !user) {
-            toast({ title: "Cannot Delete", description: "You must be signed in to delete history." });
-            return;
-        }
-        try {
-            const result = await deleteDoctorSuggestion({ userId: user.uid, suggestionId: id });
-            if (result.success) {
-                toast({ title: "Suggestion Deleted", description: "The saved suggestion has been removed." });
-            } else {
-                throw new Error(result.message);
-            }
-        } catch (error) {
-             const errorMessage = error instanceof Error ? error.message : "Could not delete the suggestion. Please try again.";
-            toast({ title: "Error", description: errorMessage, variant: 'destructive' });
         }
     };
     
@@ -280,10 +198,9 @@ export default function HealthPage() {
         </CardHeader>
         <CardContent>
             <Tabs defaultValue="history">
-                <TabsList className="grid w-full grid-cols-3">
+                <TabsList className="grid w-full grid-cols-2">
                     <TabsTrigger value="history"><History className="mr-2 h-4 w-4" /> History Log</TabsTrigger>
                     <TabsTrigger value="analyses"><ClipboardList className="mr-2 h-4 w-4" /> Saved Analyses</TabsTrigger>
-                    <TabsTrigger value="suggestions"><Save className="mr-2 h-4 w-4" /> Saved Suggestions</TabsTrigger>
                 </TabsList>
                 <TabsContent value="history" className="pt-4">
                     {healthMetrics.length > 0 ? (
@@ -315,21 +232,6 @@ export default function HealthPage() {
                             <BrainCircuit className="mx-auto h-12 w-12 text-muted-foreground" />
                             <h3 className="mt-4 text-lg font-semibold">{isGuest ? "Sign in to save analyses" : "No Saved Analyses"}</h3>
                             <p className="mt-1 text-sm text-muted-foreground">{isGuest ? "Create an account or sign in to get and save AI analyses." : "Use the symptom analysis tool to get an analysis and save it."}</p>
-                        </div>
-                    )}
-                </TabsContent>
-                <TabsContent value="suggestions" className="pt-4">
-                    {savedSuggestions.length > 0 ? (
-                        <div className="space-y-4">
-                        {savedSuggestions.map((suggestion) => (
-                            <SavedSuggestionCard key={suggestion.id} suggestion={suggestion} onDelete={handleDeleteSuggestion}/>
-                        ))}
-                        </div>
-                    ) : (
-                        <div className="text-center py-10">
-                            <BrainCircuit className="mx-auto h-12 w-12 text-muted-foreground" />
-                            <h3 className="mt-4 text-lg font-semibold">{isGuest ? "Sign in to save suggestions" : "No Saved Suggestions"}</h3>
-                            <p className="mt-1 text-sm text-muted-foreground">{isGuest ? "Create an account or sign in to get and save AI suggestions." : "Use the symptom analysis tool to get a recommendation."}</p>
                         </div>
                     )}
                 </TabsContent>
