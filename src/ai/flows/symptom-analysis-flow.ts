@@ -1,7 +1,7 @@
 
 'use server';
 /**
- * @fileOverview Analyzes user symptoms to provide multi-faceted health advice in Bengali.
+ * @fileOverview Analyzes user symptoms to provide multi-faceted health advice.
  *
  * - analyzeSymptoms - A function that provides a comprehensive analysis.
  * - SymptomAnalysisInput - The input type for the function.
@@ -12,16 +12,16 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const SymptomAnalysisInputSchema = z.object({
-  symptoms: z.string().describe("A description of the user's symptoms in Bengali or English."),
+  symptoms: z.string().describe("A description of the user's symptoms in English."),
 });
 export type SymptomAnalysisInput = z.infer<typeof SymptomAnalysisInputSchema>;
 
 
 const SymptomAnalysisOutputSchema = z.object({
-  specialistSuggestion: z.string().describe("কোন বিশেষজ্ঞ ডাক্তার দেখানো উচিত তার পরামর্শ। (e.g., 'মেডিসিন বিশেষজ্ঞের সাথে পরামর্শ করুন।')"),
-  diseaseConcept: z.string().describe("উপসর্গগুলোর উপর ভিত্তি করে সম্ভাব্য রোগের ধারণা দিন। (e.g., 'আপনার উপসর্গগুলো সাধারণ ভাইরাল জ্বরের ইঙ্গিত দেয়।')"),
-  foodSuggestion: z.string().describe("দ্রুত সুস্থ হওয়ার জন্য কী ধরনের খাবার খাওয়া উচিত তার তালিকা বা পরামর্শ দিন। (e.g., 'প্রচুর পরিমাণে পানি পান করুন এবং সহজপাচ্য খাবার খান।')"),
-  activitySuggestion: z.string().describe("সুস্থ থাকার জন্য কী ধরনের কাজ বা ব্যায়াম করা যেতে পারে তার পরামর্শ দিন। (e.g., 'পর্যাপ্ত বিশ্রাম নিন এবং হালকা ব্যায়াম করতে পারেন।')"),
+  specialistSuggestion: z.string().describe("Advice on which specialist doctor to see. (e.g., 'Consult a General Physician.')"),
+  diseaseConcept: z.string().describe("Provide a concept of the potential illness based on the symptoms. (e.g., 'Your symptoms may indicate a common viral fever.')"),
+  foodSuggestion: z.string().describe("List or suggest what kind of food should be eaten for a quick recovery. (e.g., 'Drink plenty of water and eat easily digestible foods.')"),
+  activitySuggestion: z.string().describe("Advice on what kind of activities or exercises can be done to stay healthy. (e.g., 'Get adequate rest and you can do light exercises.')"),
 });
 export type SymptomAnalysisOutput = z.infer<typeof SymptomAnalysisOutputSchema>;
 
@@ -34,18 +34,18 @@ const prompt = ai.definePrompt({
   name: 'symptomAnalysisPrompt',
   input: {schema: SymptomAnalysisInputSchema},
   output: {schema: SymptomAnalysisOutputSchema},
-  prompt: `আপনি একজন অভিজ্ঞ ডাক্তার এবং স্বাস্থ্য পরামর্শদাতা। আপনার কাজ হলো ব্যবহারকারীর দেওয়া রোগের উপসর্গগুলো বিশ্লেষণ করে বাংলায় চারটি ভিন্ন বিষয়ে পরামর্শ দেওয়া। কোনো অবস্থাতেই চূড়ান্ত রোগ নির্ণয় করবেন না, শুধুমাত্র পরামর্শ দিন।
+  prompt: `You are an experienced doctor and health consultant. Your job is to analyze the user's reported symptoms and provide advice in four different categories in English. Do not give a final diagnosis under any circumstances; only provide suggestions.
 
-ব্যবহারকারীর উপসর্গ: "{{{symptoms}}}"
+User's Symptoms: "{{{symptoms}}}"
 
-আপনার উত্তর অবশ্যই চারটি অংশে বিভক্ত থাকবে:
+Your response must be divided into four parts:
 
-১. বিশেষজ্ঞের পরামর্শ: উপসর্গ অনুযায়ী কোন ধরনের বিশেষজ্ঞ ডাক্তার দেখানো প্রয়োজন, সেই পরামর্শ দিন।
-২. রোগের ধারণা: উপসর্গগুলো কোন সাধারণ রোগের ইঙ্গিত দিতে পারে, তার একটি ধারণা দিন। এটি চূড়ান্ত কোনো সিদ্ধান্ত নয়, শুধু একটি সম্ভাবনা।
-৩. খাবার পরামর্শ: দ্রুত আরোগ্যের জন্য কী কী খাবার খাওয়া উচিত বা এড়িয়ে চলা উচিত, তার একটি তালিকা বা বর্ণনা দিন।
-৪. করণীয়: রোগীর দ্রুত সুস্থতার জন্য কী কী কাজ করা উচিত বা কী ধরনের বিশ্রাম প্রয়োজন, তার পরামর্শ দিন।
+1. Specialist Suggestion: Advise on what type of specialist doctor is needed based on the symptoms.
+2. Disease Concept: Provide an idea of what common illness the symptoms might indicate. This is not a final decision, just a possibility.
+3. Food Suggestion: Give a list or description of what foods should be eaten or avoided for a speedy recovery.
+4. Activity Suggestion: Advise on what activities should be done or what kind of rest is needed for the patient's quick recovery.
 
-প্রতিটি উত্তর সংক্ষিপ্ত, সহজবোধ্য এবং ইতিবাচক হতে হবে।
+Each answer must be concise, easy to understand, and positive.
 `,
 });
 

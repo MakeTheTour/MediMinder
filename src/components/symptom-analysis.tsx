@@ -15,7 +15,7 @@ import { useAuth } from '@/context/auth-context';
 import { analyzeSymptoms, SymptomAnalysisOutput } from '@/ai/flows/symptom-analysis-flow';
 
 const symptomSchema = z.object({
-  symptoms: z.string().min(10, 'অনুগ্রহ করে কমপক্ষে ১০ অক্ষরের মধ্যে আপনার উপসর্গ বর্ণনা করুন।'),
+  symptoms: z.string().min(10, 'Please describe your symptoms in at least 10 characters.'),
 });
 
 const ResultCard = ({ icon: Icon, title, content }: { icon: React.ElementType; title: string; content: string }) => (
@@ -74,7 +74,7 @@ export function SymptomAnalysis() {
               AI Health Analysis
             </CardTitle>
             <CardDescription>
-              আপনার রোগের উপসর্গগুলো নিচে লিখুন, এবং আমাদের AI আপনাকে বিশেষজ্ঞের পরামর্শ, রোগের ধারণা এবং জীবনযাত্রার টিপস দেবে।
+              Describe your symptoms below, and our AI will provide specialist advice, potential diagnoses, and lifestyle tips.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -83,10 +83,10 @@ export function SymptomAnalysis() {
               name="symptoms"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>আপনার উপসর্গ (Your Symptoms)</FormLabel>
+                  <FormLabel>Your Symptoms</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="যেমন: আমার গত তিন দিন ধরে মাথা ব্যথা এবং হালকা জ্বর অনুভব হচ্ছে..."
+                      placeholder="e.g., I've had a headache and a slight fever for the last three days..."
                       {...field}
                       rows={4}
                       disabled={isGuest}
@@ -102,12 +102,12 @@ export function SymptomAnalysis() {
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  এনালাইসিস করা হচ্ছে...
+                  Analyzing...
                 </>
               ) : (
                 <>
                   <Sparkles className="mr-2 h-4 w-4" />
-                   {isGuest ? 'ব্যবহার করতে সাইন ইন করুন' : 'এনালাইসিস করুন'}
+                   {isGuest ? 'Sign in to use' : 'Analyze'}
                 </>
               )}
             </Button>
@@ -118,10 +118,10 @@ export function SymptomAnalysis() {
     
     {analysis && (
         <div className="space-y-4">
-            <ResultCard icon={HeartPulse} title="বিশেষজ্ঞের পরামর্শ" content={analysis.specialistSuggestion} />
-            <ResultCard icon={BrainCircuit} title="রোগের ধারণা" content={analysis.diseaseConcept} />
-            <ResultCard icon={Utensils} title="খাবার পরামর্শ" content={analysis.foodSuggestion} />
-            <ResultCard icon={Activity} title="করণীয়" content={analysis.activitySuggestion} />
+            <ResultCard icon={HeartPulse} title="Specialist Suggestion" content={analysis.specialistSuggestion} />
+            <ResultCard icon={BrainCircuit} title="Disease Concept" content={analysis.diseaseConcept} />
+            <ResultCard icon={Utensils} title="Food Suggestion" content={analysis.foodSuggestion} />
+            <ResultCard icon={Activity} title="Activity Suggestion" content={analysis.activitySuggestion} />
         </div>
     )}
     </>
