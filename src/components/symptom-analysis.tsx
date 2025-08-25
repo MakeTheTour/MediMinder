@@ -108,7 +108,7 @@ export function SymptomAnalysis() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Stethoscope />
-              AI Health Analysis
+              Specialist Suggestions
             </CardTitle>
             <CardDescription>
               Describe your symptoms below, and our AI will provide specialist advice, potential diagnoses, and lifestyle tips.
