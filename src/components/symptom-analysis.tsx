@@ -13,13 +13,12 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/auth-context';
 import { analyzeSymptoms, SymptomAnalysisOutput } from '@/ai/flows/symptom-analysis-flow';
-import { cn } from '@/lib/utils';
 
 const symptomSchema = z.object({
   symptoms: z.string().min(10, 'Please describe your symptoms in at least 10 characters.'),
 });
 
-const ResultCard = ({ icon: Icon, title, content, isBold = false }: { icon: React.ElementType; title: string; content: string, isBold?: boolean }) => (
+const ResultCard = ({ icon: Icon, title, content }: { icon: React.ElementType; title: string; content: string }) => (
     <Card>
         <CardHeader className="flex flex-row items-center gap-4 space-y-0 pb-2">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
@@ -28,7 +27,7 @@ const ResultCard = ({ icon: Icon, title, content, isBold = false }: { icon: Reac
             <CardTitle className="text-lg">{title}</CardTitle>
         </CardHeader>
         <CardContent>
-            <p className={cn("text-muted-foreground", isBold && "font-bold text-foreground")}>{content}</p>
+            <p className="text-muted-foreground">{content}</p>
         </CardContent>
     </Card>
 );
@@ -119,7 +118,7 @@ export function SymptomAnalysis() {
     
     {analysis && (
         <div className="space-y-4 mt-6">
-            <ResultCard icon={HeartPulse} title="Specialist Suggestion" content={analysis.specialistSuggestion} isBold={true} />
+            <ResultCard icon={HeartPulse} title="Specialist Suggestion" content={analysis.specialistSuggestion} />
             <ResultCard icon={BrainCircuit} title="Disease Concept" content={analysis.diseaseConcept} />
             <ResultCard icon={Utensils} title="Food Suggestion" content={analysis.foodSuggestion} />
             <ResultCard icon={Activity} title="Activity Suggestion" content={analysis.activitySuggestion} />
