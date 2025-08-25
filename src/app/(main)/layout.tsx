@@ -20,6 +20,15 @@ import { generateFamilyAlert } from '@/ai/flows/generate-family-alert-flow';
 import { trackAdherence } from '@/ai/flows/track-adherence-flow';
 import { type ReminderSettings } from '@/app/(main)/settings/notifications/page';
 
+interface BeforeInstallPromptEvent extends Event {
+  readonly platforms: string[];
+  readonly userChoice: Promise<{
+    outcome: 'accepted' | 'dismissed';
+    platform: string;
+  }>;
+  prompt(): Promise<void>;
+}
+
 export default function MainLayout({ children }: { children: ReactNode }) {
   const { user, loading, isGuest, setFamilyMissedDoseCount, setPendingInvitationCount, setFamilyAlertCount, setInvitationsAsViewed } = useAuth();
   const router = useRouter();
@@ -45,12 +54,27 @@ export default function MainLayout({ children }: { children: ReactNode }) {
 
   const [reminder, setReminder] = useState<{ medications: Medication[]; time: string } | null>(null);
   const [activeFamilyAlert, setActiveFamilyAlert] = useState<FamilyAlert | null>(null);
+  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+
 
   const reminderTimers = useRef<Record<string, NodeJS.Timeout[]>>({});
   const initialLoadCheckDone = useRef(false);
 
   const noNavPaths = ['/login', '/signup', '/'];
   const showNav = !noNavPaths.includes(pathname) && !pathname.startsWith('/admin');
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setInstallPrompt(e as BeforeInstallPromptEvent);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
 
   useEffect(() => {
     if (pathname === '/family') {
@@ -352,6 +376,21 @@ export default function MainLayout({ children }: { children: ReactNode }) {
         toast({ title: 'Error', description: 'Could not dismiss the alert. It may reappear.', variant: 'destructive' });
     }
   }
+  
+  const handleInstallClick = () => {
+    if (installPrompt) {
+      installPrompt.prompt();
+      installPrompt.userChoice.then((choiceResult) => {
+        if (choiceResult.outcome === 'accepted') {
+          console.log('User accepted the install prompt');
+        } else {
+          console.log('User dismissed the install prompt');
+        }
+        setInstallPrompt(null);
+      });
+    }
+  };
+
 
   if (loading && !isGuest && !pathname.startsWith('/admin')) {
     return <div className="flex h-screen items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>;
@@ -376,8 +415,8 @@ export default function MainLayout({ children }: { children: ReactNode }) {
       )}
       {activeFamilyAlert && <FamilyAlertDialog isOpen={!!activeFamilyAlert} alert={activeFamilyAlert} onClose={() => handleAlertClose(activeFamilyAlert.id)} />}
       <div className="flex min-h-screen flex-col">
-        {showNav && <TopNavbar />}
-        <main className="flex-1 pb-24">{children}</main>
+        {showNav && <TopNavbar installPrompt={installPrompt} onInstallClick={handleInstallClick} />}
+        <main className="flex-1 pb-24 pt-16">{children}</main>
         {showNav && <BottomNavbar />}
       </div>
     </>
