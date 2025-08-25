@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, HeartPulse, BrainCircuit, Activity, Utensils, Dumbbell, Pill, AlertCircle, Trash2, Pencil, MoreVertical, Sparkles, User, MapPin, History, Save, Leaf, Loader2 } from 'lucide-react';
+import { Plus, HeartPulse, BrainCircuit, Activity, Utensils, Pill, AlertCircle, Trash2, Pencil, MoreVertical, Sparkles, User, MapPin, History, Save, Leaf, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -12,7 +12,6 @@ import { collection, onSnapshot, query, orderBy, getDoc, doc, deleteDoc } from '
 import { db } from '@/lib/firebase-client';
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
-import { generateHealthInsights, HealthInsightsOutput } from '@/ai/flows/health-insights-flow';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
@@ -22,7 +21,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { deleteDoctorSuggestion } from '@/ai/flows/delete-doctor-suggestion-flow';
-import { DoctorSuggestion } from '@/components/doctor-suggestion';
+import { SymptomAnalysis } from '@/components/symptom-analysis';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface SavedSuggestion extends SpecialistRecommendationOutput {
@@ -116,40 +115,10 @@ export default function HealthPage() {
     
     const [healthMetrics, setHealthMetrics] = useState<HealthMetric[]>([]);
     const [savedSuggestions, setSavedSuggestions] = useState<SavedSuggestion[]>([]);
-    const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-    const [insights, setInsights] = useState<HealthInsightsOutput | null>(null);
-    const [loadingInsights, setLoadingInsights] = useState(false);
-    const [loadingProfile, setLoadingProfile] = useState(true);
-
-    const handleGetInsights = useCallback(async () => {
-        if (healthMetrics.length === 0 && savedSuggestions.length === 0) {
-            toast({ title: "Not Enough Data", description: "Log some health data or save a suggestion first to get insights."});
-            return;
-        }
-        if (!userProfile) {
-            toast({ title: "Profile Needed", description: "Please complete your profile to generate insights."});
-            return;
-        }
-
-        setLoadingInsights(true);
-        try {
-            const result = await generateHealthInsights({
-                healthMetrics: healthMetrics.slice(0, 10), // Send last 10 records
-                savedSuggestions: savedSuggestions.map(s => ({symptoms: s.symptoms, recommendation: s})),
-                userProfile: userProfile,
-            });
-            setInsights(result);
-        } catch (e) {
-            toast({ title: "Error Generating Insights", variant: "destructive"});
-        }
-        setLoadingInsights(false);
-    }, [healthMetrics, savedSuggestions, userProfile, toast]);
 
     useEffect(() => {
         if (!user || isGuest) {
             setHealthMetrics([]);
-            setUserProfile(null);
-            setLoadingProfile(false);
             setSavedSuggestions([]);
             return;
         };
@@ -176,29 +145,11 @@ export default function HealthPage() {
              }));
         });
         
-        const fetchUserProfile = async () => {
-            setLoadingProfile(true);
-            const userRef = doc(db, 'users', user.uid);
-            const userSnap = await getDoc(userRef);
-            if (userSnap.exists()) {
-                setUserProfile(userSnap.data() as UserProfile);
-            }
-            setLoadingProfile(false);
-        };
-        fetchUserProfile();
-        
         return () => {
           unsubHealth();
           unsubSuggestions();
         }
     }, [user, isGuest]);
-    
-    useEffect(() => {
-        if (!loadingInsights && userProfile && (healthMetrics.length > 0 || savedSuggestions.length > 0)) {
-            handleGetInsights();
-        }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [healthMetrics, savedSuggestions, userProfile]);
     
     const handleEditHealthMetric = (id: string) => {
         router.push(`/health/edit/${id}`);
@@ -255,72 +206,19 @@ export default function HealthPage() {
         </Button>
       </header>
 
-      <DoctorSuggestion />
+      <SymptomAnalysis />
       
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Sparkles /> AI Insights</CardTitle>
-          <CardDescription>Your health data, history, and personalized insights.</CardDescription>
+          <CardTitle className="flex items-center gap-2"><Sparkles /> Saved Analysis & Logs</CardTitle>
+          <CardDescription>Your saved specialist suggestions and health metric history.</CardDescription>
         </CardHeader>
         <CardContent>
-            <Tabs defaultValue="insights">
-                <TabsList className="grid w-full grid-cols-3">
-                    <TabsTrigger value="insights"><Sparkles className="mr-2 h-4 w-4" /> Insights</TabsTrigger>
+            <Tabs defaultValue="history">
+                <TabsList className="grid w-full grid-cols-2">
                     <TabsTrigger value="history"><History className="mr-2 h-4 w-4" /> History Log</TabsTrigger>
                     <TabsTrigger value="suggestions"><Save className="mr-2 h-4 w-4" /> Saved Suggestions</TabsTrigger>
                 </TabsList>
-
-                <TabsContent value="insights" className="pt-4">
-                    {loadingProfile ? (
-                        <p className="text-sm text-muted-foreground">Loading profile to generate insights...</p>
-                    ) : loadingInsights ? (
-                        <div className="flex justify-center items-center p-8">
-                            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                        </div>
-                    ) : healthMetrics.length === 0 && savedSuggestions.length === 0 && !isGuest ? (
-                        <Alert variant="default" className="my-4">
-                            <AlertCircle className="h-4 w-4" />
-                            <AlertTitle>Get Your Insights!</AlertTitle>
-                            <AlertDescription>
-                                To get your AI insights, please log some of your recent health data.
-                            </AlertDescription>
-                        </Alert>
-                    ) : insights ? (
-                        <div className="space-y-4 p-4 bg-primary/10 rounded-lg">
-                            <p className="font-semibold text-foreground">Insight:</p>
-                            <p className="italic">"{insights.insight}"</p>
-                            <div className="border-t border-primary/20 pt-4 space-y-4">
-                                <div className="flex items-start gap-3">
-                                <Utensils className="h-5 w-5 text-primary mt-1 shrink-0" />
-                                <div>
-                                    <h4 className="font-semibold text-foreground">Food Suggestion</h4>
-                                    <p className="text-sm">{insights.foodSuggestion}</p>
-                                </div>
-                                </div>
-                                <div className="flex items-start gap-3">
-                                <Dumbbell className="h-5 w-5 text-primary mt-1 shrink-0" />
-                                <div>
-                                    <h4 className="font-semibold text-foreground">Exercise Suggestion</h4>
-                                    <p className="text-sm">{insights.exerciseSuggestion}</p>
-                                </div>
-                                </div>
-                                <div className="flex items-start gap-3">
-                                <Leaf className="h-5 w-5 text-primary mt-1 shrink-0" />
-                                <div>
-                                    <h4 className="font-semibold text-foreground">Holistic Observation</h4>
-                                    <p className="text-sm">{insights.holisticObservation}</p>
-                                </div>
-                                </div>
-                            </div>
-                        </div>
-                    ) : (
-                        <p className="text-muted-foreground text-sm">Click the button to generate insights from your logged data.</p>
-                    )}
-                    <Button onClick={handleGetInsights} disabled={loadingInsights || isGuest || loadingProfile} className="mt-4">
-                        {loadingInsights ? 'Generating...' : 'Generate New Insights'}
-                    </Button>
-                </TabsContent>
-
                 <TabsContent value="history" className="pt-4">
                     {healthMetrics.length > 0 ? (
                         <div className="space-y-4">
@@ -351,7 +249,7 @@ export default function HealthPage() {
                         <div className="text-center py-10">
                             <BrainCircuit className="mx-auto h-12 w-12 text-muted-foreground" />
                             <h3 className="mt-4 text-lg font-semibold">{isGuest ? "Sign in to save suggestions" : "No Saved Suggestions"}</h3>
-                            <p className="mt-1 text-sm text-muted-foreground">{isGuest ? "Create an account or sign in to get and save AI suggestions." : "Use the 'Doctor Suggestion' tool to get a recommendation."}</p>
+                            <p className="mt-1 text-sm text-muted-foreground">{isGuest ? "Create an account or sign in to get and save AI suggestions." : "Use the symptom analysis tool to get a recommendation."}</p>
                         </div>
                     )}
                 </TabsContent>

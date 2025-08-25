@@ -14,3 +14,4 @@ import '@/ai/flows/remove-family-member-flow.ts';
 import '@/ai/flows/save-doctor-suggestion-flow.ts';
 import '@/ai/flows/delete-doctor-suggestion-flow.ts';
 import '@/ai/flows/cleanup-flow.ts';
+import '@/ai/flows/symptom-analysis-flow.ts';
