@@ -1,9 +1,9 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { collection, query, where, orderBy, limit, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase-client';
 import { Megaphone } from 'lucide-react';
 import Link from 'next/link';
@@ -15,25 +15,24 @@ interface Ad {
   imageUrl: string;
   redirectUrl?: string;
   status: 'active' | 'inactive';
+  createdAt: string;
 }
 
 export function AdCard() {
-  const [ad, setAd] = useState<Ad | null>(null);
+  const [ads, setAds] = useState<Ad[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // This query requires a composite index on (status, createdAt desc).
+    // Simplified query to avoid needing a composite index.
     const q = query(
         collection(db, 'ads'), 
-        where('status', '==', 'active'),
-        orderBy('createdAt', 'desc'),
-        limit(1)
+        where('status', '==', 'active')
     );
     const unsub = onSnapshot(q, (snapshot) => {
       if (!snapshot.empty) {
-        setAd({ id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as Ad);
+        setAds(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Ad)));
       } else {
-        setAd(null);
+        setAds([]);
       }
       setLoading(false);
     }, (error) => {
@@ -44,7 +43,13 @@ export function AdCard() {
     return () => unsub();
   }, []);
 
-  if (loading || !ad) {
+  const mostRecentAd = useMemo(() => {
+    if (ads.length === 0) return null;
+    // Sort on the client to find the most recent ad
+    return [...ads].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+  }, [ads]);
+
+  if (loading || !mostRecentAd) {
     return null; // Don't render anything if loading or no ad is found
   }
   
@@ -60,25 +65,25 @@ export function AdCard() {
         <div className="flex flex-col sm:flex-row gap-4 items-center">
             <div className="w-full sm:w-1/3">
                  <img
-                    src={ad.imageUrl}
-                    alt={ad.title}
+                    src={mostRecentAd.imageUrl}
+                    alt={mostRecentAd.title}
                     width="200"
                     height="100"
                     className="rounded-md object-cover w-full h-auto"
                 />
             </div>
             <div className="w-full sm:w-2/3">
-                 <h3 className="font-bold text-lg text-foreground">{ad.title}</h3>
-                 <p className="text-muted-foreground">{ad.content}</p>
+                 <h3 className="font-bold text-lg text-foreground">{mostRecentAd.title}</h3>
+                 <p className="text-muted-foreground">{mostRecentAd.content}</p>
             </div>
         </div>
       </CardContent>
     </Card>
   );
 
-  if (ad.redirectUrl) {
+  if (mostRecentAd.redirectUrl) {
     return (
-        <a href={ad.redirectUrl} target="_blank" rel="noopener noreferrer" className="no-underline block">
+        <a href={mostRecentAd.redirectUrl} target="_blank" rel="noopener noreferrer" className="no-underline block">
             {AdContent}
         </a>
     )
