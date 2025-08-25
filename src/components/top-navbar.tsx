@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -54,7 +53,7 @@ export function TopNavbar() {
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 border-b bg-white/95 backdrop-blur-sm">
+    <header className="border-b bg-white/95 backdrop-blur-sm">
       <div className="container mx-auto flex h-16 max-w-2xl items-center justify-between px-4">
         <Link href="/home" className="text-xl font-bold text-primary">
           MediMinder

@@ -379,7 +379,7 @@ export default function MainLayout({ children }: { children: ReactNode }) {
       {activeFamilyAlert && <FamilyAlertDialog isOpen={!!activeFamilyAlert} alert={activeFamilyAlert} onClose={() => handleAlertClose(activeFamilyAlert.id)} />}
       <div className="flex min-h-screen flex-col">
         {showNav && <TopNavbar />}
-        <main className="flex-1 pt-16 pb-24">{children}</main>
+        <main className="flex-1 pb-24">{children}</main>
         {showNav && <BottomNavbar />}
       </div>
     </>
