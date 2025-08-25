@@ -13,6 +13,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/auth-context';
 import { analyzeSymptoms, SymptomAnalysisOutput } from '@/ai/flows/symptom-analysis-flow';
+import { cn } from '@/lib/utils';
 
 const symptomSchema = z.object({
   symptoms: z.string().min(10, 'Please describe your symptoms in at least 10 characters.'),
