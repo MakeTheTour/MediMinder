@@ -3,10 +3,11 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Pill, Settings, HeartPulse, Users, AlertCircle } from 'lucide-react';
+import { Home, Pill, Settings, HeartPulse, Users, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/auth-context';
 import { Badge } from './ui/badge';
+import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
 
 const navItems = [
   { href: '/home', label: 'Home', icon: Home },
@@ -18,7 +19,7 @@ const navItems = [
 
 export function BottomNavbar() {
   const pathname = usePathname();
-  const { pendingInvitationCount, familyAlertCount } = useAuth();
+  const { user, isGuest, pendingInvitationCount, familyAlertCount } = useAuth();
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background/95 backdrop-blur-sm shadow-[0_-1px_3px_rgba(0,0,0,0.05)]">
@@ -28,6 +29,7 @@ export function BottomNavbar() {
           const isFamilyItem = item.label === 'Family';
           const totalAlerts = pendingInvitationCount + familyAlertCount;
           const showBadge = isFamilyItem && totalAlerts > 0;
+          const isYouItem = item.label === 'You';
 
           return (
             <Link
@@ -38,10 +40,19 @@ export function BottomNavbar() {
                 { 'text-primary': isActive }
               )}
             >
-              <item.icon className="h-6 w-6" />
+              {isYouItem && !isGuest ? (
+                 <Avatar className="h-6 w-6">
+                    <AvatarImage src={user?.photoURL || ''} alt={user?.displayName || 'User'}/>
+                    <AvatarFallback>
+                        <User className="h-4 w-4"/>
+                    </AvatarFallback>
+                 </Avatar>
+              ) : (
+                 <item.icon className="h-6 w-6" />
+              )}
               <span className="text-xs font-medium">{item.label}</span>
                {showBadge && (
-                 <Badge variant="destructive" className="absolute top-0 right-0 h-5 w-5 justify-center p-0">
+                 <Badge variant="destructive" className="absolute top-1 right-2 h-4 w-4 justify-center p-0 text-[10px]">
                     {totalAlerts > 9 ? '9+' : totalAlerts}
                 </Badge>
               )}
