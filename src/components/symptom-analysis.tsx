@@ -18,7 +18,7 @@ const symptomSchema = z.object({
   symptoms: z.string().min(10, 'Please describe your symptoms in at least 10 characters.'),
 });
 
-const ResultCard = ({ icon: Icon, title, content }: { icon: React.ElementType; title: string; content: string }) => (
+const ResultCard = ({ icon: Icon, title, content, isBold = false }: { icon: React.ElementType; title: string; content: string, isBold?: boolean }) => (
     <Card>
         <CardHeader className="flex flex-row items-center gap-4 space-y-0 pb-2">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
@@ -27,7 +27,7 @@ const ResultCard = ({ icon: Icon, title, content }: { icon: React.ElementType; t
             <CardTitle className="text-lg">{title}</CardTitle>
         </CardHeader>
         <CardContent>
-            <p className="text-muted-foreground">{content}</p>
+            <p className={cn("text-muted-foreground", isBold && "font-bold text-foreground")}>{content}</p>
         </CardContent>
     </Card>
 );
@@ -117,8 +117,8 @@ export function SymptomAnalysis() {
     </Card>
     
     {analysis && (
-        <div className="space-y-4">
-            <ResultCard icon={HeartPulse} title="Specialist Suggestion" content={analysis.specialistSuggestion} />
+        <div className="space-y-4 mt-6">
+            <ResultCard icon={HeartPulse} title="Specialist Suggestion" content={analysis.specialistSuggestion} isBold={true} />
             <ResultCard icon={BrainCircuit} title="Disease Concept" content={analysis.diseaseConcept} />
             <ResultCard icon={Utensils} title="Food Suggestion" content={analysis.foodSuggestion} />
             <ResultCard icon={Activity} title="Activity Suggestion" content={analysis.activitySuggestion} />
