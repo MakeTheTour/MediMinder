@@ -115,7 +115,7 @@ export default function HomePage() {
   return (
     <div className="container mx-auto max-w-2xl p-4 space-y-6">
       <header className="mb-6">
-        <h1 className="text-3xl font-bold text-foreground">{greeting}, {user?.displayName || 'Guest'}!</h1>
+        <h1 className="text-2xl font-bold text-foreground">{greeting}, {user?.displayName || 'Guest'}!</h1>
         <p className="text-muted-foreground">{format(new Date(), 'EEEE, dd MMMM yyyy')}</p>
       </header>
       
@@ -159,7 +159,7 @@ export default function HomePage() {
         <CardHeader>
           <div className="flex items-center justify-between gap-2">
             <div className="flex-1">
-              <CardTitle className="flex items-center gap-2"><PillIcon/> Today's Medications</CardTitle>
+              <CardTitle className="flex items-center gap-2 text-xl"><PillIcon/> Today's Medications</CardTitle>
               <CardDescription>Your medication schedule for today.</CardDescription>
             </div>
             <Button asChild size="sm" variant="outline" className="shrink-0">
@@ -199,7 +199,7 @@ export default function HomePage() {
         <CardHeader>
           <div className="flex items-center justify-between gap-2">
               <div className="flex-1">
-                <CardTitle className="flex items-center gap-2"><CalendarDays/> Today's Appointments</CardTitle>
+                <CardTitle className="flex items-center gap-2 text-xl"><CalendarDays/> Today's Appointments</CardTitle>
                 <CardDescription>Your appointments for today.</CardDescription>
               </div>
               <Button asChild size="sm" variant="outline" className="shrink-0">
