@@ -19,6 +19,7 @@ import { generateAppointmentReminder } from '@/ai/flows/appointment-reminder-flo
 import { generateFamilyAlert } from '@/ai/flows/generate-family-alert-flow';
 import { trackAdherence } from '@/ai/flows/track-adherence-flow';
 import { type ReminderSettings } from '@/app/(main)/settings/notifications/page';
+import { SplashScreen } from '@/components/splash-screen';
 
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: string[];
@@ -393,7 +394,7 @@ export default function MainLayout({ children }: { children: ReactNode }) {
 
 
   if (loading && !isGuest && !pathname.startsWith('/admin')) {
-    return <div className="flex h-screen items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>;
+    return <SplashScreen />;
   }
   if (pathname?.startsWith('/admin')) return <>{children}</>;
   if (!user && !isGuest) return null;
