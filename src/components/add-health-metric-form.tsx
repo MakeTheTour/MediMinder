@@ -70,15 +70,15 @@ export function AddHealthMetricForm() {
         return;
     }
     
-    const healthMetricData: Omit<HealthMetric, 'id' | 'userId'> = {
+    const healthMetricData = {
         date: values.date.toISOString(),
-        weight: values.weight,
-        bloodPressure: (values.systolic && values.diastolic) ? { systolic: values.systolic, diastolic: values.diastolic } : undefined,
-        bloodSugar: values.bloodSugar,
-        heartRate: values.heartRate,
+        weight: values.weight ?? null,
+        bloodPressure: (values.systolic && values.diastolic) ? { systolic: values.systolic, diastolic: values.diastolic } : null,
+        bloodSugar: values.bloodSugar ?? null,
+        heartRate: values.heartRate ?? null,
     }
     
-    const finalData: Omit<HealthMetric, 'id'> = {
+    const finalData = {
         ...healthMetricData,
         userId: user.uid,
     }
